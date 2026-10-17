@@ -37,10 +37,13 @@ class LocalOperatorOpenTests(unittest.TestCase):
         self.assertEqual(list(self.base.iterdir()), [])
 
     def test_a_store_without_its_registry_or_database_is_refused_unchanged(self):
-        for missing in (self.root / 'objects' / REGISTRY_PATH, self.root / 'state.sqlite3'):
-            with self.subTest(missing=missing.name):
+        for name, relative in (('registry', Path('objects') / REGISTRY_PATH),
+                               ('database', Path('state.sqlite3'))):
+            with self.subTest(missing=name):
+                self.root = self.base / name
+                self.settings = fixture_settings(root=self.root)
                 self.worker_open()
-                missing.unlink()
+                (self.root / relative).unlink()
                 before = tree_snapshot(self.base)
                 with self.assertRaises(StoreMissing):
                     self.operator_open()

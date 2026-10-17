@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import shutil
+import sqlite3
 import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
@@ -373,6 +374,54 @@ class LocalBindingTests(unittest.TestCase):
         self.assertEqual(tree_snapshot(self.root), before)
         self.assertEqual(registry.read_bytes(), legacy)
         self.assertFalse((self.root / "state.sqlite3").exists())
+
+    def test_unbound_existing_database_is_refused_without_assigning_a_registry(self):
+        from sec_edgar_ingest.storage import open_stores
+        from sec_edgar_ingest.storage.contracts import Conflict, REGISTRY_PATH
+        from support_fs import tree_snapshot
+        self.root.mkdir()
+        database = self.root / "state.sqlite3"
+        with contextlib.closing(sqlite3.connect(database)) as connection, connection:
+            connection.execute("CREATE TABLE records (table_name TEXT, partition TEXT, key TEXT, value TEXT, version TEXT)")
+            connection.execute("INSERT INTO records VALUES (?, ?, ?, ?, ?)",
+                               ("SourceState", "sec-owner-lowell-mason:Source", "old-source", '{"retained":true}', "old-revision"))
+        before = tree_snapshot(self.root)
+        with self.assertRaisesRegex(Conflict, "unbound|binding"):
+            open_stores(self.settings)
+        self.assertEqual(tree_snapshot(self.root), before)
+        self.assertFalse((self.root / "objects" / REGISTRY_PATH).exists())
+        with contextlib.closing(sqlite3.connect(database)) as connection:
+            self.assertEqual(connection.execute("SELECT key, value, version FROM records").fetchall(),
+                             [("old-source", '{"retained":true}', "old-revision")])
+
+    def test_unbound_existing_objects_are_refused_without_mutation(self):
+        from sec_edgar_ingest.storage import open_stores
+        from sec_edgar_ingest.storage.contracts import Conflict, REGISTRY_PATH
+        from support_fs import tree_snapshot
+        retained = self.root / "objects/raw/retained-object"
+        retained.parent.mkdir(parents=True)
+        retained.write_bytes(b"existing unbound durable object")
+        before = tree_snapshot(self.root)
+        with self.assertRaisesRegex(Conflict, "unbound|binding"):
+            open_stores(self.settings)
+        self.assertEqual(tree_snapshot(self.root), before)
+        self.assertFalse((self.root / "objects" / REGISTRY_PATH).exists())
+        self.assertFalse((self.root / "state.sqlite3").exists())
+
+    def test_deleted_registry_is_not_recreated_for_existing_bound_state(self):
+        from sec_edgar_ingest.storage import open_stores
+        from sec_edgar_ingest.storage.contracts import Conflict, REGISTRY_PATH
+        from support_fs import tree_snapshot
+        state, objects, leases = self.open()
+        state.insert("Source", "retained", {"retained": True})
+        objects.put_once("raw/retained", b"retained object")
+        leases.close()
+        state.close()
+        (self.root / "objects" / REGISTRY_PATH).unlink()
+        before = tree_snapshot(self.root)
+        with self.assertRaisesRegex(Conflict, "unbound|binding"):
+            open_stores(self.settings)
+        self.assertEqual(tree_snapshot(self.root), before)
 
 
 class ConfiguredDescriptorTests(unittest.TestCase):

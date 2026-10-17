@@ -1,4 +1,5 @@
 import hashlib
+import fcntl
 import importlib
 import importlib.util
 import sqlite3
@@ -6,10 +7,13 @@ import tempfile
 import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
 from support import Faults, FixtureClock, fixture_settings, fixture_snapshot, fixture_source, store_bundle
+
+BINDING_INIT_WAIT_SECONDS = 5
 
 
 class StorageTests(unittest.TestCase):
@@ -208,6 +212,7 @@ class LocalStateInitTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
+        self.local.LocalObjectStore(self.root)
 
     def hold_reserved(self):
         # Act as another initializer between its RESERVED and EXCLUSIVE locks. SQLite then refuses the
@@ -237,3 +242,91 @@ class LocalStateInitTests(unittest.TestCase):
                 self.local.LocalStateStore(self.root)
         self.assertGreaterEqual(time.monotonic() - started, 0.15)
         self.assertEqual(raised.exception.sqlite_errorcode & 0xFF, sqlite3.SQLITE_BUSY)
+
+
+class LocalBindingInitTests(unittest.TestCase):
+    def setUp(self):
+        self.local = importlib.import_module("sec_edgar_ingest.storage.local")
+        self.contracts = importlib.import_module("sec_edgar_ingest.storage.contracts")
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name) / "data"
+
+    def test_sqlite_sidecars_without_a_registry_are_refused_unchanged(self):
+        from support_fs import tree_snapshot
+        self.root.mkdir()
+        for name in ("state.sqlite3-wal", "state.sqlite3-shm", "state.sqlite3-journal"):
+            path = self.root / name
+            path.write_bytes(b"unbound SQLite durable state")
+            before = tree_snapshot(self.root)
+            with self.subTest(name=name), self.assertRaises(self.contracts.Conflict):
+                self.local.LocalObjectStore(self.root)
+            self.assertEqual(tree_snapshot(self.root), before)
+            self.assertEqual(path.read_bytes(), b"unbound SQLite durable state")
+            self.assertFalse((self.root / "objects").exists())
+            path.unlink()
+
+    def test_object_directory_symlink_is_refused_before_creating_binding_or_database(self):
+        from support_fs import tree_snapshot
+        self.root.mkdir()
+        outside = self.root.parent / "outside"
+        outside.mkdir()
+        (outside / "retained").write_bytes(b"protected")
+        (self.root / "objects").symlink_to(outside, target_is_directory=True)
+        before = tree_snapshot(self.root.parent)
+        with self.assertRaises(ValueError):
+            self.local.LocalStateStore(self.root)
+        self.assertEqual(tree_snapshot(self.root.parent), before)
+        self.assertFalse((self.root / "state.sqlite3").exists())
+
+    def test_empty_existing_object_directory_can_initialize_and_reopen(self):
+        (self.root / "objects").mkdir(parents=True)
+        first = self.local.LocalStateStore(self.root)
+        self.addCleanup(first.close)
+        first.insert("Source", "first", {"retained": True})
+        second = self.local.LocalStateStore(self.root)
+        self.addCleanup(second.close)
+        self.assertTrue(second.get("Source", "first").value["retained"])
+
+    def test_concurrent_initializers_wait_for_binding_publication_and_reopen_same_state(self):
+        publish_entered, release_publish, second_lock_attempt = threading.Event(), threading.Event(), threading.Event()
+        counter_lock = threading.Lock()
+        publication_started, lock_attempts = False, 0
+        original_write = self.local.LocalObjectStore._write_once
+        original_flock = fcntl.flock
+
+        def pause_first_publication(objects, path, stream, *, notify=True):
+            nonlocal publication_started
+            if path == self.contracts.REGISTRY_PATH and not publication_started:
+                publication_started = True
+                with objects._parent(path, create=True):
+                    publish_entered.set()
+                    if not release_publish.wait(BINDING_INIT_WAIT_SECONDS):
+                        raise AssertionError("binding publisher did not receive release")
+            return original_write(objects, path, stream, notify=notify)
+
+        def observe_lock(descriptor, operation):
+            nonlocal lock_attempts
+            if operation == fcntl.LOCK_EX:
+                with counter_lock:
+                    lock_attempts += 1
+                    if lock_attempts == 2:
+                        second_lock_attempt.set()
+            return original_flock(descriptor, operation)
+
+        with patch.object(self.local.LocalObjectStore, "_write_once", pause_first_publication), \
+                patch.object(fcntl, "flock", observe_lock), ThreadPoolExecutor(max_workers=2) as executor:
+            first_future = executor.submit(self.local.LocalStateStore, self.root)
+            try:
+                self.assertTrue(publish_entered.wait(BINDING_INIT_WAIT_SECONDS), "first initializer did not reach binding publication")
+                second_future = executor.submit(self.local.LocalStateStore, self.root)
+                self.assertTrue(second_lock_attempt.wait(BINDING_INIT_WAIT_SECONDS), "second initializer did not contend on bootstrap")
+                self.assertFalse(second_future.done(), "second initializer passed an unpublished binding")
+            finally:
+                release_publish.set()
+            first = first_future.result(timeout=BINDING_INIT_WAIT_SECONDS)
+            self.addCleanup(first.close)
+            second = second_future.result(timeout=BINDING_INIT_WAIT_SECONDS)
+            self.addCleanup(second.close)
+        first.insert("Source", "shared", {"retained": True})
+        self.assertTrue(second.get("Source", "shared").value["retained"])

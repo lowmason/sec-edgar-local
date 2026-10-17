@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import errno
+import fcntl
 import hashlib
 import io
 import math
@@ -29,6 +30,7 @@ FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW
 SQLITE_BUSY_TIMEOUT_SECONDS = 5
 SQLITE_INIT_FIRST_PAUSE_SECONDS = 0.001
 SQLITE_INIT_MAX_PAUSE_SECONDS = 0.05
+SQLITE_STATE_FILES = ("state.sqlite3", "state.sqlite3-wal", "state.sqlite3-shm", "state.sqlite3-journal")
 
 
 class LocalObjectStore:
@@ -49,10 +51,33 @@ class LocalObjectStore:
                 raise Conflict("local store binding differs from this deployment")
             return
         self.root.mkdir(parents=True, exist_ok=True)
-        self.directory.mkdir(exist_ok=True)
+        descriptor = os.open(self.root, DIRECTORY_FLAGS)
+        try:
+            # A directory lock leaves no lockfile and covers inspection through registry publication.
+            # Every constructor publishes the binding before creating durable database/object state.
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            self._initialize_binding(expected)
+        finally:
+            os.close(descriptor)
+
+    def _initialize_binding(self, expected: bytes) -> None:
         if self.directory.is_symlink():
             raise ValueError("object root must not be a symlink")
-        self._write_once(REGISTRY_PATH, io.BytesIO(expected), notify=False)
+        if self.directory.exists() and not self.directory.is_dir():
+            raise ValueError("object root must be a directory")
+        try:
+            registry = self.read(REGISTRY_PATH)
+        except FileNotFoundError:
+            has_database = any((self.root / name).exists() or (self.root / name).is_symlink()
+                               for name in SQLITE_STATE_FILES)
+            has_objects = self.directory.is_dir() and any(self.directory.iterdir())
+            if has_database or has_objects:
+                raise Conflict("unbound local state has no accepted deployment binding; use a fresh store")
+            self.directory.mkdir(exist_ok=True)
+            self._write_once(REGISTRY_PATH, io.BytesIO(expected), notify=False)
+        else:
+            if registry != expected:
+                raise Conflict("local store binding differs from this deployment")
 
     @contextmanager
     def _parent(self, path: str, *, create: bool = False):

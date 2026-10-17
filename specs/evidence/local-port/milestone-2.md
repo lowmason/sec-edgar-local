@@ -90,3 +90,36 @@ Final output: exit 0, `Ran 23 tests in 0.007s`, `OK`. No SEC requests or source-
 The native environment remains Darwin arm64, uv `0.13.1 (Homebrew 2026-10-14 aarch64-apple-darwin)`, CPython `3.14.0 (main, Oct 14 2025, 21:10:22) [Clang 20.1.4]`, installed application `0.2.0`, Requests `2.34.2`, and PyArrow `25.0.1`. No interpreter, dependency, backend or lock changes. No build ran. The declared backend remains `uv_build>=0.12.15,<0.13.0`; Task 1's exact setup backend was `0.12.24` and is not installed in the application environment.
 
 Self-review read the changed production functions and tests against the brief, including final resolved-path validation, canonical policy equality, failure-before-DB creation, lease sentinel preservation, and context/CLI deferral. Clean-code applications: G30/G34 for separating supplied validation, path normalization, configured provenance and persistence binding; N1/N4 for acquisition/runtime/path naming; G25 for accepted policy constants; F2 for detached normalized return values; T1/T5/T6 for closed union/JSON/policy/path/replay/binding boundary tests; C2/C3 for updating obsolete fixture/cloud comments while preserving the SQLite WAL and fsync design intent. No adjacent cleanup was undertaken. `git diff --check` passed after removing the extra newline left by the helper move. Only Task 3 owned paths are staged. The ignored `.sdd` report remains local execution evidence.
+
+
+# Task 3 review fix round 1: refuse registry-less durable state
+
+The Important finding in `.sdd/1-sec-edgar-local-spec/task-3-review.md` was verified before implementation under the receiving-code-review procedure. The original object constructor wrote a missing registry before the state constructor opened an existing database. Three new real-filesystem regressions reproduced adoption of an unbound database with a retained row, an unbound object tree, and a previously bound store whose registry was deleted.
+
+`LocalObjectStore` now opens the resolved root directory with the existing no-follow directory flags and holds native `fcntl.flock(LOCK_EX)` from registry inspection through fresh registry publication. Closing that descriptor releases the lock. No lockfile or other guard artifact is created. A present matching registry is read and verified; a mismatched registry still conflicts. When the registry is absent, any database, WAL/SHM/rollback-journal file (including a dangling symlink at a SQLite state path), or nonempty object directory conflicts before object-directory creation or database access. An absent/empty root or empty object directory may initialize. Existing object-directory symlinks and non-directory object roots are refused under the serialized bootstrap. There is no cleanup, rewrite, migration, or adoption path.
+
+All local constructors already enter `LocalObjectStore` before creating SQLite/object durable state. Therefore concurrent constructors serialize while the first binding is unpublished, and later constructors see that published binding before opening SQLite. This is an atomic bootstrap protocol for the supported native macOS filesystem; it relies on native advisory directory flock support, exercised on this Mac. It does not replace leases, CAS, SQLite locking, filesystem atomic writes or fsync; those algorithms remain unchanged. No shared-filesystem or Windows support is claimed.
+
+The new deterministic concurrency test pauses the first publisher after creating registry parent directories, observes a second thread attempting the real root flock, confirms that second initialization has not completed before publication is released, then proves both opened stores share the same retained row. Events and bounded waits coordinate exact transitions; there is no scheduling sleep. Additional tests cover fresh empty-directory initialization/reopen, standalone SQLite sidecar refusal with unchanged bytes, and object-root symlink refusal without database creation. Existing WAL contention tests now establish a legitimate binding before holding a competing empty SQLite database; their original wait/timeout/SQLite-BUSY assertions remain. The operator missing-registry/missing-database matrix uses separate fresh roots because the prior matrix silently recreated the deleted registry between cases, the very behavior being removed.
+
+## Review-fix exact evidence
+
+Focused RED command, repository root:
+
+```sh
+uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p test_local_config.py -v
+```
+
+After explicitly closing the SQLite test-seeding connection (the first test attempt exposed a test ResourceWarning), the clean RED was exit 1: `Ran 29 tests in 0.141s`, `FAILED (failures=3)`. All three failures were `AssertionError: Conflict not raised`, and the prior 26 tests stayed green. The minimal serialized-bootstrap implementation produced config GREEN: `Ran 29 tests in 0.127s`, `OK`, and existing storage `Ran 14 tests in 0.644s`, `OK`. The initial combined gate then exposed the operator matrix's unsupported registry-recreation setup (one error); its independent-root correction retained both refusal assertions. This setup error was not additional RED evidence.
+
+Final exact covering command:
+
+```sh
+for test_file in test_local_config.py test_storage.py test_operator_open.py; do
+  uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p "$test_file" -v
+done
+```
+
+Final output: exit 0; `Ran 29 tests in 0.123s`, `OK`; `Ran 18 tests in 0.664s`, `OK`; `Ran 5 tests in 0.043s`, `OK` (52 tests). The unbound database test verifies both unchanged complete tree/file hashes and the original SQL key/value/revision; the object and deleted-registry tests verify unchanged trees. `git diff --check` also passed. No SEC/network, source-repository mutation, dependency change, broad cleanup, or subagent work occurred. Task 4 and later deferred gates remain as recorded above.
+
+Self-review checked creation order, root/objects no-follow defenses, the missing-registry branch before mkdir/SQLite, descriptor closure on success/failure, and the actual concurrent initialization boundary. Applied clean-code rules: G30/G34 for the cohesive locked binding bootstrap, G19 for explicit existing-database/object predicates, G25 for SQLite state-file names and named bounded test waits, T1/T5/T6 for missing/damaged/racing initialization invariants, and C3 for the lock scope and publish-before-state design intent. Only `storage/local.py`, the three targeted test modules, and this evidence are part of the review-fix commit.
