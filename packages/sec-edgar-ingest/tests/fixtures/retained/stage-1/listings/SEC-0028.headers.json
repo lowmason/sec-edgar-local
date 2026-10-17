@@ -1,0 +1,297 @@
+{
+  "evidence_id": "SEC-0028",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2015/QTR1/index.json",
+  "start_utc": "2026-10-05T23:41:05.017218+00:00",
+  "receipt_utc": "2026-10-05T23:41:05.244287+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "P4tG1eUKIKpZspTrm/pd0PtzAKHtFe+H/eBLhYjJneKn2dcowWzgX6t4jv55tch6Hlb8ZFzHMkgQ9K9TrnX6tjBsWl/Mj1lr"
+    ],
+    [
+      "x-amz-request-id",
+      "9ZBPH8MWQB60XZ3X"
+    ],
+    [
+      "x-amz-replication-status",
+      "REPLICA"
+    ],
+    [
+      "Last-Modified",
+      "Sat, 25 Nov 2017 22:04:24 GMT"
+    ],
+    [
+      "ETag",
+      "\"c21417f9c7343bd49455fd8142b37652-gzip\""
+    ],
+    [
+      "x-amz-meta-mode",
+      "33188"
+    ],
+    [
+      "x-amz-version-id",
+      "Wlr3XMVw34r1Gxjc_pN96ahBP0okzZgX"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Date",
+      "Mon, 05 Oct 2026 23:41:05 GMT"
+    ],
+    [
+      "Content-Length",
+      "3658"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=AAF58AA7689A9D4FA0D514D40A249DD9~-1~YAAQLH/RF+7QUPOgAQAAeD9xDhAoJzAXAFnbb0I12s1nbEP/cylCC4qyFhWBxg7qFU1RlBLdgbrNxuP2chC+pqW5reqwI010HrGsI4qUZ2+AZyGCRJ1EP9Y0IFS+Rph317Hnholh/SzA/7tvmRLxpodQgXx4r+mcb9KsZlHK3EW8j6ywnesX7OFyuPvHhfUnRcGxlxdtJqb5pf11YCNFvpRS/Ua+f0ouK7OLMHIzyn/rLSv0MaNf5zXhRXoYF0k4DTCrRP4idieiM7/JaV2+sK73zT4Oj9XWjtrr/5CDbKPZ4Eb5hkljKQqs8jXuVJAq1aD6DhIE9B9YV0Y61FiOmviU5QY7nAXwBsvfRS45cVYwVyy0ig7aLsgBGAKIbsopSwfbqZJEveh2/C7lOmyQlDpglKMpE0NC7T+kJ31iC6T85PjZzagj4C2uihlgCGAm5vcMSlqQjcsH3Q==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Tue, 05 Oct 2027 23:41:05 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=2C4B220B1CC0CEE68B39089F22C13491~YAAQLH/RF+/QUPOgAQAAeD9xDgGiQqr2anoTQm70D0Bv/itiIebCcrN7WhLj9t/R0AUm+hZBoiSRALbHaHPEnXlStayg7rwM56iyPqNYp7/9g66RkpXMbomm8eBEHNO8KArsXHUeITiDM0Frv2FuxKATCQ6H/FErC3+yCDSDvQ4g2kSmhx9e740AJ7ZrgYvtMgYr1kNPhgdeEiYKr22FkKbdqEthuS89tHEQARaMn4C+DtKiqX6b/PRuLTIi/IsZ8JMm+prp+pUgFGmboveJI84lmjbPSteyn4eEMBuuFnxT7b66rTP53WyDrQNyY04K+tn9aYLckvgD7iIWr856iqbzym+UNcxHIE55JgKOzmS1B0VDfjnDf/bZR4/pM9dur0B1ynerAu9S3zLf~3553605~3162945; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 03:41:05 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 3658,
+  "sha256": "f67b224609da652a129018d9858e6650ee92fdfa5729b27c0f5007f19b0d9c27",
+  "body_artifact": "listings/SEC-0028.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0028.intent.json",
+  "schema": "SEC directory entries: json",
+  "outcome": "success",
+  "specimen": false,
+  "directory_name": "full-index/2015/QTR1/",
+  "discovered_children": [
+    {
+      "last-modified": "03/31/2015 10:03:47 PM",
+      "name": "company.gz",
+      "type": "file",
+      "href": "company.gz",
+      "size": "4498 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:10 PM",
+      "name": "company.idx",
+      "type": "file",
+      "href": "company.idx",
+      "size": "46110 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:45 PM",
+      "name": "company.Z",
+      "type": "file",
+      "href": "company.Z",
+      "size": "8074 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:58 PM",
+      "name": "company.zip",
+      "type": "file",
+      "href": "company.zip",
+      "size": "4102 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:09 PM",
+      "name": "crawler.idx",
+      "type": "file",
+      "href": "crawler.idx",
+      "size": "56492 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:02 PM",
+      "name": "form.gz",
+      "type": "file",
+      "href": "form.gz",
+      "size": "5104 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:12 PM",
+      "name": "form.idx",
+      "type": "file",
+      "href": "form.idx",
+      "size": "46110 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:59 PM",
+      "name": "form.Z",
+      "type": "file",
+      "href": "form.Z",
+      "size": "8044 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:12 PM",
+      "name": "form.zip",
+      "type": "file",
+      "href": "form.zip",
+      "size": "4738 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:14 PM",
+      "name": "master.gz",
+      "type": "file",
+      "href": "master.gz",
+      "size": "3915 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:06 PM",
+      "name": "master.idx",
+      "type": "file",
+      "href": "master.idx",
+      "size": "27214 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:13 PM",
+      "name": "master.Z",
+      "type": "file",
+      "href": "master.Z",
+      "size": "7107 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:19 PM",
+      "name": "master.zip",
+      "type": "file",
+      "href": "master.zip",
+      "size": "3749 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex1.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex1.xml",
+      "size": "6610 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:04 PM",
+      "name": "sitemap.quarterlyindex10.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex10.xml",
+      "size": "6611 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:04 PM",
+      "name": "sitemap.quarterlyindex11.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex11.xml",
+      "size": "3396 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex2.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex2.xml",
+      "size": "6612 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex3.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex3.xml",
+      "size": "6608 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex4.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex4.xml",
+      "size": "6608 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex5.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex5.xml",
+      "size": "6608 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex6.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex6.xml",
+      "size": "6612 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex7.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex7.xml",
+      "size": "6609 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:03 PM",
+      "name": "sitemap.quarterlyindex8.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex8.xml",
+      "size": "6612 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:04 PM",
+      "name": "sitemap.quarterlyindex9.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex9.xml",
+      "size": "6610 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:19 PM",
+      "name": "xbrl.gz",
+      "type": "file",
+      "href": "xbrl.gz",
+      "size": "190 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:03:12 PM",
+      "name": "xbrl.idx",
+      "type": "file",
+      "href": "xbrl.idx",
+      "size": "768 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:19 PM",
+      "name": "xbrl.Z",
+      "type": "file",
+      "href": "xbrl.Z",
+      "size": "232 KB"
+    },
+    {
+      "last-modified": "03/31/2015 10:04:19 PM",
+      "name": "xbrl.zip",
+      "type": "file",
+      "href": "xbrl.zip",
+      "size": "188 KB"
+    }
+  ],
+  "selection_decision": "Validated name and dir/file type; no source-body support claim"
+}

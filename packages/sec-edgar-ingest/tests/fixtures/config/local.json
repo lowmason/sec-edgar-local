@@ -1,0 +1,56 @@
+{
+  "config_version": "sec-acquisition-v1",
+  "backfill": {
+    "start_quarter": "2015Q1",
+    "end_quarter": "open"
+  },
+  "daily": {
+    "start_date": "2026-10-01"
+  },
+  "sec": {
+    "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+    "requests_per_second": 3,
+    "max_active_collectors": 1
+  },
+  "http": {
+    "max_attempts": 5,
+    "retry_base_seconds": 2,
+    "retry_cap_seconds": 120,
+    "connect_timeout_seconds": 15,
+    "read_timeout_seconds": 60,
+    "exchange_deadline_seconds": 90,
+    "max_received_bytes": 67108864,
+    "max_expanded_bytes": 536870912
+  },
+  "coordination": {
+    "lease_seconds": 60,
+    "renew_every_seconds": 20,
+    "namespace": "sec-owner-lowell-mason",
+    "clock_uncertainty_seconds": 2
+  },
+  "storage": {
+    "backend": "local-fixture",
+    "root": ".fixture-state",
+    "source_table": "SourceState",
+    "attempt_table": "Attempts",
+    "blob_api_version": "2026-04-06",
+    "table_api_version": "2020-12-06"
+  },
+  "etl": {
+    "parser_version": "fixture-envelope-v1",
+    "schema_version": "sec-index-v1"
+  },
+  "worker": {
+    "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "provenance": "synthetic-fixture"
+  },
+  "jobs": {
+    "replica_retry_limit": 0
+  },
+  "orchestration": {
+    "transient_replays": 1
+  },
+  "reconciliation": {
+    "require_withdrawal_approval": true
+  }
+}

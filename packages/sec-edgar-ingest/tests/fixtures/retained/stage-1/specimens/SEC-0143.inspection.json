@@ -1,0 +1,100 @@
+{
+  "evidence_id": "SEC-0143",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2026/QTR3/master.zip",
+  "receipt_artifact": "listings/SEC-0143.headers.json",
+  "original_path": "specimens/393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71.zip",
+  "original_bytes": 3502663,
+  "original_sha256": "393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71",
+  "original_extension": ".zip",
+  "transport_interpretation": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "advertised_content_length": "3502663",
+  "content_length_comparison": "equal",
+  "mime_type": "application/zip",
+  "last_modified": "Sat, 03 Oct 2026 07:50:12 GMT",
+  "etag": "\"576fde241b574dce189072664c159d0e\"",
+  "receipt_utc": "2026-10-05T23:55:44.640468+00:00",
+  "status": 200,
+  "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+  "archive_members": [
+    {
+      "name": "master.idx",
+      "codec": 8,
+      "compressed_bytes": 3502493,
+      "expanded_bytes": 27835213,
+      "crc32": "9c55c9f7",
+      "flags": 2
+    }
+  ],
+  "archive_integrity": "zipfile streaming read checked member CRC, exact expanded length; exit 0",
+  "expansion_cap_bytes": 536870912,
+  "expanded_bytes": 27835213,
+  "expansion_ratio": 7.946871566005636,
+  "derivative_path": "specimens/07d2ac3086d8b57a8b4f093a9f3fb1cf74892c1ecaeef828f9c7a9543cf1c251.decoded.idx",
+  "derivative_sha256": "07d2ac3086d8b57a8b4f093a9f3fb1cf74892c1ecaeef828f9c7a9543cf1c251",
+  "independent_shasum_command": [
+    "shasum",
+    "-a",
+    "256",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71.zip",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/07d2ac3086d8b57a8b4f093a9f3fb1cf74892c1ecaeef828f9c7a9543cf1c251.decoded.idx"
+  ],
+  "independent_shasum_exit_code": 0,
+  "independent_shasum_stdout": "393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71.zip\n07d2ac3086d8b57a8b4f093a9f3fb1cf74892c1ecaeef828f9c7a9543cf1c251  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/07d2ac3086d8b57a8b4f093a9f3fb1cf74892c1ecaeef828f9c7a9543cf1c251.decoded.idx\n",
+  "observations": {
+    "text_family": "quarterly ISO-date master",
+    "column_header": "CIK|Company Name|Form Type|Date Filed|Filename",
+    "date_shape_counts": {
+      "YYYY-MM-DD": 302315
+    },
+    "strict_encoding": "ascii",
+    "decoder_failures": [],
+    "bom_hex": null,
+    "newline_counts": {
+      "crlf": 302325,
+      "lone_lf": 0,
+      "lone_cr": 0
+    },
+    "header_lines": [
+      "Description:           Master Index of EDGAR Dissemination Feed",
+      "Last Data Received:    September 30, 2026",
+      "Comments:              webmaster@sec.gov",
+      "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+      "Cloud HTTP:            https://www.sec.gov/Archives/",
+      "",
+      "",
+      "",
+      "",
+      "CIK|Company Name|Form Type|Date Filed|Filename",
+      "--------------------------------------------------------------------------------"
+    ],
+    "separator": "|",
+    "scan_boundary": "Every nonempty post-header row in retained body",
+    "row_count": 302315,
+    "field_count_distribution": {
+      "5": 302315
+    },
+    "path_families": {
+      "edgar/data/CIK/dashed-accession.txt": 302315
+    },
+    "minimum_filing_date": "2026-07-01",
+    "maximum_filing_date": "2026-09-30",
+    "date_bound_raw_rows": {
+      "minimum": "1000209|MEDALLION FINANCIAL CORP|EFFECT|2026-07-01|edgar/data/1000209/9999999995-26-002181.txt",
+      "maximum": "1000275|ROYAL BANK OF CANADA|424B2|2026-09-30|edgar/data/1000275/0000950103-26-014800.txt"
+    },
+    "invalid_dates": [],
+    "representative_raw_rows": {
+      "edgar/data/CIK/dashed-accession.txt": "1000097|KINGDON CAPITAL MANAGEMENT, L.L.C.|13F-HR|2026-08-14|edgar/data/1000097/0001000097-26-000006.txt"
+    },
+    "nonextractable_examples": [],
+    "representative_fields": [
+      "1000097",
+      "KINGDON CAPITAL MANAGEMENT, L.L.C.",
+      "13F-HR",
+      "2026-08-14",
+      "edgar/data/1000097/0001000097-26-000006.txt"
+    ],
+    "non_ascii_byte_count": 0
+  }
+}

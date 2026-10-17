@@ -1,0 +1,5 @@
+Description: synthetic quarterly index
+CIK|Company Name|Form Type|Date Filed|Filename
+--------
+123456|Example Corp|10-K|2024-02-29|edgar/data/123456/0000123456-24-000001.txt
+123456|Example Corp|10-K/A|2024-02-29|edgar/data/123456/0000123456-24-000002.txt

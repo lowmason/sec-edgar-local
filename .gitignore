@@ -1,0 +1,10 @@
+.venv/
+data/
+fixture-data/
+logs/
+releases/
+dist/
+build/
+__pycache__/
+*.py[cod]
+*.egg-info/

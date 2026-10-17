@@ -1,0 +1,345 @@
+{
+  "evidence_id": "SEC-0085",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2026/QTR3/index.json",
+  "start_utc": "2026-10-05T23:41:24.693705+00:00",
+  "receipt_utc": "2026-10-05T23:41:24.845487+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=()"
+    ],
+    [
+      "Content-Security-Policy",
+      "frame-ancestors 'self'"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "lmr2axMc1eVDj3Xnz9TvC0vmIYgj1sWtKpGbpUXbXC5tkshlWYvn8rvQo9ZD6pCbch5F4tPSxN1dVmagxuRBRHvW+rwTdxso"
+    ],
+    [
+      "x-amz-request-id",
+      "A6TDBV8HJ9X985B3"
+    ],
+    [
+      "x-amz-replication-status",
+      "COMPLETED"
+    ],
+    [
+      "Last-Modified",
+      "Thu, 01 Oct 2026 03:45:29 GMT"
+    ],
+    [
+      "ETag",
+      "\"611d838ab2ae2d8990c4ffaa7a36e43c-gzip\""
+    ],
+    [
+      "x-amz-server-side-encryption",
+      "AES256"
+    ],
+    [
+      "x-amz-version-id",
+      "gf4Ujxq7hciB_HDnGEgcpnvXRg_uEDC3"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Pragma",
+      "no-cache"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Cache-Control",
+      "no-cache, no-store, no-transform, proxy-revalidate"
+    ],
+    [
+      "Date",
+      "Mon, 05 Oct 2026 23:41:24 GMT"
+    ],
+    [
+      "Content-Length",
+      "4101"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=101C0F4702C6FEAF54265F2036A43129~-1~YAAQK3/RF8o2nfWgAQAACoxxDhCRANjpZ1UCtMBMxt21k4vOBP54r4sDqkk5wihAdkLcKAX4jciHTrmEfdmL6JMQiK2b1ZagiRUfeOorhPenYLBE1S0zT+Dy3c696LKGp6KGHr8MT8gF6WrIa63+FWv0ymxUGmhfz+acvAyrlR0/OfErKuIrVEBMJJJRa9y95v3qQe4D4qWBSppLdrsIHAuV6nZqCZgfFxCbyPMMxVscYmAq38jH9Ounc3s8XmrpdsHVtWJb70QQ1QkZAmbPFba1hIGRTyj5B8/wZytV0QNzveumSeFEL3Ht45Rc/WsFqIay9a+R9tJvHdoQUlGVfZ8bg9cbvKPlru8iWGkKRNze1fYEYvZAL31pVe6Y0TwQhzi/nGzzovU9QTJYaWhFiELgeJu7b8+RR0C+bRvL5HlXOQV2vNPe73t2li6rrbg9DeMyP7fom9/zbw==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Tue, 05 Oct 2027 23:41:24 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=778B0675DFCCEA54857B2FDC1B424005~YAAQK3/RF8s2nfWgAQAACoxxDgEdQ9NGj9VTeX2u5pLFxwc98nVyD41194yu7wMJRwIxRXcgHvnsH7CwGyXpUraP29bVVttReJwenmPV1hU3EKBUv97nbCex4zQpQ6eVnzsduMQ9VQoQllKXxmoAVVNo6oMUq5gPdB/LjOgJ/MZrlky8MrHZtozFcQS+QGzNVvwnz/SiOCw2KjPzZ3dWJ6YXyz3LF3NvBbwHS0PANW+FzC2hVpqKZp+cZOfRcq/erWqAaBve5rhKUaR1tJCba8WSEf++Na7fu0jwPuhYyvGn2euVhn4ehXDASL/gYm4nMnRej9TVxZYG731n63/7kgUtA/G/n37W/rvjfdJVuSXpgwVdK7ldGvKSn8NGHO2btgS5ECT/qHy5+6/6~4604217~4469302; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 03:41:24 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 4101,
+  "sha256": "e3ec6aa82a06ead3ffa7a4d2020653e67ca97a1ad768f227421b4b41c794cc24",
+  "body_artifact": "listings/SEC-0085.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0085.intent.json",
+  "schema": "SEC directory entries: json",
+  "outcome": "success",
+  "specimen": false,
+  "directory_name": "full-index/2026/QTR3/",
+  "discovered_children": [
+    {
+      "last-modified": "09/30/2026 10:04:20 PM",
+      "name": "company.Z",
+      "type": "file",
+      "href": "company.Z",
+      "size": "7322 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:20 PM",
+      "name": "company.gz",
+      "type": "file",
+      "href": "company.gz",
+      "size": "4086 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:19 PM",
+      "name": "company.idx",
+      "type": "file",
+      "href": "company.idx",
+      "size": "46050 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:17 PM",
+      "name": "company.z",
+      "type": "file",
+      "href": "company.z",
+      "size": "7322 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:20 PM",
+      "name": "company.zip",
+      "type": "file",
+      "href": "company.zip",
+      "size": "3735 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:25 PM",
+      "name": "crawler.idx",
+      "type": "file",
+      "href": "crawler.idx",
+      "size": "56086 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:22 PM",
+      "name": "form.Z",
+      "type": "file",
+      "href": "form.Z",
+      "size": "7258 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:22 PM",
+      "name": "form.gz",
+      "type": "file",
+      "href": "form.gz",
+      "size": "4669 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:21 PM",
+      "name": "form.idx",
+      "type": "file",
+      "href": "form.idx",
+      "size": "46050 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:18 PM",
+      "name": "form.z",
+      "type": "file",
+      "href": "form.z",
+      "size": "7258 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:22 PM",
+      "name": "form.zip",
+      "type": "file",
+      "href": "form.zip",
+      "size": "4353 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:23 PM",
+      "name": "master.Z",
+      "type": "file",
+      "href": "master.Z",
+      "size": "6438 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:23 PM",
+      "name": "master.gz",
+      "type": "file",
+      "href": "master.gz",
+      "size": "3592 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:23 PM",
+      "name": "master.idx",
+      "type": "file",
+      "href": "master.idx",
+      "size": "26884 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:18 PM",
+      "name": "master.z",
+      "type": "file",
+      "href": "master.z",
+      "size": "6438 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:23 PM",
+      "name": "master.zip",
+      "type": "file",
+      "href": "master.zip",
+      "size": "3420 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:14 PM",
+      "name": "sitemap.quarterlyindex1.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex1.xml",
+      "size": "6399 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:14 PM",
+      "name": "sitemap.quarterlyindex10.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex10.xml",
+      "size": "6414 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:14 PM",
+      "name": "sitemap.quarterlyindex11.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex11.xml",
+      "size": "486 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:15 PM",
+      "name": "sitemap.quarterlyindex2.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex2.xml",
+      "size": "6408 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:15 PM",
+      "name": "sitemap.quarterlyindex3.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex3.xml",
+      "size": "6409 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:15 PM",
+      "name": "sitemap.quarterlyindex4.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex4.xml",
+      "size": "6408 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:16 PM",
+      "name": "sitemap.quarterlyindex5.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex5.xml",
+      "size": "6407 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:16 PM",
+      "name": "sitemap.quarterlyindex6.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex6.xml",
+      "size": "6413 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:16 PM",
+      "name": "sitemap.quarterlyindex7.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex7.xml",
+      "size": "6412 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:16 PM",
+      "name": "sitemap.quarterlyindex8.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex8.xml",
+      "size": "6398 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:17 PM",
+      "name": "sitemap.quarterlyindex9.xml",
+      "type": "file",
+      "href": "sitemap.quarterlyindex9.xml",
+      "size": "6404 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:24 PM",
+      "name": "xbrl.Z",
+      "type": "file",
+      "href": "xbrl.Z",
+      "size": "1002 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:24 PM",
+      "name": "xbrl.gz",
+      "type": "file",
+      "href": "xbrl.gz",
+      "size": "560 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:24 PM",
+      "name": "xbrl.idx",
+      "type": "file",
+      "href": "xbrl.idx",
+      "size": "4942 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:18 PM",
+      "name": "xbrl.z",
+      "type": "file",
+      "href": "xbrl.z",
+      "size": "1002 KB"
+    },
+    {
+      "last-modified": "09/30/2026 10:04:24 PM",
+      "name": "xbrl.zip",
+      "type": "file",
+      "href": "xbrl.zip",
+      "size": "530 KB"
+    }
+  ],
+  "selection_decision": "Validated name and dir/file type; no source-body support claim"
+}

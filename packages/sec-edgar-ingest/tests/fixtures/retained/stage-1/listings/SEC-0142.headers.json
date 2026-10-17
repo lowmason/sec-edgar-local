@@ -1,0 +1,113 @@
+{
+  "evidence_id": "SEC-0142",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2015/QTR1/master.zip",
+  "start_utc": "2026-10-05T23:55:01.306459+00:00",
+  "receipt_utc": "2026-10-05T23:55:01.725514+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/zip"
+    ],
+    [
+      "Content-Length",
+      "3901000"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=()"
+    ],
+    [
+      "Content-Security-Policy",
+      "frame-ancestors 'self'"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "+Ymf8l8T+bhx23j4lu3r0ViD1OYDZR8OjI+lNgeY3N20MqxN/rHQwUxJTPzNgFOlB6DoGhwaMUBYlAyRD7R9luYpG3lQqTED"
+    ],
+    [
+      "x-amz-request-id",
+      "83ABNCXAE3ASRGHK"
+    ],
+    [
+      "x-amz-replication-status",
+      "COMPLETED"
+    ],
+    [
+      "Last-Modified",
+      "Sat, 03 Oct 2026 06:28:41 GMT"
+    ],
+    [
+      "ETag",
+      "\"4b508eebaa46d728721a7b377a9965a6\""
+    ],
+    [
+      "x-amz-server-side-encryption",
+      "AES256"
+    ],
+    [
+      "x-amz-meta-mode",
+      "33188"
+    ],
+    [
+      "x-amz-version-id",
+      "XGZwyJqjUbOp.pNEpQAgYApMhTH_Uf5."
+    ],
+    [
+      "Accept-Ranges",
+      "bytes"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Pragma",
+      "no-cache"
+    ],
+    [
+      "Cache-Control",
+      "no-cache, no-store, no-transform, proxy-revalidate"
+    ],
+    [
+      "Date",
+      "Mon, 05 Oct 2026 23:55:01 GMT"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 3901000,
+  "sha256": "984c3130c617c11d085a4deff77a01c21b1113d5bb4c8b2173f5f87eb9f2a728",
+  "body_artifact": "listings/SEC-0142.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0142.intent.json",
+  "schema": "uninspected response entity bytes",
+  "outcome": "success",
+  "specimen": true
+}

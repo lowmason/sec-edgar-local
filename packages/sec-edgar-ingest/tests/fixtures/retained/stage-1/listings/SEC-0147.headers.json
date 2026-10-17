@@ -1,0 +1,125 @@
+{
+  "evidence_id": "SEC-0147",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261001.idx",
+  "start_utc": "2026-10-06T00:02:31.920541+00:00",
+  "receipt_utc": "2026-10-06T00:02:32.095464+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/octet-stream"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=()"
+    ],
+    [
+      "Content-Security-Policy",
+      "frame-ancestors 'self'"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "uKlK0Rxn+2wY/+p7810DCQUhK4wOxBdsMWCnyqVD6ImT3hMnlO1MvsJUo6WDtH1Vw6CePJjzdsw+G3ZkYpmdsD7wvLY/xJok"
+    ],
+    [
+      "x-amz-request-id",
+      "B7Q2QXESNRGVFYNH"
+    ],
+    [
+      "x-amz-replication-status",
+      "PENDING"
+    ],
+    [
+      "Last-Modified",
+      "Fri, 02 Oct 2026 02:02:19 GMT"
+    ],
+    [
+      "ETag",
+      "\"09ea571c7a378ed9469b3a52dde9641e-gzip\""
+    ],
+    [
+      "x-amz-server-side-encryption",
+      "AES256"
+    ],
+    [
+      "x-amz-meta-mode",
+      "33188"
+    ],
+    [
+      "x-amz-version-id",
+      "q.kjbHSqgT1R.jZ7nlYDDwwR.tIEv63v"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Pragma",
+      "no-cache"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Cache-Control",
+      "no-cache, no-store, no-transform, proxy-revalidate"
+    ],
+    [
+      "Date",
+      "Tue, 06 Oct 2026 00:02:32 GMT"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Connection",
+      "Transfer-Encoding"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=7A3068D62A7E488B0D0ED5204AE65490~-1~YAAQRX/RFw/h8eOgAQAA/uGEDhAYlcVC+ogbepNT/T5CYr/Vq5C0HMV+025AcaD8pegimFXMTj+EICZ77VNiS3q8REwi9UPt5sxg5gpf9NnF5KYTZcT31m9DHoxlooGx/sngtxuui7iRLW9+aL8omGiFZNTxJTDbL0w7kVtt+esKvF2U/ZDgM3raR6J2qjCSEn+goZZs/y776fHjoeZK5U7N2a/ZMSFv38q+Db8nFshYXKNw7ebKqXDMrcFa8L/3oMfuZZaM3kbNNbMv9i9Rgm+GCMiGlXoyQBsY/9t5RzEtYWas5ysTYBcW7uKpzfBb7CXFUaFsIjWCyhXPhqWQADTm0HFcVDVz46eK2zliVF8n0LomaV87idPfQIlQY3DPY9QtWbCqvimbf3elP+AL+Bn6SP1mkM539wmMOKOTgtb6RbfBI676KwcfQX/bUhqUtcRcKsE4KroBxA==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Wed, 06 Oct 2027 00:02:32 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=B04B0B15CDE20AFA5FA9E2DD6ED1BA95~YAAQRX/RFxDh8eOgAQAA/uGEDgENidc6JdbElUqiNDZ6dm9MvDwVnviWZxsgRVvh0FZiqQVSYE8Wiq6K1ysPRfqSROpiLPRj+nICnH1MDJhq8aFV86EQb4G2SmSbFVWJQDsz8JWp2iYz2PJr+mrwn3gI97YcqHF6m39D2U25EGaaH6RlHp0oV/APng4Zz2yjmcjpQFAR6eIx862BTehyLB1VT0fnzklr6gIk15X+e1u4JuA5HNvfIZzY8B2igIC4CdQbO9SOwxL3ec0JI8vcbV7ByiudWOJpiCkcIN92uj0mBzaWUuzkiI0lowFo6tgj2fAq4rkqsDzaFjyQtLe7AGEEUG4M+ZP7HQiux5wUZNqxhnf08TWwjqYtnVy8db4Z/ZF7NSG6HGJ8DgDP~3294519~3488056; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 04:02:32 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 481733,
+  "sha256": "529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17",
+  "body_artifact": "listings/SEC-0147.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0147.intent.json",
+  "schema": "uninspected response entity bytes",
+  "outcome": "success",
+  "specimen": true
+}

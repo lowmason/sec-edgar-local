@@ -1,0 +1,14 @@
+[project]
+name = "sec-edgar-ingest"
+version = "0.2.0"
+description = "Native local SEC filing-index ingestion"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = ["pyarrow==25.0.1", "requests==2.34.2"]
+
+[project.scripts]
+sec-edgar-ingest = "sec_edgar_ingest.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"

@@ -1,0 +1,20 @@
+[project]
+name = "sec-edgar"
+version = "0.1.0"
+description = "SEC filing-index ingestion workspace"
+readme = "README.md"
+authors = [
+    { name = "Lowell Mason", email = "mason.lowell@mac.com" }
+]
+requires-python = ">=3.14"
+dependencies = ["sec-edgar-ingest"]
+
+[tool.uv]
+package = false
+constraint-dependencies = ["pyarrow==25.0.1", "requests==2.34.2"]
+
+[tool.uv.sources]
+sec-edgar-ingest = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/sec-edgar-ingest"]

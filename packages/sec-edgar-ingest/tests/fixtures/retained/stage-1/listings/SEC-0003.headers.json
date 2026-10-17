@@ -1,0 +1,332 @@
+{
+  "evidence_id": "SEC-0003",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2010/QTR1/index.json",
+  "start_utc": "2026-10-05T23:40:56.407966+00:00",
+  "receipt_utc": "2026-10-05T23:40:56.609478+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "m0jVVO256LIf4a8uyz+ssb9g7SlwyLhRTDiaa96iPTZh/1WIdoRm2GIsWLAhllAcrws1lzCcYzv6AtAP9ZRsAEYHZpqwNaSB"
+    ],
+    [
+      "x-amz-request-id",
+      "C7D6R9XJZ28X02TA"
+    ],
+    [
+      "x-amz-replication-status",
+      "REPLICA"
+    ],
+    [
+      "Last-Modified",
+      "Sat, 25 Nov 2017 22:04:19 GMT"
+    ],
+    [
+      "ETag",
+      "\"c6b6520cd7fc99286a8266e2ac0a5661-gzip\""
+    ],
+    [
+      "x-amz-meta-mode",
+      "33188"
+    ],
+    [
+      "x-amz-version-id",
+      "m.b7oWYejT.fqse97tt9T1GcchMIaEt7"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Date",
+      "Mon, 05 Oct 2026 23:40:56 GMT"
+    ],
+    [
+      "Content-Length",
+      "4254"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=E6A05082A9DD489C76CD7FE05D494E20~-1~YAAQLH/RF8HBUPOgAQAAux1xDhBCNrZ4MKG7QDPisWCSagf4Cb190PyVFrJW6uK2lpH0Fp0Z4E8/JCu1R2elScAoRIml1vSm5VGpIg7vvom5Y+WtMIWCOwJwPKfye9vsYs3l4eMEwzUDtO5lflPHXMuxmE+Ol0aMHRyShdjaZ66G4UanFTsXdGlgkKK11ZuioI03rzUz6wo+8vNvbkmN4SiRPLBwZYZkFS9K6iF4a23hgCNVq9FCSyoFWRqJbf3n5alsZhkbNUTU+4nUeL6/xyxEd4AjdSLZqse6AmomR+p77H+9zqKFm8f3a+q3ZneoAq0+nu95tRB/YaklQYkOXIGdPkFQ9FUdAQjXyZOVw2PRgT3hnL9p1VeETreOC4I+Z9THWyZ1ubFQzfbOEanWMfovY36Ihb30pCvffC3Snml33yuuhyxlHoV8t+SkIRRZm9PNkQpjp7N8Bw==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Tue, 05 Oct 2027 23:40:56 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=DDCC0F51A3792FFB57B29FCFE78AFD97~YAAQLH/RF8LBUPOgAQAAux1xDgH0SiE4J16s+xARAzHL85FDlKRTuVnzlw2WsW2JRQTa3A7FuDiBYZHbxB57+0nPVmWTdfBrTIFgD8jcJdYy17+OvTGKtCNTYd+oA9e5wh58qgF08fzQMdD4ZqtSLrOE/W+kG+v1Sjf8kY90YKka2D74rIZyth+pQfYrzTQNJMDa7Jpiw3TZXaoBYs3NimG5bzfnFbl4eYnVcK+Metc6JUVyiqesZjBy5+L7jC6BF35wmtCP3al8I6ivdLcR+PbPLyuc3K/u4rqC3/UNfWc/5LOcsFEirm8SJX1Gqqe8GytnZTzU+M87gQegxAIpq/eYzTKL0rZHPjDZ4I3eh2acF0dxpZPqge67R+Ue6NdRke6JPa5LW524DY0O~3356996~3753266; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 03:40:56 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 4254,
+  "sha256": "67dfc9c726f4d77949cb93bf270b16664ed0b4f4026b8cec73e08e27104f011c",
+  "body_artifact": "listings/SEC-0003.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0003.intent.json",
+  "schema": "SEC directory entries: json",
+  "outcome": "success",
+  "specimen": false,
+  "directory_name": "full-index/2010/QTR1/",
+  "discovered_children": [
+    {
+      "last-modified": "09/06/2014 01:42:11 AM",
+      "size": "4411 KB",
+      "name": "company.gz",
+      "href": "company.gz",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:02 AM",
+      "size": "44306 KB",
+      "name": "company.idx",
+      "href": "company.idx",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:13 AM",
+      "size": "8346 KB",
+      "name": "company.sit",
+      "href": "company.sit",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:09 AM",
+      "size": "7715 KB",
+      "name": "company.Z",
+      "href": "company.Z",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:21 AM",
+      "size": "4026 KB",
+      "name": "company.zip",
+      "href": "company.zip",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:59 AM",
+      "size": "54282 KB",
+      "name": "crawler.idx",
+      "href": "crawler.idx",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:24 AM",
+      "size": "5063 KB",
+      "name": "form.gz",
+      "href": "form.gz",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:05 AM",
+      "size": "44306 KB",
+      "name": "form.idx",
+      "href": "form.idx",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:26 AM",
+      "size": "8503 KB",
+      "name": "form.sit",
+      "href": "form.sit",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:22 AM",
+      "size": "7712 KB",
+      "name": "form.Z",
+      "href": "form.Z",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:34 AM",
+      "size": "4710 KB",
+      "name": "form.zip",
+      "href": "form.zip",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:37 AM",
+      "size": "3794 KB",
+      "name": "master.gz",
+      "href": "master.gz",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:56 AM",
+      "size": "26145 KB",
+      "name": "master.idx",
+      "href": "master.idx",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:38 AM",
+      "size": "7392 KB",
+      "name": "master.sit",
+      "href": "master.sit",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:35 AM",
+      "size": "6767 KB",
+      "name": "master.Z",
+      "href": "master.Z",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:42 AM",
+      "size": "3640 KB",
+      "name": "master.zip",
+      "href": "master.zip",
+      "type": "file"
+    },
+    {
+      "last-modified": "05/16/2012 12:08:30 PM",
+      "size": "1 KB",
+      "name": "sitemap.quarterlyindex.xml",
+      "href": "sitemap.quarterlyindex.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:50 AM",
+      "size": "6374 KB",
+      "name": "sitemap.quarterlyindex1.xml",
+      "href": "sitemap.quarterlyindex1.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:52 AM",
+      "size": "6374 KB",
+      "name": "sitemap.quarterlyindex10.xml",
+      "href": "sitemap.quarterlyindex10.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:52 AM",
+      "size": "527 KB",
+      "name": "sitemap.quarterlyindex11.xml",
+      "href": "sitemap.quarterlyindex11.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:51 AM",
+      "size": "6374 KB",
+      "name": "sitemap.quarterlyindex2.xml",
+      "href": "sitemap.quarterlyindex2.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:51 AM",
+      "size": "6372 KB",
+      "name": "sitemap.quarterlyindex3.xml",
+      "href": "sitemap.quarterlyindex3.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:51 AM",
+      "size": "6372 KB",
+      "name": "sitemap.quarterlyindex4.xml",
+      "href": "sitemap.quarterlyindex4.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:51 AM",
+      "size": "6371 KB",
+      "name": "sitemap.quarterlyindex5.xml",
+      "href": "sitemap.quarterlyindex5.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:51 AM",
+      "size": "6377 KB",
+      "name": "sitemap.quarterlyindex6.xml",
+      "href": "sitemap.quarterlyindex6.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:52 AM",
+      "size": "6372 KB",
+      "name": "sitemap.quarterlyindex7.xml",
+      "href": "sitemap.quarterlyindex7.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:52 AM",
+      "size": "6375 KB",
+      "name": "sitemap.quarterlyindex8.xml",
+      "href": "sitemap.quarterlyindex8.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:41:52 AM",
+      "size": "6375 KB",
+      "name": "sitemap.quarterlyindex9.xml",
+      "href": "sitemap.quarterlyindex9.xml",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:42 AM",
+      "size": "13 KB",
+      "name": "xbrl.gz",
+      "href": "xbrl.gz",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:05 AM",
+      "size": "50 KB",
+      "name": "xbrl.idx",
+      "href": "xbrl.idx",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:42 AM",
+      "size": "17 KB",
+      "name": "xbrl.sit",
+      "href": "xbrl.sit",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:42 AM",
+      "size": "17 KB",
+      "name": "xbrl.Z",
+      "href": "xbrl.Z",
+      "type": "file"
+    },
+    {
+      "last-modified": "09/06/2014 01:42:43 AM",
+      "size": "13 KB",
+      "name": "xbrl.zip",
+      "href": "xbrl.zip",
+      "type": "file"
+    }
+  ],
+  "selection_decision": "Validated name and dir/file type; no source-body support claim"
+}

@@ -1,0 +1,22 @@
+{
+  "request_headers": {
+    "User-Agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+    "Accept-Encoding": "identity"
+  },
+  "budget_counter": {
+    "start_utc": "2026-10-05T23:40:28.753726+00:00",
+    "deadline_utc": "2026-10-06T00:25:28.753726+00:00",
+    "issuer": "root chat only",
+    "attempts": 88,
+    "received_bytes": 260459,
+    "specimens": 0,
+    "next_allowed_at": "2026-10-05T23:41:26.068593+00:00",
+    "halted": ""
+  },
+  "evidence_id": "SEC-0088",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/2010/index.json",
+  "start_utc": "2026-10-05T23:41:25.728593+00:00",
+  "outcome": "attempt_started",
+  "received_bytes": 0,
+  "issuer": "root chat only"
+}

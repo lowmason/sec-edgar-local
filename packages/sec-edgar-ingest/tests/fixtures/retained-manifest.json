@@ -1,0 +1,430 @@
+{
+  "schema_version": "sec-retained-fixture-manifest-v1",
+  "provenance": {
+    "finding": {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/final-candidate/finding-F1-2026-10-05-939a724eccf22147015a59d5940ed57f02cc4e9fe9d942a9cd78ae73c34615ff.md",
+      "sha256": "939a724eccf22147015a59d5940ed57f02cc4e9fe9d942a9cd78ae73c34615ff"
+    },
+    "accepted_manifest": {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/final-candidate/evidence-manifest.json",
+      "sha256": "124e96041548daba8216aa495fc69021751555b0f0e4c890ac85e934f512a131"
+    }
+  },
+  "records": [
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0001.body",
+      "bytes": 5569,
+      "sha256": "e658f0319201d29647e0d35e1416a2c9e5516f798fc692a0a0e03c842dca09c0"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0001.headers.json",
+      "bytes": 11714,
+      "sha256": "4ba6cf80015b71479eae66421da58594a7d31a655dc6413f9daca6528c13de0a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0001.intent.json",
+      "bytes": 679,
+      "sha256": "a158e9d2fc30330e86cfcaa4d142b4e0d6e7b6bd3357fb701d888b79fbdef21c"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0002.body",
+      "bytes": 480,
+      "sha256": "323453899790aad4c2b6a359cc16e1fe42c0bbe20ef0470359652fb173e75dc2"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0002.headers.json",
+      "bytes": 4289,
+      "sha256": "763997fc099e9dcf3d679be90cb941fbfddf9d25eecd0f162a4e789d8a6af5e9"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0002.intent.json",
+      "bytes": 687,
+      "sha256": "0a4fd3d41a70b87152a99230d636226b6c9c7f1f574621dffc8366eb686b09dd"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0003.body",
+      "bytes": 4254,
+      "sha256": "67dfc9c726f4d77949cb93bf270b16664ed0b4f4026b8cec73e08e27104f011c"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0003.headers.json",
+      "bytes": 9079,
+      "sha256": "cfa531127978099113ab4f43224e702f5b26c1bf3f3dee222083cbb3b26167de"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0003.intent.json",
+      "bytes": 692,
+      "sha256": "5e4cad85f485ee7caf6c617041cedb7b837f9a5e70d5a113894852471aa9c89d"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0028.body",
+      "bytes": 3658,
+      "sha256": "f67b224609da652a129018d9858e6650ee92fdfa5729b27c0f5007f19b0d9c27"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0028.headers.json",
+      "bytes": 8243,
+      "sha256": "bbac87a334536bf7aa41c4c58cdeb73c5d5fe2f212c1d2318cb45fdb6483b4f7"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0028.intent.json",
+      "bytes": 694,
+      "sha256": "000063d27b26a84ea1c0218be2529377bc91509cc327b3aa20ad5f2e3b83266a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0085.body",
+      "bytes": 4101,
+      "sha256": "e3ec6aa82a06ead3ffa7a4d2020653e67ca97a1ad768f227421b4b41c794cc24"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0085.headers.json",
+      "bytes": 9280,
+      "sha256": "3ac3bb0e11450f9e81603139611fa37fbcb04cf8b7eab84d90f92c5873a2bdab"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0085.intent.json",
+      "bytes": 695,
+      "sha256": "d25c00f6333f67e1a7728979540d089dcca03effb42c2ea19ca20f85c3f0511a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0086.body",
+      "bytes": 2575,
+      "sha256": "30bf3acb84a579303ceb0e4bc3526366f70b2e225607f228d4af6729d40b4801"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0086.headers.json",
+      "bytes": 7254,
+      "sha256": "5085fcadf085e8d6be2adfdfe68368cffc252bad66f5a996276626afb2d90f2b"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0086.intent.json",
+      "bytes": 695,
+      "sha256": "83669d05d294094532a6f4d65438e4a934b9dd2cfaf8aeb948c7185b289e0ef7"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0087.body",
+      "bytes": 3763,
+      "sha256": "50a885e0831f37adc2ef981d9ffe9cb4c732ce6459056f872a2e6168b1cf28ae"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0087.headers.json",
+      "bytes": 9140,
+      "sha256": "76af5792e9398f340981332c2f4fa489a8f64e4469f1c0b84a0601df745ad072"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0087.intent.json",
+      "bytes": 686,
+      "sha256": "6bc2de90bc5d40f796687b7a2354cb2c184cad2861c1e3fb94599d9359d70015"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0088.body",
+      "bytes": 485,
+      "sha256": "ed12d9ac7f9a92213275aef20ee80b1c4af41db94087d783bb99622a48b2afcd"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0088.headers.json",
+      "bytes": 3909,
+      "sha256": "4523a3d35c3e5d8938e605d3261b0970027517754443bf80fd6ce3b020a2750f"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0088.intent.json",
+      "bytes": 691,
+      "sha256": "6612e698334e913ecb04d415e9ad2056efedd75d236fd2553474e3d429b06fe9"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0089.body",
+      "bytes": 46841,
+      "sha256": "df157692ebaebb28fa55a630f37da29ad95c347947e8f3ea7fd77e0ab205ce62"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0089.headers.json",
+      "bytes": 36704,
+      "sha256": "2fc9f7904bef25fccb0075357cb4cd08c5e1159615337fb09ba1e0856f4b5c68"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0089.intent.json",
+      "bytes": 696,
+      "sha256": "185d5577338bc61c50c3bab73eaf637380d53b0ae1b5e4d0fa60c877885f3ce7"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0104.body",
+      "bytes": 40844,
+      "sha256": "127c0245abfd6698302e9dca031d9f8605cbda4017c125954c0b5135aadc9d39"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0104.headers.json",
+      "bytes": 58728,
+      "sha256": "eda2577c9e3e5f82613441f1c8b0cb6b08e4a3a1451c37323e7cad9e8dab1149"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0104.intent.json",
+      "bytes": 697,
+      "sha256": "ba2354f59844d29f309e9deeb00c7cf872f32b446319bc6a582d608bcc0062d2"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0135.body",
+      "bytes": 40151,
+      "sha256": "119bb9e23f278b37628547544db99c728fc7b1ec091c2fffe15f8702145c1603"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0135.headers.json",
+      "bytes": 57811,
+      "sha256": "c78983ad3a3a079971b24dbe34842108f518052d617f2f2295b287fc49312844"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0135.intent.json",
+      "bytes": 698,
+      "sha256": "277b648426e607ec21431462dc2d0c47de23d02905019b6ff557aac76d9e2276"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0137.body",
+      "bytes": 40906,
+      "sha256": "cadfdf4c918cf3621f11d52e29db9581c98a40badb2c47f9a17dab9878c6a0fb"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0137.headers.json",
+      "bytes": 58806,
+      "sha256": "b1b67acc11f842a7cd138a3858c4053f3eaf3063bd66fd8e23662501718514e6"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0137.intent.json",
+      "bytes": 698,
+      "sha256": "7d18f1aa7a54f5db0802ec0df73cd58c5dd5156fce4eecb9f7375bfa58f9ece9"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0138.body",
+      "bytes": 42844,
+      "sha256": "dbba44f7f3e0cdcabc15f4337daa7f2ba2f42fdcf7d6381719a1e9a3faa2947a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0138.headers.json",
+      "bytes": 61830,
+      "sha256": "88d18a97faec0c81d10a54a9b0bea1a81d7dda70ecc181c83574f03377c3f3e0"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0138.intent.json",
+      "bytes": 698,
+      "sha256": "891733f4946b043fb9474ae1ed9e44e90824f4327e7d2256b939995f58224623"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0139.body",
+      "bytes": 1419,
+      "sha256": "bb4e29c64ca74c3ed92b8e27d4f4bc2f421fb3b4ed6f8c329609fc4fc72bf1bb"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0139.headers.json",
+      "bytes": 5543,
+      "sha256": "9e2ea50927d127eb38e5ca48a7f8161f25b56f94bef6dde13741152e5e6c6d7a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0139.intent.json",
+      "bytes": 698,
+      "sha256": "88c5b6dd941779f9559ecea95d59c108f5776f0da8d2edc3e443e666c0d32dd9"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0141.body",
+      "bytes": 3729148,
+      "sha256": "aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0141.headers.json",
+      "bytes": 2324,
+      "sha256": "93d2925580047ef49c874af43cd844956905d1ec39c2c4768027faac43dfc671"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0141.intent.json",
+      "bytes": 697,
+      "sha256": "d013d34fc77d8ca8d7dc270c3bbe17082c69cd5e49b245ee7a717dbd7e5fb31b"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0142.body",
+      "bytes": 3901000,
+      "sha256": "984c3130c617c11d085a4deff77a01c21b1113d5bb4c8b2173f5f87eb9f2a728"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0142.headers.json",
+      "bytes": 2344,
+      "sha256": "fa81e050a269f3b7333976398a376a7b23f89b5d9df633b585257bfcf3cd87f8"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0142.intent.json",
+      "bytes": 697,
+      "sha256": "09ba1c8578baf142ece9aa259c8fb901596ab2d53be10193f9d4b4887211f62a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0143.body",
+      "bytes": 3502663,
+      "sha256": "393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0143.headers.json",
+      "bytes": 2344,
+      "sha256": "8c80695ec3aef908343bed3b0ed8c57ef98eb403564a6a0bdaa596d9f3ada9c9"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0143.intent.json",
+      "bytes": 697,
+      "sha256": "e9d4f61e175f2cdc840a2b63ffb9a195dc6200a63c4498ce5be9c772380227bc"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0144.body",
+      "bytes": 178884,
+      "sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0144.headers.json",
+      "bytes": 2342,
+      "sha256": "bb8cddcdb400c039f441f200062cf27247d2bc0f46d28ec6fe83016befac6a87"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0144.intent.json",
+      "bytes": 698,
+      "sha256": "eb126d8cb49b87832397f4e4a921e238d27852ccfd5c4bd0dad33c38eb65d41a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0145.body",
+      "bytes": 178884,
+      "sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0145.headers.json",
+      "bytes": 2312,
+      "sha256": "1a85dfe75cf235e43a3462a2a33fa889464c411d8524fcbdc182ce756408d27f"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0145.intent.json",
+      "bytes": 688,
+      "sha256": "2e6908bac9e2a6367b51abc124e2346e9d253e058d53ecec75078c03cb1f44be"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0146.body",
+      "bytes": 320256,
+      "sha256": "8ec83de06534af79673887618c0125184a76e9a3db79843c95d3558561ddd018"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0146.headers.json",
+      "bytes": 3675,
+      "sha256": "60e771cfa08fcc635f9c874cfb2e32745d69d75d079517987da352df747b774a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0146.intent.json",
+      "bytes": 708,
+      "sha256": "94df6989655629214f1a09b25fa47de59ad01f878423da7b7ff8cfb8ec6dedb2"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0147.body",
+      "bytes": 481733,
+      "sha256": "529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0147.headers.json",
+      "bytes": 3695,
+      "sha256": "6d63b7a85e2919f827700e9e8238f30508ce328321cfefec4f690bff34a5bfd2"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0147.intent.json",
+      "bytes": 708,
+      "sha256": "c953b355b5a41901dfe903d480f8b26d0a672347703a9e5f5f4c4a149651b558"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0148.body",
+      "bytes": 621000,
+      "sha256": "17f223abb09fc7488947f0ca9e4686167927a09a2f342d8bcefd0d445fdbc3eb"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0148.headers.json",
+      "bytes": 3697,
+      "sha256": "9fc9aa81a294eebd1e4fc7e23132ad1b8c47881a269fe0d59d827e4d7fbefeac"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0148.intent.json",
+      "bytes": 708,
+      "sha256": "ea2e3f3011597f875cb6626b8d52d0eb2b1a13ed61727f49328edcd0ac44ed3a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0149.body",
+      "bytes": 273232,
+      "sha256": "a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0149.headers.json",
+      "bytes": 3291,
+      "sha256": "12883b8e698caaabe470bd48ede4df09d2a3bfc6fcba4cd0b3549dd0d5a5edb6"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0149.intent.json",
+      "bytes": 708,
+      "sha256": "8575302846d74edc3d687d02ab0ee51e94783d43201381b502f3750d2cd4685a"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0150.body",
+      "bytes": 417467,
+      "sha256": "caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0150.headers.json",
+      "bytes": 3677,
+      "sha256": "87e5fff5ddc6d35f8c5d79ab2b18760be2db84699db6cf89753d0efd4320b014"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0150.intent.json",
+      "bytes": 708,
+      "sha256": "7f3bafb31221387b3a280e7594cf20b747fb260949f789b468cd41f86a1e005c"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0141.inspection.json",
+      "bytes": 4374,
+      "sha256": "73f2417c3bf1fbbade124472c0c62487aa60b904987e0da995237099466970c4"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0142.inspection.json",
+      "bytes": 4363,
+      "sha256": "3fd1682db7343a74d9bf390e4cf0c2f7bcc41abcdf21aaa5d0d51a1b8cbd8c2e"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0143.inspection.json",
+      "bytes": 4422,
+      "sha256": "9e11c3e2138b77c1a8591cca61c251eef6ee86aed43ad0c3e08582dae77d1014"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0144.inspection.json",
+      "bytes": 4374,
+      "sha256": "8fcdc1ea4c028dc7cb37b26aad2b860094007d8afb151e416aeffd36d53e6fe3"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0145.inspection.json",
+      "bytes": 4364,
+      "sha256": "c5f2d33592a6860c420c73c02a697992f4215211f43ac2cbe3249b6d164e7269"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0146.inspection.json",
+      "bytes": 3497,
+      "sha256": "279809ae05bf35a443258d8bedf2ceb066f15e99ce21140202014c0a8d396762"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0147.inspection.json",
+      "bytes": 3493,
+      "sha256": "d83d9462eb5890b6e1c4744e858457d55e2687386159aebfa10c84c5564753f7"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0148.inspection.json",
+      "bytes": 3468,
+      "sha256": "f977edeff01732010f3660e1144fa633d846aa2acf4921b139852a59b8b681c7"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0149.inspection.json",
+      "bytes": 3525,
+      "sha256": "484b35c7ce250a0f00b4f8fff6d35bb1a6ea513e322f76854200086cf5515300"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0150.inspection.json",
+      "bytes": 3493,
+      "sha256": "9105d4928899a16a79cf28935758e1b0096a9cb6e832737bc65c375445a44ee8"
+    },
+    {
+      "path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/matrix.json",
+      "bytes": 8309,
+      "sha256": "332cbfe6e6ee2077176c49f6f71e9bb90805f4fc7ad86ff9f58843f035e43177"
+    }
+  ]
+}

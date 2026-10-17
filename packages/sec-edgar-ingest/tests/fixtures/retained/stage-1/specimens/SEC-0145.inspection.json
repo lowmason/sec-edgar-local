@@ -1,0 +1,100 @@
+{
+  "evidence_id": "SEC-0145",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/master.zip",
+  "receipt_artifact": "listings/SEC-0145.headers.json",
+  "original_path": "specimens/ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8.zip",
+  "original_bytes": 178884,
+  "original_sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8",
+  "original_extension": ".zip",
+  "transport_interpretation": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "advertised_content_length": "178884",
+  "content_length_comparison": "equal",
+  "mime_type": "application/zip",
+  "last_modified": "Sat, 03 Oct 2026 07:50:20 GMT",
+  "etag": "\"00ae502f4fa0fe87ef906222884443e9\"",
+  "receipt_utc": "2026-10-05T23:57:14.225345+00:00",
+  "status": 200,
+  "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+  "archive_members": [
+    {
+      "name": "master.idx",
+      "codec": 8,
+      "compressed_bytes": 178714,
+      "expanded_bytes": 1120694,
+      "crc32": "cf0484c8",
+      "flags": 2
+    }
+  ],
+  "archive_integrity": "zipfile streaming read checked member CRC, exact expanded length; exit 0",
+  "expansion_cap_bytes": 536870912,
+  "expanded_bytes": 1120694,
+  "expansion_ratio": 6.264920283535699,
+  "derivative_path": "specimens/f2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af.decoded.idx",
+  "derivative_sha256": "f2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af",
+  "independent_shasum_command": [
+    "shasum",
+    "-a",
+    "256",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8.zip",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/f2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af.decoded.idx"
+  ],
+  "independent_shasum_exit_code": 0,
+  "independent_shasum_stdout": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8.zip\nf2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/f2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af.decoded.idx\n",
+  "observations": {
+    "text_family": "quarterly ISO-date master",
+    "column_header": "CIK|Company Name|Form Type|Date Filed|Filename",
+    "date_shape_counts": {
+      "YYYY-MM-DD": 12479
+    },
+    "strict_encoding": "ascii",
+    "decoder_failures": [],
+    "bom_hex": null,
+    "newline_counts": {
+      "crlf": 12489,
+      "lone_lf": 0,
+      "lone_cr": 0
+    },
+    "header_lines": [
+      "Description:           Master Index of EDGAR Dissemination Feed",
+      "Last Data Received:    October 3, 2026",
+      "Comments:              webmaster@sec.gov",
+      "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+      "Cloud HTTP:            https://www.sec.gov/Archives/",
+      "",
+      "",
+      "",
+      "",
+      "CIK|Company Name|Form Type|Date Filed|Filename",
+      "--------------------------------------------------------------------------------"
+    ],
+    "separator": "|",
+    "scan_boundary": "Every nonempty post-header row in retained body",
+    "row_count": 12479,
+    "field_count_distribution": {
+      "5": 12479
+    },
+    "path_families": {
+      "edgar/data/CIK/dashed-accession.txt": 12479
+    },
+    "minimum_filing_date": "2026-10-01",
+    "maximum_filing_date": "2026-10-02",
+    "date_bound_raw_rows": {
+      "minimum": "1000275|ROYAL BANK OF CANADA|424B2|2026-10-01|edgar/data/1000275/0000950103-26-014887.txt",
+      "maximum": "1000275|ROYAL BANK OF CANADA|424B2|2026-10-02|edgar/data/1000275/0000950103-26-014973.txt"
+    },
+    "invalid_dates": [],
+    "representative_raw_rows": {
+      "edgar/data/CIK/dashed-accession.txt": "1000275|ROYAL BANK OF CANADA|424B2|2026-10-01|edgar/data/1000275/0000950103-26-014887.txt"
+    },
+    "nonextractable_examples": [],
+    "representative_fields": [
+      "1000275",
+      "ROYAL BANK OF CANADA",
+      "424B2",
+      "2026-10-01",
+      "edgar/data/1000275/0000950103-26-014887.txt"
+    ],
+    "non_ascii_byte_count": 0
+  }
+}

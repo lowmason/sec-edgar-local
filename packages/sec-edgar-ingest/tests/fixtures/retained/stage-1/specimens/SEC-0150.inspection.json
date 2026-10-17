@@ -1,0 +1,86 @@
+{
+  "evidence_id": "SEC-0150",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR1/master.20260102.idx",
+  "receipt_artifact": "listings/SEC-0150.headers.json",
+  "original_path": "specimens/caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7.idx",
+  "original_bytes": 417467,
+  "original_sha256": "caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7",
+  "original_extension": ".idx",
+  "transport_interpretation": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "advertised_content_length": null,
+  "content_length_comparison": "not advertised",
+  "mime_type": "application/octet-stream",
+  "last_modified": "Sat, 03 Jan 2026 03:04:31 GMT",
+  "etag": "\"38caa22cd9a65fe127f895030caec46f-gzip\"",
+  "receipt_utc": "2026-10-06T00:05:20.276399+00:00",
+  "status": 200,
+  "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+  "archive_members": [],
+  "archive_integrity": "not an archive",
+  "expansion_cap_bytes": 536870912,
+  "expanded_bytes": 417467,
+  "expansion_ratio": 1.0,
+  "derivative_path": null,
+  "derivative_sha256": null,
+  "independent_shasum_command": [
+    "shasum",
+    "-a",
+    "256",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7.idx"
+  ],
+  "independent_shasum_exit_code": 0,
+  "independent_shasum_stdout": "caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7.idx\n",
+  "observations": {
+    "text_family": "daily compact-date master",
+    "column_header": "CIK|Company Name|Form Type|Date Filed|File Name",
+    "date_shape_counts": {
+      "YYYYMMDD": 4777
+    },
+    "strict_encoding": "ascii",
+    "decoder_failures": [],
+    "bom_hex": null,
+    "newline_counts": {
+      "crlf": 0,
+      "lone_lf": 4783,
+      "lone_cr": 0
+    },
+    "header_lines": [
+      "Description:           Daily Index of EDGAR Dissemination Feed",
+      "Last Data Received:    Jan 2, 2026",
+      "Comments:              webmaster@sec.gov",
+      "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+      " ",
+      "CIK|Company Name|Form Type|Date Filed|File Name",
+      "--------------------------------------------------------------------------------"
+    ],
+    "separator": "|",
+    "scan_boundary": "Every nonempty post-header row in retained body",
+    "row_count": 4777,
+    "field_count_distribution": {
+      "5": 4777
+    },
+    "path_families": {
+      "edgar/data/CIK/dashed-accession.txt": 4777
+    },
+    "minimum_filing_date": "20250827",
+    "maximum_filing_date": "20260102",
+    "date_bound_raw_rows": {
+      "minimum": "2083477|APS BDC, LLC|DRS|20250827|edgar/data/2083477/0000950123-25-008593.txt",
+      "maximum": "1000045|OLD MARKET CAPITAL Corp|15-12G/A|20260102|edgar/data/1000045/0001437749-26-000015.txt"
+    },
+    "invalid_dates": [],
+    "representative_raw_rows": {
+      "edgar/data/CIK/dashed-accession.txt": "1000045|OLD MARKET CAPITAL Corp|15-12G/A|20260102|edgar/data/1000045/0001437749-26-000015.txt"
+    },
+    "nonextractable_examples": [],
+    "representative_fields": [
+      "1000045",
+      "OLD MARKET CAPITAL Corp",
+      "15-12G/A",
+      "20260102",
+      "edgar/data/1000045/0001437749-26-000015.txt"
+    ],
+    "non_ascii_byte_count": 0
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "evidence_id": "SEC-0141",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2010/QTR1/master.zip",
+  "receipt_artifact": "listings/SEC-0141.headers.json",
+  "original_path": "specimens/aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de.zip",
+  "original_bytes": 3729148,
+  "original_sha256": "aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de",
+  "original_extension": ".zip",
+  "transport_interpretation": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "advertised_content_length": "3729148",
+  "content_length_comparison": "equal",
+  "mime_type": "application/zip",
+  "last_modified": "Sat, 03 Oct 2026 05:58:20 GMT",
+  "etag": "\"8e3601fdd70d4bdeeb1d55fc18c85bd1\"",
+  "receipt_utc": "2026-10-05T23:53:32.451401+00:00",
+  "status": 200,
+  "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+  "archive_members": [
+    {
+      "name": "master.idx",
+      "codec": 8,
+      "compressed_bytes": 3728978,
+      "expanded_bytes": 27083681,
+      "crc32": "0b205b21",
+      "flags": 2
+    }
+  ],
+  "archive_integrity": "zipfile streaming read checked member CRC, exact expanded length; exit 0",
+  "expansion_cap_bytes": 536870912,
+  "expanded_bytes": 27083681,
+  "expansion_ratio": 7.262699415523332,
+  "derivative_path": "specimens/5562b0502a4fbed557af88bdbe28487c3c96475a211545843c706b84d8ed784f.decoded.idx",
+  "derivative_sha256": "5562b0502a4fbed557af88bdbe28487c3c96475a211545843c706b84d8ed784f",
+  "independent_shasum_command": [
+    "shasum",
+    "-a",
+    "256",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de.zip",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/5562b0502a4fbed557af88bdbe28487c3c96475a211545843c706b84d8ed784f.decoded.idx"
+  ],
+  "independent_shasum_exit_code": 0,
+  "independent_shasum_stdout": "aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de.zip\n5562b0502a4fbed557af88bdbe28487c3c96475a211545843c706b84d8ed784f  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/5562b0502a4fbed557af88bdbe28487c3c96475a211545843c706b84d8ed784f.decoded.idx\n",
+  "observations": {
+    "text_family": "quarterly ISO-date master",
+    "column_header": "CIK|Company Name|Form Type|Date Filed|Filename",
+    "date_shape_counts": {
+      "YYYY-MM-DD": 300561
+    },
+    "strict_encoding": "ascii",
+    "decoder_failures": [],
+    "bom_hex": null,
+    "newline_counts": {
+      "crlf": 300571,
+      "lone_lf": 0,
+      "lone_cr": 0
+    },
+    "header_lines": [
+      "Description:           Master Index of EDGAR Dissemination Feed",
+      "Last Data Received:    March 31, 2010",
+      "Comments:              webmaster@sec.gov",
+      "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+      "Cloud HTTP:            https://www.sec.gov/Archives/",
+      "",
+      "",
+      "",
+      "",
+      "CIK|Company Name|Form Type|Date Filed|Filename",
+      "--------------------------------------------------------------------------------"
+    ],
+    "separator": "|",
+    "scan_boundary": "Every nonempty post-header row in retained body",
+    "row_count": 300561,
+    "field_count_distribution": {
+      "5": 300561
+    },
+    "path_families": {
+      "edgar/data/CIK/dashed-accession.txt": 300561
+    },
+    "minimum_filing_date": "2010-01-02",
+    "maximum_filing_date": "2010-03-31",
+    "date_bound_raw_rows": {
+      "minimum": "1111247|RIGHTNOW TECHNOLOGIES INC|UPLOAD|2010-01-02|edgar/data/1111247/0000000000-10-000005.txt",
+      "maximum": "1000209|MEDALLION FINANCIAL CORP|40-APP/A|2010-03-31|edgar/data/1000209/0001193125-10-073211.txt"
+    },
+    "invalid_dates": [],
+    "representative_raw_rows": {
+      "edgar/data/CIK/dashed-accession.txt": "1000032|BINCH JAMES G|4|2010-03-02|edgar/data/1000032/0001181431-10-013095.txt"
+    },
+    "nonextractable_examples": [],
+    "representative_fields": [
+      "1000032",
+      "BINCH JAMES G",
+      "4",
+      "2010-03-02",
+      "edgar/data/1000032/0001181431-10-013095.txt"
+    ],
+    "non_ascii_byte_count": 0
+  }
+}

@@ -1,0 +1,4 @@
+CIK|Company Name|Form Type|Date Filed|File Name
+--------
+123456|Legacy Corp|10-K|19960229|edgar/data/123456/legacy-annual.txt
+123456|Legacy Corp|10-K/A|19960229|edgar/data/123456/Nested/Annual.TXT

@@ -1,0 +1,149 @@
+{
+  "evidence_id": "SEC-0002",
+  "url": "https://www.sec.gov/Archives/edgar/full-index/2010/index.json",
+  "start_utc": "2026-10-05T23:40:56.062870+00:00",
+  "receipt_utc": "2026-10-05T23:40:56.169832+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=()"
+    ],
+    [
+      "Content-Security-Policy",
+      "frame-ancestors 'self'"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-request-id",
+      "P2HCGWF28W2XJNWM"
+    ],
+    [
+      "x-amz-id-2",
+      "z+Zh9v2qfmh6WPfjRMSUBozqGWTPiC/GcMdd3HPc6Ym3k7sPqdNVMQ0DPRnCS5kFtY7YaYS5mo+A1B4ddaeE9yfpas4xVh0T"
+    ],
+    [
+      "Last-Modified",
+      "Sat, 25 Nov 2017 22:04:20 GMT"
+    ],
+    [
+      "ETag",
+      "\"f1925debc17224357731344ea37d0967-gzip\""
+    ],
+    [
+      "x-amz-meta-mode",
+      "33188"
+    ],
+    [
+      "x-amz-version-id",
+      "__sT3A9LiRMMt0Za8_cxJu2FZC1UuuBw"
+    ],
+    [
+      "x-amz-replication-status",
+      "REPLICA"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Pragma",
+      "no-cache"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Cache-Control",
+      "no-cache, no-store, no-transform, proxy-revalidate"
+    ],
+    [
+      "Date",
+      "Mon, 05 Oct 2026 23:40:56 GMT"
+    ],
+    [
+      "Content-Length",
+      "480"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=E78139C9B4D4A181DE9D96C4A57FD1A7~-1~YAAQLH/RFy7BUPOgAQAABhxxDhDrCcnbOHaQne4eDC6YcwRuMQO+dTtk6yl+hXVyXGkb8+Kon8DLP0RnjvojYAHvS/rI0G4Zz6gQ05AXspm5vviAkuZ6m7ZaeP/nW7Ns2GzYpJAlqlise9d0NvFIcpHyPlUoAGxd1SOc0C3eqbV8j+atl4T8NlAB2kKVcjxrkApG66ihYx6f1Xcw69Avx5n8ABdlU2VGGKfnJut3S5eXUpZEolt8IL/wUqltjIq7My4nAQa29fKBkJrD9hE5hthlDrFoYREoadPfvJTlCVXmRSs7EKBaV+d5c38aHEjKwT19TEzC4X5Oz9JmRfhlhrz4FZZBTuA6qAFmTCKJ0tknSBgv880ySa9+tOYIEBC+2aO/DBL6pB/onvAVa/VkgvSNsx11E18Sc8rLWMsyJCn0S3Mzl2NVbEOyD/8fQY755v91Rf4SfyDN0g==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Tue, 05 Oct 2027 23:40:56 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=C0CB58E5C559412C5FB074B795551D07~YAAQLH/RFy/BUPOgAQAABhxxDgHPl5bMHngk5q49NsJcG/Dkch6qLaSgGld9h7YGyANPY6siFucvxCC/J0BCJgm3TplzPMBa5L740kyjmTkDUgaqw/WC6uSp1NPhnmM3lwVmfCJtRkj0Lf5kMNf3dDVdLelXjtUTA06PS4ve6CNK+6t20l+xKk0+yUWO/12HGVez+CNQnybwq2e8ur79esA4gZ7ud2km4a8WaQrPFl8Xgi4i0KZEngEJkEC5butoSrS3ZwgMNu7zzrzW2D2o07zWYAZJ/+RCYvZZ20AwNcZTYVC5HvlGItQX2pDP3NivypsuQ22vTMV5iTW8TByH6R5BCCljy0CQI31TSSGpyZ6nNOBp3kwl3C1UCg9UMqaDzaxlLo3A7N+TIiDU~3356996~3753266; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 03:40:56 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 480,
+  "sha256": "323453899790aad4c2b6a359cc16e1fe42c0bbe20ef0470359652fb173e75dc2",
+  "body_artifact": "listings/SEC-0002.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0002.intent.json",
+  "schema": "SEC directory entries: json",
+  "outcome": "success",
+  "specimen": false,
+  "directory_name": "full-index/2010/",
+  "discovered_children": [
+    {
+      "last-modified": "09/06/2014 01:42:43 AM",
+      "size": "4 KB",
+      "name": "QTR1",
+      "href": "QTR1/",
+      "type": "dir"
+    },
+    {
+      "last-modified": "09/06/2014 01:43:46 AM",
+      "size": "4 KB",
+      "name": "QTR2",
+      "href": "QTR2/",
+      "type": "dir"
+    },
+    {
+      "last-modified": "09/06/2014 01:44:38 AM",
+      "size": "4 KB",
+      "name": "QTR3",
+      "href": "QTR3/",
+      "type": "dir"
+    },
+    {
+      "last-modified": "09/06/2014 01:45:35 AM",
+      "size": "4 KB",
+      "name": "QTR4",
+      "href": "QTR4/",
+      "type": "dir"
+    }
+  ],
+  "selection_decision": "Validated name and dir/file type; no source-body support claim"
+}

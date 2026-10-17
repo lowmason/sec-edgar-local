@@ -1,0 +1,86 @@
+{
+  "evidence_id": "SEC-0147",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261001.idx",
+  "receipt_artifact": "listings/SEC-0147.headers.json",
+  "original_path": "specimens/529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17.idx",
+  "original_bytes": 481733,
+  "original_sha256": "529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17",
+  "original_extension": ".idx",
+  "transport_interpretation": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "advertised_content_length": null,
+  "content_length_comparison": "not advertised",
+  "mime_type": "application/octet-stream",
+  "last_modified": "Fri, 02 Oct 2026 02:02:19 GMT",
+  "etag": "\"09ea571c7a378ed9469b3a52dde9641e-gzip\"",
+  "receipt_utc": "2026-10-06T00:02:32.095464+00:00",
+  "status": 200,
+  "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+  "archive_members": [],
+  "archive_integrity": "not an archive",
+  "expansion_cap_bytes": 536870912,
+  "expanded_bytes": 481733,
+  "expansion_ratio": 1.0,
+  "derivative_path": null,
+  "derivative_sha256": null,
+  "independent_shasum_command": [
+    "shasum",
+    "-a",
+    "256",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17.idx"
+  ],
+  "independent_shasum_exit_code": 0,
+  "independent_shasum_stdout": "529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17.idx\n",
+  "observations": {
+    "text_family": "daily compact-date master",
+    "column_header": "CIK|Company Name|Form Type|Date Filed|File Name",
+    "date_shape_counts": {
+      "YYYYMMDD": 5527
+    },
+    "strict_encoding": "ascii",
+    "decoder_failures": [],
+    "bom_hex": null,
+    "newline_counts": {
+      "crlf": 0,
+      "lone_lf": 5533,
+      "lone_cr": 0
+    },
+    "header_lines": [
+      "Description:           Daily Index of EDGAR Dissemination Feed",
+      "Last Data Received:    Oct 1, 2026",
+      "Comments:              webmaster@sec.gov",
+      "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+      " ",
+      "CIK|Company Name|Form Type|Date Filed|File Name",
+      "--------------------------------------------------------------------------------"
+    ],
+    "separator": "|",
+    "scan_boundary": "Every nonempty post-header row in retained body",
+    "row_count": 5527,
+    "field_count_distribution": {
+      "5": 5527
+    },
+    "path_families": {
+      "edgar/data/CIK/dashed-accession.txt": 5527
+    },
+    "minimum_filing_date": "20260812",
+    "maximum_filing_date": "20261001",
+    "date_bound_raw_rows": {
+      "minimum": "2079013|Hall Chadwick Acquisition Corp|DRS|20260812|edgar/data/2079013/0001829126-26-008713.txt",
+      "maximum": "1000275|ROYAL BANK OF CANADA|424B2|20261001|edgar/data/1000275/0000950103-26-014887.txt"
+    },
+    "invalid_dates": [],
+    "representative_raw_rows": {
+      "edgar/data/CIK/dashed-accession.txt": "1000275|ROYAL BANK OF CANADA|424B2|20261001|edgar/data/1000275/0000950103-26-014887.txt"
+    },
+    "nonextractable_examples": [],
+    "representative_fields": [
+      "1000275",
+      "ROYAL BANK OF CANADA",
+      "424B2",
+      "20261001",
+      "edgar/data/1000275/0000950103-26-014887.txt"
+    ],
+    "non_ascii_byte_count": 0
+  }
+}

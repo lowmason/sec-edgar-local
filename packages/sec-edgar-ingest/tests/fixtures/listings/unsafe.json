@@ -1,0 +1,16 @@
+{
+  "directory": {
+    "name": "daily-index/2026/QTR4/",
+    "parent-dir": "../",
+    "item": [
+      {
+        "name": "../master.idx",
+        "href": "../master.idx",
+        "type": "file",
+        "size": "synthetic label",
+        "last-modified": "synthetic label"
+      }
+    ]
+  },
+  "fixture_provenance": "synthetic offline Task 6 fixture"
+}

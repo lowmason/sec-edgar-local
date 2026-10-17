@@ -1,0 +1,105 @@
+{
+  "evidence_id": "SEC-0149",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/2025/QTR4/master.20251231.idx",
+  "start_utc": "2026-10-06T00:04:11.583037+00:00",
+  "receipt_utc": "2026-10-06T00:04:11.819515+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/octet-stream"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "TE10ogZqfHZBikEHwE3MCjnNMLxkaXCaBrI2blMXXQXgl5PbHRDEvXwSj39Ahb+ny43rQ/gywFU="
+    ],
+    [
+      "x-amz-request-id",
+      "SXB90QEPE44TYBZZ"
+    ],
+    [
+      "x-amz-replication-status",
+      "COMPLETED"
+    ],
+    [
+      "Last-Modified",
+      "Thu, 01 Jan 2026 03:03:42 GMT"
+    ],
+    [
+      "ETag",
+      "\"77294cd28b3787528d598edb733d4ba3-gzip\""
+    ],
+    [
+      "x-amz-server-side-encryption",
+      "AES256"
+    ],
+    [
+      "x-amz-meta-mode",
+      "33188"
+    ],
+    [
+      "x-amz-version-id",
+      "AMKxG83urpicTAo0QumLHhSJxfY88vn_"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Date",
+      "Tue, 06 Oct 2026 00:04:11 GMT"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Connection",
+      "Transfer-Encoding"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=80CD9E4515006B8823C93D4D872EA80A~-1~YAAQLH/RF9edWfOgAQAAmGeGDhCeg37+0+gGM0HL27Pb0+MvBTkghwMBygfKpcWVdrQGj6RyJj95aUASPu8et25PYmmK5cFxz6Ps3TLoHM+gY5K9QcdT5U5j/DGNF4dT2TNjf3nV12iQUDBCR1VhwlBRsP8HuXT2wbfbpa5W27n2vDVwvOF7KSd2lU1OsPrXE+UW3ee5ikXcrU83gT49+l9Mtu4DaWEGS3svC3CkwdsIprBynFQwlzwLuXlBVb5NJeQwpfD7Ycy1CEAKaToDlFJzfxsJR/EOutUuiqeqnYqPnp9fpufkuS4W2nY+DbYLUnK381U02++Sx0wzWCewWbHpRSvkZcu2JsHs9vnh5iBwpKUqTrin8o/sqGg/RgxET35CZVdgJ8kasGkUpSTS727SfUxweFwxqm5c539lyshynvqIuJMLw6VZtasx6A+iKUcMZwybGTPd2g==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Wed, 06 Oct 2027 00:04:11 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=F3612C79A2544BD5727A401F43A4E03F~YAAQLH/RF9idWfOgAQAAmGeGDgEXXG1huPpFd4VPSKtsMILwATyC0grNQ/00A9jQhuTJZ2NmCFDiAKpwZGvOoqVkgYW3433jqCWybJQwcoO5fzNwyNyK14zByjoCsh6gG4JCKlwfxAWz0rEEQe05dHyDpl+oQs/+YSJEAAeqdl3nT+jrOKh9AHIupvlq9lsLjFljRaX5Pszuww5ilDF+HV7Y7r3GU6dbgKfATgoFDNlDzfL1TaEWKlkxjHGHGUcBmEuh84Ui9bZWNaV62LcOc5Ay7YWjuBAvXeIp911brYavtefX4lV6iD/3A0IQDw/kJreGqWhwcut7w8tdHNCc2CJOKwwGN144N/PLBcs0wB8sHmNZh8mQe6eBjcFdFQbciwuMFafvcQFO3FD9~4277058~3686982; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 04:04:11 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 273232,
+  "sha256": "a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b",
+  "body_artifact": "listings/SEC-0149.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0149.intent.json",
+  "schema": "uninspected response entity bytes",
+  "outcome": "success",
+  "specimen": true
+}

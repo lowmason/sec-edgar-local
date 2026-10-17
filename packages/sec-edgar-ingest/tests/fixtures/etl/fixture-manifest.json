@@ -1,0 +1,25 @@
+{
+  "provenance": "Hand-authored synthetic fixtures; legacy examples are synthetic, not retained SEC evidence. Expected normalized values independently hand-authored.",
+  "records": [
+    {
+      "path": "daily.idx",
+      "bytes": 140,
+      "sha256": "99a4d772a4dbe78d023137d4e4ca5af3c50b404a223c4283c5c81944c02d5329"
+    },
+    {
+      "path": "expected.json",
+      "bytes": 2263,
+      "sha256": "67a0efd1b91805b8be16ffe8af44f2011c05876ff8756b6731504a37e0501d58"
+    },
+    {
+      "path": "legacy.idx",
+      "bytes": 197,
+      "sha256": "8eb7edfa8740d2a3a0d23c13f4e6a86bd249c1b743cb26be3eeca9a6f813831a"
+    },
+    {
+      "path": "quarterly.idx",
+      "bytes": 260,
+      "sha256": "a442b38e07b4f0161f9dfccb0465d9f8721adc4012309904ccccd10a8a6982c9"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "evidence_id": "SEC-0149",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/2025/QTR4/master.20251231.idx",
+  "receipt_artifact": "listings/SEC-0149.headers.json",
+  "original_path": "specimens/a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b.idx",
+  "original_bytes": 273232,
+  "original_sha256": "a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b",
+  "original_extension": ".idx",
+  "transport_interpretation": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "advertised_content_length": null,
+  "content_length_comparison": "not advertised",
+  "mime_type": "application/octet-stream",
+  "last_modified": "Thu, 01 Jan 2026 03:03:42 GMT",
+  "etag": "\"77294cd28b3787528d598edb733d4ba3-gzip\"",
+  "receipt_utc": "2026-10-06T00:04:11.819515+00:00",
+  "status": 200,
+  "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+  "archive_members": [],
+  "archive_integrity": "not an archive",
+  "expansion_cap_bytes": 536870912,
+  "expanded_bytes": 273232,
+  "expansion_ratio": 1.0,
+  "derivative_path": null,
+  "derivative_sha256": null,
+  "independent_shasum_command": [
+    "shasum",
+    "-a",
+    "256",
+    "/Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b.idx"
+  ],
+  "independent_shasum_exit_code": 0,
+  "independent_shasum_stdout": "a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b  /Users/lowell/Projects/sec-edgar/specs/evidence/sec-filing-index-ingestion/stage-1/specimens/a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b.idx\n",
+  "observations": {
+    "text_family": "daily compact-date master",
+    "column_header": "CIK|Company Name|Form Type|Date Filed|File Name",
+    "date_shape_counts": {
+      "YYYYMMDD": 3084
+    },
+    "strict_encoding": "ascii",
+    "decoder_failures": [],
+    "bom_hex": null,
+    "newline_counts": {
+      "crlf": 0,
+      "lone_lf": 3090,
+      "lone_cr": 0
+    },
+    "header_lines": [
+      "Description:           Daily Index of EDGAR Dissemination Feed",
+      "Last Data Received:    Dec 31, 2025",
+      "Comments:              webmaster@sec.gov",
+      "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+      " ",
+      "CIK|Company Name|Form Type|Date Filed|File Name",
+      "--------------------------------------------------------------------------------"
+    ],
+    "separator": "|",
+    "scan_boundary": "Every nonempty post-header row in retained body",
+    "row_count": 3084,
+    "field_count_distribution": {
+      "5": 3084
+    },
+    "path_families": {
+      "edgar/data/CIK/dashed-accession.txt": 3084
+    },
+    "minimum_filing_date": "20250528",
+    "maximum_filing_date": "20251231",
+    "date_bound_raw_rows": {
+      "minimum": "2065821|Little West Holdings Inc.|DRS|20250528|edgar/data/2065821/0001213900-25-048133.txt",
+      "maximum": "1000191|RIVERSOURCE VARIABLE ACCOUNT 10|497VPI|20251231|edgar/data/1000191/0001193125-25-338291.txt"
+    },
+    "invalid_dates": [],
+    "representative_raw_rows": {
+      "edgar/data/CIK/dashed-accession.txt": "1000191|RIVERSOURCE VARIABLE ACCOUNT 10|497VPI|20251231|edgar/data/1000191/0001193125-25-338291.txt"
+    },
+    "nonextractable_examples": [],
+    "representative_fields": [
+      "1000191",
+      "RIVERSOURCE VARIABLE ACCOUNT 10",
+      "497VPI",
+      "20251231",
+      "edgar/data/1000191/0001193125-25-338291.txt"
+    ],
+    "non_ascii_byte_count": 0
+  }
+}

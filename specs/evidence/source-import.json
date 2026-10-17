@@ -1,0 +1,1206 @@
+{
+  "format_version": "sec-local-source-import-v1",
+  "source_commit": "0e7701a1e2e98b669334546c90f5c9d4c45b1537",
+  "files": [
+    {
+      "original_path": ".python-version",
+      "destination_path": ".python-version",
+      "sha256": "a876e0b10411037a012498b9fe18d9bc1df32ed8b722a13564dc944ddcfd9135"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/README.md",
+      "destination_path": "packages/sec-edgar-ingest/README.md",
+      "sha256": "51a08726ea2c4b2697fb0ed6ea51e325b17bd62eab35c336232aba48dad2495d"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/pyproject.toml",
+      "destination_path": "packages/sec-edgar-ingest/pyproject.toml",
+      "sha256": "404bad6a0cababd0b336bc329dcbb02eaaccf4393ded1877e63816553cf611ea"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/__init__.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/__init__.py",
+      "sha256": "91447944015cec709e8aa7655f7e9d64e1e4508e7023a57fe3746911c0fc6fed"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/__main__.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/__main__.py",
+      "sha256": "307299fda7b77d22c64cb51430ec75e5f59d78e9c948786afb3b2544fe45e4b7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/cli.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/cli.py",
+      "sha256": "12726ca3cacfc8730b5b5e1d4f74965bb68d806059a32cdd58f6157c8b5711a5"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/collection.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/collection.py",
+      "sha256": "a7e7d1e6fb4eab527ab7061ad04aa180a81c3a9cece97563dfdcc2939c067f08"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/config.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/config.py",
+      "sha256": "e54f539f783ca5ae3a23dd5b26c0843c0de9a9657ca714f38944ad2b40c6dd9e"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/coordination.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/coordination.py",
+      "sha256": "8ace16595189a9894ac9391ffa3f7c9eac38e8b04b2bc897cee88ddbbc2c41b3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/discovery.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/discovery.py",
+      "sha256": "2d7cdef286e92896532138f91487090f5c8867dbc5a6fad3bd09527b839bcc63"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/download.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/download.py",
+      "sha256": "66010b503a2fd2719273e29bafca1682783553060151d9a5e24c8a758bebdd95"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/__init__.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/__init__.py",
+      "sha256": "2898a2d0bf5c0fe87688f264b30b475142a0f234248003c98992d7ad1589356d"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/approval.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/approval.py",
+      "sha256": "b136ca57db121ebabcb3726a9648ae65df750c3a1ca6051268b0b47e6d3c28f8"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/catalog.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/catalog.py",
+      "sha256": "07c205fd40cd735faff0be58535614fa2f4b2b2dfaf69a02e2a9cd522fbefdce"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/commands.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/commands.py",
+      "sha256": "630b86b5c01529ed36642f7fcf8dbd6b8080bc7197defeadaed64e03600d96c4"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/contracts.py",
+      "sha256": "5438c7ffffaf248ac6ee6250d315be4b625996f60b8e254f8a9fd6f820e1d0b5"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/history.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/history.py",
+      "sha256": "bfc8c5fb5990f440eca97a040cb802233a46af7b3ba20535e1b1dba66760e752"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/manifest.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/manifest.py",
+      "sha256": "1edc440e3f5dd5cad96b321744553591d7aa9c411db2b4c2e95639c7f2244dbb"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/parser.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/parser.py",
+      "sha256": "5c1f973d542e3142e866fada60f1a969af68b8abf37313517965db3f58db2ea3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/publication.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/publication.py",
+      "sha256": "8f39d88cb598d716d11ee865cbd0aca261449c6b0f944f2574a7b8ee0516adb7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/reader.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/reader.py",
+      "sha256": "8ee1bfbc949e222fa185f862793285709eaa3847140907ccbedff89d443523fc"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/rollback.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/rollback.py",
+      "sha256": "33d7881b42363c574372a6344d8134ddfa729258e61810547cb579ccf6ba4724"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/state.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/state.py",
+      "sha256": "84f226a4fec266d78edf018c66bfeaf020d28eeea3e7204469012e6bf42e3213"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/transform.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/transform.py",
+      "sha256": "227c37ca0d936ed9fd627bdab2ea3c25f3c6d92b2a92be44a672cd0261bf7e91"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/models.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/models.py",
+      "sha256": "5b77acc792748fcede800559944fac7bb8cd159a11d0415e5353b4f782d4b172"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/py.typed",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/results.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/results.py",
+      "sha256": "1ff7e898d628216f0dc21424d400373b8d551baf13e20744bb116652fe7c58da"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/state.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/state.py",
+      "sha256": "1462bfe35789866c0158d294207205a25c37c4582097a958e6f4ed3b0bcb09b5"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/__init__.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/__init__.py",
+      "sha256": "95f9b82b8f0f778a7814697cac3ffd850204f2fa7bb8bebbaafeb2c027e3bd12"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/contracts.py",
+      "sha256": "8b05c7f746932bea25fe9979705f12806be7b25c3fdaac4dc6c5545740219a28"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/local.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/local.py",
+      "sha256": "7619f3f5f59484465938f6037cb4061e39570363b54ed18dcc71352d948c710f"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/urls.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/urls.py",
+      "sha256": "7e1f20fc5c951c23efbbfec9a66e60ae4ecd4fda683fd1f95e20d59e28057d77"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/validation.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/validation.py",
+      "sha256": "1885960d908838ee4fa4e733bc91fdcfc1f773cdad2d807844e8e3405f4800b3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/__init__.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/__init__.py",
+      "sha256": "f51eb258ef600f80cc91804b6090ca9acbd22c0295f351b12f89b6649d19ed49"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/checked.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/checked.py",
+      "sha256": "8865637835cf9c37c89df897c2d24dc0bc80988e0ae95d47c7ea02ab43f2faf7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/completion.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/completion.py",
+      "sha256": "afcfd079a2fdb10e3d741532bdf7c3fb59d79d814029be82600c7cb66805d491"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/contracts.py",
+      "sha256": "9029623a0772d3c25c0a3856e438641345ee4298da20e8b72adf8b533d5f9d35"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/legacy.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/legacy.py",
+      "sha256": "b3897afddd2c7a3ea1f56f4e2e46eba50b7db1b77d96a1a67fd0d307277ac2da"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/members.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/members.py",
+      "sha256": "bb1210de141b8ecd76f08a414006039d1076c06d42ba13dbf38f77780b807282"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/processing.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/processing.py",
+      "sha256": "c9c934cb9aa8cf0955018cddd3a32ad77d426eca26f2f0e1f96a52ff025ffac2"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/provenance.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/provenance.py",
+      "sha256": "1146c56ad5fc43679e6ddb9d1e8d117ff1e7a06a217d1b523c7bca371cf56c60"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/results.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/results.py",
+      "sha256": "082a59a2d26c7ae6127b6995bd157d268d9420d273195bb849832204691cf976"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/runner.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/runner.py",
+      "sha256": "f8e5161d928d5368131f0da70d6cec99699ac1592b96fcca2a5ba4e417bdbb77"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/summary.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/summary.py",
+      "sha256": "71776742887fcc1c1feab02f77a46174149e448c86de8b1de32414012308c7a6"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/worksets.py",
+      "destination_path": "packages/sec-edgar-ingest/src/sec_edgar_ingest/worksets.py",
+      "sha256": "bc74aefcb04eb3fd0b11cc503b604f100664484cf49996a46b52f14ea0020cfd"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/__init__.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/etl_proof.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/etl_proof.py",
+      "sha256": "83eaa27ff22c98e8d64ee64946b1da7d55af69a307e72939fcc7112c88d745a7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/21105f019f995a508212e1aea8b954cc17965311f95d2bee96cd3929068384e7.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/21105f019f995a508212e1aea8b954cc17965311f95d2bee96cd3929068384e7.body",
+      "sha256": "21105f019f995a508212e1aea8b954cc17965311f95d2bee96cd3929068384e7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/2238e6e45c468be5a35d36546f7dfb5239c961e58316858113ee6e56025584ea.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/2238e6e45c468be5a35d36546f7dfb5239c961e58316858113ee6e56025584ea.body",
+      "sha256": "2238e6e45c468be5a35d36546f7dfb5239c961e58316858113ee6e56025584ea"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/258e0245ed05b9340e156bc1572f88425962b0bcb9b25eca60ecb8c6052815c9.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/258e0245ed05b9340e156bc1572f88425962b0bcb9b25eca60ecb8c6052815c9.body",
+      "sha256": "258e0245ed05b9340e156bc1572f88425962b0bcb9b25eca60ecb8c6052815c9"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/295ea06a8709fc8a1280e0f394504d2589a79b044afd394199772a8ded166d59.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/295ea06a8709fc8a1280e0f394504d2589a79b044afd394199772a8ded166d59.body",
+      "sha256": "295ea06a8709fc8a1280e0f394504d2589a79b044afd394199772a8ded166d59"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/30e26ab496e04432e3c6c18e7717d05267f3a25b1f349b012c99734d91f35441.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/30e26ab496e04432e3c6c18e7717d05267f3a25b1f349b012c99734d91f35441.body",
+      "sha256": "30e26ab496e04432e3c6c18e7717d05267f3a25b1f349b012c99734d91f35441"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/32eb8001fb131584156014f9ff5ad6dc2a8a97efa7fc63fb712173fdbccc3e94.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/32eb8001fb131584156014f9ff5ad6dc2a8a97efa7fc63fb712173fdbccc3e94.body",
+      "sha256": "32eb8001fb131584156014f9ff5ad6dc2a8a97efa7fc63fb712173fdbccc3e94"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/32fff5ff6a37979890bc180de561f8cb58cbcc6f37d0cd92d5048ba0c4a10e31.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/32fff5ff6a37979890bc180de561f8cb58cbcc6f37d0cd92d5048ba0c4a10e31.body",
+      "sha256": "32fff5ff6a37979890bc180de561f8cb58cbcc6f37d0cd92d5048ba0c4a10e31"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/4021d2e373bff5ccc8588b4d8077586f8684d3f3153823cdd13b0555c030cc28.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/4021d2e373bff5ccc8588b4d8077586f8684d3f3153823cdd13b0555c030cc28.body",
+      "sha256": "4021d2e373bff5ccc8588b4d8077586f8684d3f3153823cdd13b0555c030cc28"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/44196541abe6841a5e9e959b26a1161959d015750143fa45a156ba1c3a75295e.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/44196541abe6841a5e9e959b26a1161959d015750143fa45a156ba1c3a75295e.body",
+      "sha256": "44196541abe6841a5e9e959b26a1161959d015750143fa45a156ba1c3a75295e"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/4dc2efcff18a472cac890b5a3e4cc38a1f78a6fd9e672e0a8dababec4a91e6c0.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/4dc2efcff18a472cac890b5a3e4cc38a1f78a6fd9e672e0a8dababec4a91e6c0.body",
+      "sha256": "4dc2efcff18a472cac890b5a3e4cc38a1f78a6fd9e672e0a8dababec4a91e6c0"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/52b4c5e475b57259a26bae0dbf22e6280e051be3f6ef99964e37571fd84f5b8a.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/52b4c5e475b57259a26bae0dbf22e6280e051be3f6ef99964e37571fd84f5b8a.body",
+      "sha256": "52b4c5e475b57259a26bae0dbf22e6280e051be3f6ef99964e37571fd84f5b8a"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/58af35e69e11a9c273ed928520bbf412f7133356b09eac39641f6487c6f1421c.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/58af35e69e11a9c273ed928520bbf412f7133356b09eac39641f6487c6f1421c.body",
+      "sha256": "58af35e69e11a9c273ed928520bbf412f7133356b09eac39641f6487c6f1421c"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/634dccc56d14ab6d6ac8bd0f565d04a9133416e5fb0ca8ecb09096a58c6312fc.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/634dccc56d14ab6d6ac8bd0f565d04a9133416e5fb0ca8ecb09096a58c6312fc.body",
+      "sha256": "634dccc56d14ab6d6ac8bd0f565d04a9133416e5fb0ca8ecb09096a58c6312fc"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/68b0e0e1c09010a02e45ac0d0adc2621f23d61a84448064d15d0cee9e5aab399.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/68b0e0e1c09010a02e45ac0d0adc2621f23d61a84448064d15d0cee9e5aab399.body",
+      "sha256": "68b0e0e1c09010a02e45ac0d0adc2621f23d61a84448064d15d0cee9e5aab399"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/95e7e13dffd163f5ab77a98032435d7fbb62900752caa672b2159a37c56041ad.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/95e7e13dffd163f5ab77a98032435d7fbb62900752caa672b2159a37c56041ad.body",
+      "sha256": "95e7e13dffd163f5ab77a98032435d7fbb62900752caa672b2159a37c56041ad"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/ab4132221967a34c4ea3b6f797f41a4782bc853df450dbc763de354b4e972fc3.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/ab4132221967a34c4ea3b6f797f41a4782bc853df450dbc763de354b4e972fc3.body",
+      "sha256": "ab4132221967a34c4ea3b6f797f41a4782bc853df450dbc763de354b4e972fc3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/d33e4176f1fae064d45af39190561b7bb61edac6f7462378554e662fb0b329e2.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/d33e4176f1fae064d45af39190561b7bb61edac6f7462378554e662fb0b329e2.body",
+      "sha256": "d33e4176f1fae064d45af39190561b7bb61edac6f7462378554e662fb0b329e2"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/d7660c59fd179fb60293211d85d1b5961ff97c911df237ccca9b80a425642bc7.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/d7660c59fd179fb60293211d85d1b5961ff97c911df237ccca9b80a425642bc7.body",
+      "sha256": "d7660c59fd179fb60293211d85d1b5961ff97c911df237ccca9b80a425642bc7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/dd36466564b870eb44518366fe09113e11484b4c5b9e4bde1b36b5b74c98c03c.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/dd36466564b870eb44518366fe09113e11484b4c5b9e4bde1b36b5b74c98c03c.body",
+      "sha256": "dd36466564b870eb44518366fe09113e11484b4c5b9e4bde1b36b5b74c98c03c"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/ebad8fd92aa0dc8acd373ff8ac13cd65581b9204a268d0552e3aee3642a60f58.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/bodies/ebad8fd92aa0dc8acd373ff8ac13cd65581b9204a268d0552e3aee3642a60f58.body",
+      "sha256": "ebad8fd92aa0dc8acd373ff8ac13cd65581b9204a268d0552e3aee3642a60f58"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/manifest.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/acquisition/manifest.json",
+      "sha256": "c96e76610f6a218eb27f647abafe538991330bffa0f471c11e890ce3eeac5a97"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/config/local.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/config/local.json",
+      "sha256": "dd50a930e09e840d38109e0953b4b9e0cc1ff3253845d8649d9242fc63192a3a"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/etl/daily.idx",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/etl/daily.idx",
+      "sha256": "99a4d772a4dbe78d023137d4e4ca5af3c50b404a223c4283c5c81944c02d5329"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/etl/expected.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/etl/expected.json",
+      "sha256": "67a0efd1b91805b8be16ffe8af44f2011c05876ff8756b6731504a37e0501d58"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/etl/fixture-manifest.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/etl/fixture-manifest.json",
+      "sha256": "59ae4e0618313c383673d5479364307d81176ec3d63b62bbd417e7fcd54b9503"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/etl/legacy.idx",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/etl/legacy.idx",
+      "sha256": "8eb7edfa8740d2a3a0d23c13f4e6a86bd249c1b743cb26be3eeca9a6f813831a"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/etl/quarterly.idx",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/etl/quarterly.idx",
+      "sha256": "a442b38e07b4f0161f9dfccb0465d9f8721adc4012309904ccccd10a8a6982c9"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/listings/empty.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/listings/empty.json",
+      "sha256": "5ed20b995d5b00ac90633dc093d8d372fe759c7da4fc9c21a6bd0b3b97f8ca3e"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/listings/late-daily.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/listings/late-daily.json",
+      "sha256": "686268ee76505c7c308c3a4af5899a74ae5c3c001c974b22b9cc746d091facb8"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/listings/leap-day.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/listings/leap-day.json",
+      "sha256": "a29908debf1c4b9e6ae29f89727eeb140426ca7acacdb53042b601f8079fe0c1"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/listings/malformed.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/listings/malformed.json",
+      "sha256": "6d7298473c44291ef033d50b38856e71222614a9dd56f6b39d34c40757fef4a1"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/listings/unsafe.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/listings/unsafe.json",
+      "sha256": "b8aa8681e3f45bfedd8c64fc564520e83033db02192200bea629c87053204d25"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/raw/daily.idx",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/raw/daily.idx",
+      "sha256": "11706e256ea49f13ee6f024f255e79d04b397caecf05c4e7c4da89f239457b1e"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/raw/denial.html",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/raw/denial.html",
+      "sha256": "f60fdac4b9680aee311c518950e27e8255087b15eb403ad7e40a16536fc91f18"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/raw/quarterly.idx",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/raw/quarterly.idx",
+      "sha256": "7b4b4f949d2bce1bac9bebd1d33c51f99d5d089a12264c7e43e6a61b23f946b3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/retained-manifest.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained-manifest.json",
+      "sha256": "69fad8fa98314c9eb3d5acd6a4dfd434c2822b713a8bd1597b741c1d330d7861"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-q3.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-q3.json",
+      "sha256": "59ab59a7e1e867d136e873056dca5a3780d676ca9d5594df4a3fd225cfdb6996"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-q4.idx",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-q4.idx",
+      "sha256": "7943a5e5ffcb0cd7d6b37c5729b7fd16d9f847934ee3f22fa84a09af35b8c432"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-q4.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-q4.json",
+      "sha256": "9f81041434a715a49d11780464e1842f22ebc426aa3a296f434c3b7ad44b9cae"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-root.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-root.json",
+      "sha256": "821d651009d355419a45c63dd5ed78cf3bc1a7cce5ff6efe283792a70a829713"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-year.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/daily-year.json",
+      "sha256": "bf4456334cfaba6e3a80a4a963a5b7365abb50fa62a724a6ffe9a4897b992230"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/expected.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/expected.json",
+      "sha256": "3dbca2c261f73eec350e57bdc5d009ee0a8af253ce45068d75c53bd032e64153"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q3.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q3.json",
+      "sha256": "74592f4cdda88386cfb294342f062ad4b72cdfe1d49dc02b24a429f979219f10"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q3.zip",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q3.zip",
+      "sha256": "0cc4e6ae15d7fe59be898c8fe50a77e4b78833e85ff6f67d3e38e7254c0c2ebe"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q4.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q4.json",
+      "sha256": "1b90f523acc078a99171a32363211823c6dc208ed9d464ed94904bb73e3ba705"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q4.zip",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-q4.zip",
+      "sha256": "3edb3317153738036fe2f471fe1b2d4d3a50cc8b33055c98db205302577efc3c"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-root.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-root.json",
+      "sha256": "e534a5787341870dceb89c92f9691d1ec4049b0c93eaeedf4a43ec784bf60cca"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-year.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/full-year.json",
+      "sha256": "697e7e3f6591675cf8eecca2d4c6cec03fbf39638e088d8ea208d25da0a93a9d"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/manifest.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/workflows/proof/manifest.json",
+      "sha256": "1911b466b85bdcb269ef77384548b8511ac9425d8e16688b58c32f90de948fdb"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/locked_proof.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/locked_proof.py",
+      "sha256": "3a7d89b19086c2722468269be9a16499ace41728ebcc55d39dd8b1cae8133d00"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/network_guard.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/network_guard.py",
+      "sha256": "b4868ac5c7329147051be51ff0293d781ec3a256ec84292cab210674112d3abf"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support.py",
+      "sha256": "44055c906cf759e3710451fcaa932659509c5de6f93180f4e4608b6e8839c885"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_approval.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_approval.py",
+      "sha256": "bda744bfc2a1471eb10020d41895f51cce8c53568d5e4807b42e078840f3253b"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_checked.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_checked.py",
+      "sha256": "22a49e66ca545a515523b612a2987b8cc6cf81645e959e59608da76571207b65"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_etl.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_etl.py",
+      "sha256": "1ec1b75d7150a15eaf59224dc758e62e3429c82c400f58b63908958bef13b127"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_reconcile.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_reconcile.py",
+      "sha256": "ee4f93aa8ffeadec36934851b3d26e5f77747cec91262e8d964a581c77c37545"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_scenario.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_scenario.py",
+      "sha256": "e9dd3cd80513690663239edf308b335b46f950bb1e436bb81c8d33115a0a39cf"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_workflow_evidence.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_workflow_evidence.py",
+      "sha256": "c0358624e50e7249621b459561323460714d42d476d39ca87959cd0b95eacfac"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/support_workflows.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/support_workflows.py",
+      "sha256": "ebed2db88518f7b6aba081661f4a3fd8d8d15ee764da01412aa2a0393710fc42"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_acquisition_processes.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_acquisition_processes.py",
+      "sha256": "9bc5051e9ec34b8d36f61390ca9b7a8b576995428d2ad2185069f455e7fea305"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_approval_activation.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_approval_activation.py",
+      "sha256": "48a6c22590dfc332e67df3fdef204bb0d1d0525b521cff00503b85ff36fccf53"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_cli.py",
+      "sha256": "f79848043efd67d65a644502b8fbb3b92926f3664729c58fbee2724a5fbf74e6"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_collection.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_collection.py",
+      "sha256": "d95cd4fecfa5342605e3a9ea84554142578ef34129fe6a6ce9b51552f5464aa3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_config.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_config.py",
+      "sha256": "532fa76c222bc52d1aed97880d38227c405cc9b154965b20501947cd9a39f142"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_coordination.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_coordination.py",
+      "sha256": "e492b8bbee5d816b33e31d7db08c5e673cd2a61a4f9c81143d376dd892b0b7a1"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_discovery.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_discovery.py",
+      "sha256": "ea2dc13b71d3bb75f69427f5566f6ed7689e0cc14984aef2ff5d3bb976c6f611"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_download.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_download.py",
+      "sha256": "463e1361371a11c673426d673818c06c178b10f9649ede7f00926db533af10ab"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_approval.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_approval.py",
+      "sha256": "22a2475d00036d62a5f71de0efcad0c7f8ceab7c17339e26f6b01d8cebf0d863"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_catalog.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_catalog.py",
+      "sha256": "cb2d5d401ca0c3abcfc49ee6b39e511a5fef31e6a8d5d0242ded3bcf0abd6d61"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_cli.py",
+      "sha256": "312d1a69f5f00fdbe5b9f8543b0ad7ea56c4cd44d10b8e3f19d024348f3e7156"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_contracts.py",
+      "sha256": "622c2d9c58c1af2c99b1e207264b5c9125c6da214fbf4dd85d03939709442e5c"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_history.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_history.py",
+      "sha256": "7161fc6f67883b82ca709e04b2502f906bb16e3599f99776236ac18b04cd1739"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_parser.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_parser.py",
+      "sha256": "b20817729bb20f707adcf52f1f77d5523445f79a886ac86df3d853ed8c528e62"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_processes.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_processes.py",
+      "sha256": "f201665b779113a79d76b7b6e3113f0079ba3689e4a5b8f097c8534b152722dc"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_publication.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_publication.py",
+      "sha256": "bff7b4df9322c335b2435c971f2836737e3f884fefe5618b3592fd9441bcbc57"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_rollback.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_rollback.py",
+      "sha256": "26bf7d24e0ba766913a8586813162d725ae9ad870daae2072c4a3749a6778cef"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_storage.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_storage.py",
+      "sha256": "75c9451c745b00fec6e224af30066cb4416f0adff807b72e69379dc5fd1fa73c"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_transform.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_transform.py",
+      "sha256": "1169aea24fa0b7bef049c9e542889aa52d0d80699b2fc76d7ac4d4040bfca600"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_history_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_history_cli.py",
+      "sha256": "d976d536e421d49fefd1456da844c10e18ee5d04460eb08194ce06fef80b5272"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_network_guard.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_network_guard.py",
+      "sha256": "6d0a9cdd898350fb3f33185c6f3cca501ad118713026f67bff0407242d38c455"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_operator_identity.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_operator_identity.py",
+      "sha256": "a37c082e04f92d2e6cc7d04dc70fb4f6d23ec7b5541fb8219e0e116b851d89ef"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_operator_open.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_operator_open.py",
+      "sha256": "19cfa4ea7aef7d625329d3b15f5b75599611d24960af1c3a30d4563cd44539c6"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_reconcile_acceptance.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_reconcile_acceptance.py",
+      "sha256": "2d2477d0e73d8530d2ab2779436063cb26154663e7c872bfd6c7e24766cfe61b"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_reconcile_workflow.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_reconcile_workflow.py",
+      "sha256": "dfb71ba3b1a6157b15645cda2a71813bd105cb5b626165a9d75fa2a54bf363d3"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_state.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_state.py",
+      "sha256": "32dc7eba3d8a1b3840b359e405a3823ea1dbf24a08a667c29346d0dbcc8c5797"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_storage.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_storage.py",
+      "sha256": "18edb839d7d1027471d4d3250a7f61fe95d57839e2db2d8cfcceebca38cd6764"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_urls.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_urls.py",
+      "sha256": "7a6d9b5cc214fd940c77deedd0407e43e7b074b4c101725f35bf7a8d27d40b94"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_validation.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_validation.py",
+      "sha256": "d2b9eef608dfd5049489bc4875cdf988b2a0987ef9a47d39553956fd5377c51f"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_acceptance.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_acceptance.py",
+      "sha256": "98218b84ffe0083bac1073d225dfae0a5f533f8ee61c1a91e68fc24f115b49fa"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_checked.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_checked.py",
+      "sha256": "1b633dd389c13604c1c953d80c71eea0fd24cb72f5c68eba33b7cef5904e2a25"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_cli.py",
+      "sha256": "2a3981eb5a84235a3b4021d03b9878b2aed7e90d0a31bef31a71fcf0a85bd371"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_completion.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_completion.py",
+      "sha256": "cde0bba4d55cf7ea4d40afd0fe423bb0d23d4ee197903b5741760073fdaefb2d"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_config_env.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_config_env.py",
+      "sha256": "1c6b6448ea920d5176c05841c2a7c4307a8ad8cb159e7ad4728bb675bc924cc2"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_contracts.py",
+      "sha256": "e73b98af8f7506e2580af2f9e39b35b5c1b64428ff85528f07a1150915becfe6"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_installed_lock.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_installed_lock.py",
+      "sha256": "f3266935480b028366034ccb321f76cc47aba9b1fd977ffdde0018f11a7d6fec"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_legacy.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_legacy.py",
+      "sha256": "2c393cdaeed905a8f05ba3f002c05138a4ae0fd8fad87b8006560cb2f1646759"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_process.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_process.py",
+      "sha256": "e80c21f1ba75313926d1aec5bdbb5370eaa44d3833783b1376f40dfe61468359"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_processing.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_processing.py",
+      "sha256": "8d717d0e9264db483498e0a5554e5c802722e9ffc815d53ad5c165c3136f8b4e"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_provenance.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_provenance.py",
+      "sha256": "f7cccb22cbe57bb1d2a2b5f7afad30673926ec49b263bc1061fb08f6572dac36"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_results.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_results.py",
+      "sha256": "f7785417524df1d8db235f67cb20a1a73a34deee42c61ca2d9a21e7f6471923c"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_runner.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_runner.py",
+      "sha256": "662ed4bd87c445f679b6f3eff859b6c8310448d5bf1cadae425110af62cf2233"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_selection_v1.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_selection_v1.py",
+      "sha256": "57455f901d038bb61e53e47d449c7aebeece43a4dd5f4462d5aa025297cf3650"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_summary.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_summary.py",
+      "sha256": "9ed4306ff6b85df7121a79a69c4f57cc586cfa0da514717e12d252ba9afd7ae6"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_worksets.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_worksets.py",
+      "sha256": "48ec84d62e165717884ea3aa1e19ebcb6bd6254492d247fd10ccce4e205e17a7"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workspace.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workspace.py",
+      "sha256": "e5666d726d7861f92f576ae2bd85b211ab9637acc01a3d2876f9dd35ab3d253e"
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/workflow_proof.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/workflow_proof.py",
+      "sha256": "5290143319d094e24a85a5f68e8cd9e14ea441002fab691a710b1cabb52e5481"
+    },
+    {
+      "original_path": "pyproject.toml",
+      "destination_path": "pyproject.toml",
+      "sha256": "54bf48d1fba4f8447b1be4aef9c534ac63928c1357bbd22624956def6376b0dc"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/final-candidate/evidence-manifest.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/final-candidate/evidence-manifest.json",
+      "sha256": "124e96041548daba8216aa495fc69021751555b0f0e4c890ac85e934f512a131"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/final-candidate/finding-F1-2026-10-05-939a724eccf22147015a59d5940ed57f02cc4e9fe9d942a9cd78ae73c34615ff.md",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/final-candidate/finding-F1-2026-10-05-939a724eccf22147015a59d5940ed57f02cc4e9fe9d942a9cd78ae73c34615ff.md",
+      "sha256": "939a724eccf22147015a59d5940ed57f02cc4e9fe9d942a9cd78ae73c34615ff"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0001.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0001.body",
+      "sha256": "e658f0319201d29647e0d35e1416a2c9e5516f798fc692a0a0e03c842dca09c0"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0001.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0001.headers.json",
+      "sha256": "4ba6cf80015b71479eae66421da58594a7d31a655dc6413f9daca6528c13de0a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0001.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0001.intent.json",
+      "sha256": "a158e9d2fc30330e86cfcaa4d142b4e0d6e7b6bd3357fb701d888b79fbdef21c"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0002.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0002.body",
+      "sha256": "323453899790aad4c2b6a359cc16e1fe42c0bbe20ef0470359652fb173e75dc2"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0002.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0002.headers.json",
+      "sha256": "763997fc099e9dcf3d679be90cb941fbfddf9d25eecd0f162a4e789d8a6af5e9"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0002.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0002.intent.json",
+      "sha256": "0a4fd3d41a70b87152a99230d636226b6c9c7f1f574621dffc8366eb686b09dd"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0003.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0003.body",
+      "sha256": "67dfc9c726f4d77949cb93bf270b16664ed0b4f4026b8cec73e08e27104f011c"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0003.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0003.headers.json",
+      "sha256": "cfa531127978099113ab4f43224e702f5b26c1bf3f3dee222083cbb3b26167de"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0003.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0003.intent.json",
+      "sha256": "5e4cad85f485ee7caf6c617041cedb7b837f9a5e70d5a113894852471aa9c89d"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0028.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0028.body",
+      "sha256": "f67b224609da652a129018d9858e6650ee92fdfa5729b27c0f5007f19b0d9c27"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0028.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0028.headers.json",
+      "sha256": "bbac87a334536bf7aa41c4c58cdeb73c5d5fe2f212c1d2318cb45fdb6483b4f7"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0028.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0028.intent.json",
+      "sha256": "000063d27b26a84ea1c0218be2529377bc91509cc327b3aa20ad5f2e3b83266a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0085.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0085.body",
+      "sha256": "e3ec6aa82a06ead3ffa7a4d2020653e67ca97a1ad768f227421b4b41c794cc24"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0085.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0085.headers.json",
+      "sha256": "3ac3bb0e11450f9e81603139611fa37fbcb04cf8b7eab84d90f92c5873a2bdab"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0085.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0085.intent.json",
+      "sha256": "d25c00f6333f67e1a7728979540d089dcca03effb42c2ea19ca20f85c3f0511a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0086.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0086.body",
+      "sha256": "30bf3acb84a579303ceb0e4bc3526366f70b2e225607f228d4af6729d40b4801"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0086.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0086.headers.json",
+      "sha256": "5085fcadf085e8d6be2adfdfe68368cffc252bad66f5a996276626afb2d90f2b"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0086.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0086.intent.json",
+      "sha256": "83669d05d294094532a6f4d65438e4a934b9dd2cfaf8aeb948c7185b289e0ef7"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0087.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0087.body",
+      "sha256": "50a885e0831f37adc2ef981d9ffe9cb4c732ce6459056f872a2e6168b1cf28ae"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0087.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0087.headers.json",
+      "sha256": "76af5792e9398f340981332c2f4fa489a8f64e4469f1c0b84a0601df745ad072"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0087.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0087.intent.json",
+      "sha256": "6bc2de90bc5d40f796687b7a2354cb2c184cad2861c1e3fb94599d9359d70015"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0088.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0088.body",
+      "sha256": "ed12d9ac7f9a92213275aef20ee80b1c4af41db94087d783bb99622a48b2afcd"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0088.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0088.headers.json",
+      "sha256": "4523a3d35c3e5d8938e605d3261b0970027517754443bf80fd6ce3b020a2750f"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0088.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0088.intent.json",
+      "sha256": "6612e698334e913ecb04d415e9ad2056efedd75d236fd2553474e3d429b06fe9"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0089.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0089.body",
+      "sha256": "df157692ebaebb28fa55a630f37da29ad95c347947e8f3ea7fd77e0ab205ce62"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0089.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0089.headers.json",
+      "sha256": "2fc9f7904bef25fccb0075357cb4cd08c5e1159615337fb09ba1e0856f4b5c68"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0089.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0089.intent.json",
+      "sha256": "185d5577338bc61c50c3bab73eaf637380d53b0ae1b5e4d0fa60c877885f3ce7"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0104.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0104.body",
+      "sha256": "127c0245abfd6698302e9dca031d9f8605cbda4017c125954c0b5135aadc9d39"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0104.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0104.headers.json",
+      "sha256": "eda2577c9e3e5f82613441f1c8b0cb6b08e4a3a1451c37323e7cad9e8dab1149"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0104.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0104.intent.json",
+      "sha256": "ba2354f59844d29f309e9deeb00c7cf872f32b446319bc6a582d608bcc0062d2"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0135.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0135.body",
+      "sha256": "119bb9e23f278b37628547544db99c728fc7b1ec091c2fffe15f8702145c1603"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0135.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0135.headers.json",
+      "sha256": "c78983ad3a3a079971b24dbe34842108f518052d617f2f2295b287fc49312844"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0135.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0135.intent.json",
+      "sha256": "277b648426e607ec21431462dc2d0c47de23d02905019b6ff557aac76d9e2276"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0137.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0137.body",
+      "sha256": "cadfdf4c918cf3621f11d52e29db9581c98a40badb2c47f9a17dab9878c6a0fb"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0137.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0137.headers.json",
+      "sha256": "b1b67acc11f842a7cd138a3858c4053f3eaf3063bd66fd8e23662501718514e6"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0137.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0137.intent.json",
+      "sha256": "7d18f1aa7a54f5db0802ec0df73cd58c5dd5156fce4eecb9f7375bfa58f9ece9"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0138.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0138.body",
+      "sha256": "dbba44f7f3e0cdcabc15f4337daa7f2ba2f42fdcf7d6381719a1e9a3faa2947a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0138.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0138.headers.json",
+      "sha256": "88d18a97faec0c81d10a54a9b0bea1a81d7dda70ecc181c83574f03377c3f3e0"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0138.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0138.intent.json",
+      "sha256": "891733f4946b043fb9474ae1ed9e44e90824f4327e7d2256b939995f58224623"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0139.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0139.body",
+      "sha256": "bb4e29c64ca74c3ed92b8e27d4f4bc2f421fb3b4ed6f8c329609fc4fc72bf1bb"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0139.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0139.headers.json",
+      "sha256": "9e2ea50927d127eb38e5ca48a7f8161f25b56f94bef6dde13741152e5e6c6d7a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0139.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0139.intent.json",
+      "sha256": "88c5b6dd941779f9559ecea95d59c108f5776f0da8d2edc3e443e666c0d32dd9"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0141.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0141.body",
+      "sha256": "aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0141.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0141.headers.json",
+      "sha256": "93d2925580047ef49c874af43cd844956905d1ec39c2c4768027faac43dfc671"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0141.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0141.intent.json",
+      "sha256": "d013d34fc77d8ca8d7dc270c3bbe17082c69cd5e49b245ee7a717dbd7e5fb31b"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0142.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0142.body",
+      "sha256": "984c3130c617c11d085a4deff77a01c21b1113d5bb4c8b2173f5f87eb9f2a728"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0142.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0142.headers.json",
+      "sha256": "fa81e050a269f3b7333976398a376a7b23f89b5d9df633b585257bfcf3cd87f8"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0142.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0142.intent.json",
+      "sha256": "09ba1c8578baf142ece9aa259c8fb901596ab2d53be10193f9d4b4887211f62a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0143.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0143.body",
+      "sha256": "393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0143.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0143.headers.json",
+      "sha256": "8c80695ec3aef908343bed3b0ed8c57ef98eb403564a6a0bdaa596d9f3ada9c9"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0143.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0143.intent.json",
+      "sha256": "e9d4f61e175f2cdc840a2b63ffb9a195dc6200a63c4498ce5be9c772380227bc"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0144.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0144.body",
+      "sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0144.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0144.headers.json",
+      "sha256": "bb8cddcdb400c039f441f200062cf27247d2bc0f46d28ec6fe83016befac6a87"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0144.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0144.intent.json",
+      "sha256": "eb126d8cb49b87832397f4e4a921e238d27852ccfd5c4bd0dad33c38eb65d41a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0145.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0145.body",
+      "sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0145.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0145.headers.json",
+      "sha256": "1a85dfe75cf235e43a3462a2a33fa889464c411d8524fcbdc182ce756408d27f"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0145.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0145.intent.json",
+      "sha256": "2e6908bac9e2a6367b51abc124e2346e9d253e058d53ecec75078c03cb1f44be"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0146.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0146.body",
+      "sha256": "8ec83de06534af79673887618c0125184a76e9a3db79843c95d3558561ddd018"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0146.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0146.headers.json",
+      "sha256": "60e771cfa08fcc635f9c874cfb2e32745d69d75d079517987da352df747b774a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0146.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0146.intent.json",
+      "sha256": "94df6989655629214f1a09b25fa47de59ad01f878423da7b7ff8cfb8ec6dedb2"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0147.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0147.body",
+      "sha256": "529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0147.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0147.headers.json",
+      "sha256": "6d63b7a85e2919f827700e9e8238f30508ce328321cfefec4f690bff34a5bfd2"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0147.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0147.intent.json",
+      "sha256": "c953b355b5a41901dfe903d480f8b26d0a672347703a9e5f5f4c4a149651b558"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0148.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0148.body",
+      "sha256": "17f223abb09fc7488947f0ca9e4686167927a09a2f342d8bcefd0d445fdbc3eb"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0148.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0148.headers.json",
+      "sha256": "9fc9aa81a294eebd1e4fc7e23132ad1b8c47881a269fe0d59d827e4d7fbefeac"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0148.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0148.intent.json",
+      "sha256": "ea2e3f3011597f875cb6626b8d52d0eb2b1a13ed61727f49328edcd0ac44ed3a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0149.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0149.body",
+      "sha256": "a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0149.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0149.headers.json",
+      "sha256": "12883b8e698caaabe470bd48ede4df09d2a3bfc6fcba4cd0b3549dd0d5a5edb6"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0149.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0149.intent.json",
+      "sha256": "8575302846d74edc3d687d02ab0ee51e94783d43201381b502f3750d2cd4685a"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0150.body",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0150.body",
+      "sha256": "caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0150.headers.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0150.headers.json",
+      "sha256": "87e5fff5ddc6d35f8c5d79ab2b18760be2db84699db6cf89753d0efd4320b014"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/listings/SEC-0150.intent.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/listings/SEC-0150.intent.json",
+      "sha256": "7f3bafb31221387b3a280e7594cf20b747fb260949f789b468cd41f86a1e005c"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0141.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0141.inspection.json",
+      "sha256": "73f2417c3bf1fbbade124472c0c62487aa60b904987e0da995237099466970c4"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0142.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0142.inspection.json",
+      "sha256": "3fd1682db7343a74d9bf390e4cf0c2f7bcc41abcdf21aaa5d0d51a1b8cbd8c2e"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0143.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0143.inspection.json",
+      "sha256": "9e11c3e2138b77c1a8591cca61c251eef6ee86aed43ad0c3e08582dae77d1014"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0144.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0144.inspection.json",
+      "sha256": "8fcdc1ea4c028dc7cb37b26aad2b860094007d8afb151e416aeffd36d53e6fe3"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0145.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0145.inspection.json",
+      "sha256": "c5f2d33592a6860c420c73c02a697992f4215211f43ac2cbe3249b6d164e7269"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0146.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0146.inspection.json",
+      "sha256": "279809ae05bf35a443258d8bedf2ceb066f15e99ce21140202014c0a8d396762"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0147.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0147.inspection.json",
+      "sha256": "d83d9462eb5890b6e1c4744e858457d55e2687386159aebfa10c84c5564753f7"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0148.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0148.inspection.json",
+      "sha256": "f977edeff01732010f3660e1144fa633d846aa2acf4921b139852a59b8b681c7"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0149.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0149.inspection.json",
+      "sha256": "484b35c7ce250a0f00b4f8fff6d35bb1a6ea513e322f76854200086cf5515300"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/SEC-0150.inspection.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/SEC-0150.inspection.json",
+      "sha256": "9105d4928899a16a79cf28935758e1b0096a9cb6e832737bc65c375445a44ee8"
+    },
+    {
+      "original_path": "specs/evidence/sec-filing-index-ingestion/stage-1/specimens/matrix.json",
+      "destination_path": "packages/sec-edgar-ingest/tests/fixtures/retained/stage-1/specimens/matrix.json",
+      "sha256": "332cbfe6e6ee2077176c49f6f71e9bb90805f4fc7ad86ff9f58843f035e43177"
+    }
+  ]
+}

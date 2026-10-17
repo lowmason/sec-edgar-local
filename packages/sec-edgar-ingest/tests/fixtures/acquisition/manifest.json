@@ -1,0 +1,131 @@
+{
+  "fixture_version": "sec-acquisition-fixture-v1",
+  "provenance": "synthetic",
+  "responses": {
+    "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR3/index.json": [
+      {
+        "body_path": "bodies/52b4c5e475b57259a26bae0dbf22e6280e051be3f6ef99964e37571fd84f5b8a.body",
+        "body_sha256": "52b4c5e475b57259a26bae0dbf22e6280e051be3f6ef99964e37571fd84f5b8a",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/index.json": [
+      {
+        "body_path": "bodies/32eb8001fb131584156014f9ff5ad6dc2a8a97efa7fc63fb712173fdbccc3e94.body",
+        "body_sha256": "32eb8001fb131584156014f9ff5ad6dc2a8a97efa7fc63fb712173fdbccc3e94",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261001.idx": [
+      {
+        "body_path": "bodies/4dc2efcff18a472cac890b5a3e4cc38a1f78a6fd9e672e0a8dababec4a91e6c0.body",
+        "body_sha256": "4dc2efcff18a472cac890b5a3e4cc38a1f78a6fd9e672e0a8dababec4a91e6c0",
+        "headers": {
+          "Content-Length": "230",
+          "Content-Type": "text/plain",
+          "ETag": "\"synthetic-Synthetic Fixture Co 1\"",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261002.idx": [
+      {
+        "body_path": "bodies/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "Content-Length": "0",
+          "X-Fixture": "synthetic"
+        },
+        "status": 404
+      },
+      {
+        "body_path": "bodies/258e0245ed05b9340e156bc1572f88425962b0bcb9b25eca60ecb8c6052815c9.body",
+        "body_sha256": "258e0245ed05b9340e156bc1572f88425962b0bcb9b25eca60ecb8c6052815c9",
+        "headers": {
+          "Content-Length": "230",
+          "Content-Type": "text/plain",
+          "ETag": "\"synthetic-Synthetic Fixture Co 2\"",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/daily-index/2026/index.json": [
+      {
+        "body_path": "bodies/d7660c59fd179fb60293211d85d1b5961ff97c911df237ccca9b80a425642bc7.body",
+        "body_sha256": "d7660c59fd179fb60293211d85d1b5961ff97c911df237ccca9b80a425642bc7",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/daily-index/index.json": [
+      {
+        "body_path": "bodies/44196541abe6841a5e9e959b26a1161959d015750143fa45a156ba1c3a75295e.body",
+        "body_sha256": "44196541abe6841a5e9e959b26a1161959d015750143fa45a156ba1c3a75295e",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/full-index/2015/QTR1/index.json": [
+      {
+        "body_path": "bodies/58af35e69e11a9c273ed928520bbf412f7133356b09eac39641f6487c6f1421c.body",
+        "body_sha256": "58af35e69e11a9c273ed928520bbf412f7133356b09eac39641f6487c6f1421c",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/full-index/2015/QTR1/master.zip": [
+      {
+        "body_path": "bodies/68b0e0e1c09010a02e45ac0d0adc2621f23d61a84448064d15d0cee9e5aab399.body",
+        "body_sha256": "68b0e0e1c09010a02e45ac0d0adc2621f23d61a84448064d15d0cee9e5aab399",
+        "headers": {
+          "Content-Length": "261",
+          "Content-Type": "application/zip",
+          "ETag": "\"synthetic-Synthetic Fixture Co\"",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/full-index/2015/index.json": [
+      {
+        "body_path": "bodies/32fff5ff6a37979890bc180de561f8cb58cbcc6f37d0cd92d5048ba0c4a10e31.body",
+        "body_sha256": "32fff5ff6a37979890bc180de561f8cb58cbcc6f37d0cd92d5048ba0c4a10e31",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ],
+    "https://www.sec.gov/Archives/edgar/full-index/index.json": [
+      {
+        "body_path": "bodies/2238e6e45c468be5a35d36546f7dfb5239c961e58316858113ee6e56025584ea.body",
+        "body_sha256": "2238e6e45c468be5a35d36546f7dfb5239c961e58316858113ee6e56025584ea",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Fixture": "synthetic"
+        },
+        "status": 200
+      }
+    ]
+  }
+}

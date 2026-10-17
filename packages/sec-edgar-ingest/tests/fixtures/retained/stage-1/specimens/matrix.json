@@ -1,0 +1,241 @@
+{
+  "planned_receipt_specimens": 10,
+  "fully_inspected": 10,
+  "selected_families": [
+    "quarterly ZIP/master.idx ISO-date master",
+    "daily uncompressed compact-date master"
+  ],
+  "owner_continuation": "daily-family-continuation-acceptance.json",
+  "matrix": [
+    {
+      "role": "earliest intended",
+      "url": "https://www.sec.gov/Archives/edgar/full-index/2010/QTR1/master.zip",
+      "listing_evidence_id": "SEC-0003",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0141",
+      "inspection": "specimens/SEC-0141.inspection.json",
+      "original_bytes": 3729148,
+      "expanded_bytes": 27083681,
+      "original_sha256": "aca38d21ee64795f6095c86c0424f94e16a322a4ec0eb6fd38d2e5d6f86822de",
+      "derivative_sha256": "5562b0502a4fbed557af88bdbe28487c3c96475a211545843c706b84d8ed784f",
+      "row_count": 300561,
+      "filing_date_bounds": [
+        "2010-01-02",
+        "2010-03-31"
+      ],
+      "text_family": "quarterly ISO-date master",
+      "newline_counts": {
+        "crlf": 300571,
+        "lone_lf": 0,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "development boundary",
+      "url": "https://www.sec.gov/Archives/edgar/full-index/2015/QTR1/master.zip",
+      "listing_evidence_id": "SEC-0028",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0142",
+      "inspection": "specimens/SEC-0142.inspection.json",
+      "original_bytes": 3901000,
+      "expanded_bytes": 28748322,
+      "original_sha256": "984c3130c617c11d085a4deff77a01c21b1113d5bb4c8b2173f5f87eb9f2a728",
+      "derivative_sha256": "b40cbfb3f24e6201e89093a16e99e94c38ddee54a0ae50366e8b5289c705e463",
+      "row_count": 318647,
+      "filing_date_bounds": [
+        "2015-01-02",
+        "2015-03-31"
+      ],
+      "text_family": "quarterly ISO-date master",
+      "newline_counts": {
+        "crlf": 318657,
+        "lone_lf": 0,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "latest closed quarter",
+      "url": "https://www.sec.gov/Archives/edgar/full-index/2026/QTR3/master.zip",
+      "listing_evidence_id": "SEC-0085",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0143",
+      "inspection": "specimens/SEC-0143.inspection.json",
+      "original_bytes": 3502663,
+      "expanded_bytes": 27835213,
+      "original_sha256": "393a535f84b71ed34845f67aa5e5275ecc86afeb1a6558ad5623b0d7d0babe71",
+      "derivative_sha256": "07d2ac3086d8b57a8b4f093a9f3fb1cf74892c1ecaeef828f9c7a9543cf1c251",
+      "row_count": 302315,
+      "filing_date_bounds": [
+        "2026-07-01",
+        "2026-09-30"
+      ],
+      "text_family": "quarterly ISO-date master",
+      "newline_counts": {
+        "crlf": 302325,
+        "lone_lf": 0,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "open quarter",
+      "url": "https://www.sec.gov/Archives/edgar/full-index/2026/QTR4/master.zip",
+      "listing_evidence_id": "SEC-0086",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0144",
+      "inspection": "specimens/SEC-0144.inspection.json",
+      "original_bytes": 178884,
+      "expanded_bytes": 1120694,
+      "original_sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8",
+      "derivative_sha256": "f2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af",
+      "row_count": 12479,
+      "filing_date_bounds": [
+        "2026-10-01",
+        "2026-10-02"
+      ],
+      "text_family": "quarterly ISO-date master",
+      "newline_counts": {
+        "crlf": 12489,
+        "lone_lf": 0,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "root/open relationship",
+      "url": "https://www.sec.gov/Archives/edgar/full-index/master.zip",
+      "listing_evidence_id": "SEC-0001",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0145",
+      "inspection": "specimens/SEC-0145.inspection.json",
+      "original_bytes": 178884,
+      "expanded_bytes": 1120694,
+      "original_sha256": "ca5f8a7b9ed1689a334f204456a7ecc70a63176506e9d20f9d149cd11d1201b8",
+      "derivative_sha256": "f2161fc54dd78c7f342b483ff27d9e758abd9a02e8ece98913fa2c8c8e9277af",
+      "row_count": 12479,
+      "filing_date_bounds": [
+        "2026-10-01",
+        "2026-10-02"
+      ],
+      "text_family": "quarterly ISO-date master",
+      "newline_counts": {
+        "crlf": 12489,
+        "lone_lf": 0,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "closed/open daily before",
+      "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR3/master.20260930.idx",
+      "listing_evidence_id": "SEC-0138",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0146",
+      "inspection": "specimens/SEC-0146.inspection.json",
+      "original_bytes": 320256,
+      "expanded_bytes": 320256,
+      "original_sha256": "8ec83de06534af79673887618c0125184a76e9a3db79843c95d3558561ddd018",
+      "derivative_sha256": null,
+      "row_count": 3594,
+      "filing_date_bounds": [
+        "20250825",
+        "20260930"
+      ],
+      "text_family": "daily compact-date master",
+      "newline_counts": {
+        "crlf": 0,
+        "lone_lf": 3600,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "handoff and closed/open daily after",
+      "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261001.idx",
+      "listing_evidence_id": "SEC-0139",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0147",
+      "inspection": "specimens/SEC-0147.inspection.json",
+      "original_bytes": 481733,
+      "expanded_bytes": 481733,
+      "original_sha256": "529aabd8111461c373b409da01e106a75662af200ac75f9545106a55b4d8ba17",
+      "derivative_sha256": null,
+      "row_count": 5527,
+      "filing_date_bounds": [
+        "20260812",
+        "20261001"
+      ],
+      "text_family": "daily compact-date master",
+      "newline_counts": {
+        "crlf": 0,
+        "lone_lf": 5533,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "already-published daily",
+      "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261002.idx",
+      "listing_evidence_id": "SEC-0139",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0148",
+      "inspection": "specimens/SEC-0148.inspection.json",
+      "original_bytes": 621000,
+      "expanded_bytes": 621000,
+      "original_sha256": "17f223abb09fc7488947f0ca9e4686167927a09a2f342d8bcefd0d445fdbc3eb",
+      "derivative_sha256": null,
+      "row_count": 7159,
+      "filing_date_bounds": [
+        "20260331",
+        "20261002"
+      ],
+      "text_family": "daily compact-date master",
+      "newline_counts": {
+        "crlf": 0,
+        "lone_lf": 7165,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "year-transition daily before",
+      "url": "https://www.sec.gov/Archives/edgar/daily-index/2025/QTR4/master.20251231.idx",
+      "listing_evidence_id": "SEC-0135",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0149",
+      "inspection": "specimens/SEC-0149.inspection.json",
+      "original_bytes": 273232,
+      "expanded_bytes": 273232,
+      "original_sha256": "a5f5bd3f0ea83804b13b3a89f57273ddff78c0eefd0cbc302ecc81400408029b",
+      "derivative_sha256": null,
+      "row_count": 3084,
+      "filing_date_bounds": [
+        "20250528",
+        "20251231"
+      ],
+      "text_family": "daily compact-date master",
+      "newline_counts": {
+        "crlf": 0,
+        "lone_lf": 3090,
+        "lone_cr": 0
+      }
+    },
+    {
+      "role": "year-transition daily after",
+      "url": "https://www.sec.gov/Archives/edgar/daily-index/2026/QTR1/master.20260102.idx",
+      "listing_evidence_id": "SEC-0137",
+      "status": "fully inspected retained specimen",
+      "evidence_id": "SEC-0150",
+      "inspection": "specimens/SEC-0150.inspection.json",
+      "original_bytes": 417467,
+      "expanded_bytes": 417467,
+      "original_sha256": "caaf4ed84be07de97f100a3e04afbb03f4c28d080faf892b35a20e2e96125ba7",
+      "derivative_sha256": null,
+      "row_count": 4777,
+      "filing_date_bounds": [
+        "20250827",
+        "20260102"
+      ],
+      "text_family": "daily compact-date master",
+      "newline_counts": {
+        "crlf": 0,
+        "lone_lf": 4783,
+        "lone_cr": 0
+      }
+    }
+  ]
+}

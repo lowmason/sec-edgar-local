@@ -1,0 +1,380 @@
+{
+  "evidence_id": "SEC-0087",
+  "url": "https://www.sec.gov/Archives/edgar/daily-index/index.json",
+  "start_utc": "2026-10-05T23:41:25.383762+00:00",
+  "receipt_utc": "2026-10-05T23:41:25.578050+00:00",
+  "status": 200,
+  "headers": [
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Server",
+      "Apache"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=()"
+    ],
+    [
+      "Content-Security-Policy",
+      "frame-ancestors 'self'"
+    ],
+    [
+      "X-Frame-Options",
+      "SAMEORIGIN"
+    ],
+    [
+      "x-amz-id-2",
+      "QeDAgt5PumDSGOnSKQN/9NqqwWcqz1VWtBD5JhigkVTyfdsg7sx7Lduv9HxjwoOP1F3Kzygc7xmOvTZ0aOdxogTmNJdr/XWK"
+    ],
+    [
+      "x-amz-request-id",
+      "P6M5M3ZNM6WCKMN5"
+    ],
+    [
+      "x-amz-replication-status",
+      "COMPLETED"
+    ],
+    [
+      "Last-Modified",
+      "Thu, 01 Oct 2026 04:20:12 GMT"
+    ],
+    [
+      "ETag",
+      "\"c109133d53e3f1ed47ad040c587a8df7-gzip\""
+    ],
+    [
+      "x-amz-server-side-encryption",
+      "AES256"
+    ],
+    [
+      "x-amz-version-id",
+      "MfmbHV4x.yLk9TMGnP1ZSluwu8hYXdz1"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Pragma",
+      "no-cache"
+    ],
+    [
+      "Vary",
+      "Accept-Encoding"
+    ],
+    [
+      "Cache-Control",
+      "no-cache, no-store, no-transform, proxy-revalidate"
+    ],
+    [
+      "Date",
+      "Mon, 05 Oct 2026 23:41:25 GMT"
+    ],
+    [
+      "Content-Length",
+      "3763"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000 ; includeSubDomains ; preload"
+    ],
+    [
+      "Set-Cookie",
+      "_abck=E36E9BACF60BD9BE2EBC2B5FE4A3665A~-1~YAAQK3/RF8s4nfWgAQAA545xDhC2YChcv9yS+c58m2wshzTFZM6U40UK6sXMNlCDvjFHOpPVswUX3XUsKzL2+Z4+qMapRIz42DoBTEQC29oj2WukGmQTuH6hAVEGFoNTqin0uqRLHndMweFfcwBXCufQkQwxsY8iIcdwWlJmg6jzPIQ4VuuhKXix5kgkDxtXvOXStiUqvntt5pvmszMx5Pc7MMMkGW03CdYOWqD7fCt9qjd1oQR8tQfQwzwhu12YY9nwklhDMJsyGOo0HnmBEFher8mty4/RH1tGpjX1ZOwjiBvOyPRMz4MRcadfj+xxWa9qrpG4Ofs5eiiuz0UIhJQlTeXYMJ0BhuqDbQLf5wnt1QJn2hJOExnn8Ti8lDWo2x9G0t/zX4OuqiO2LIFsR1tNTVXanCFpyoKIAhp9nYsCJLOXmtPJsmh7ALGqWzbcAGhxyAw0VTBQrQ==~-1~-1~-1~-1~-1; Domain=.sec.gov; Path=/; Expires=Tue, 05 Oct 2027 23:41:25 GMT; Max-Age=31536000; SameSite=None; Secure"
+    ],
+    [
+      "Set-Cookie",
+      "bm_sz=906AA5CA3636AAA05331BEC960A67343~YAAQK3/RF8w4nfWgAQAA545xDgHC9Sc2KFzyChepOWvd7smzbJ66QwA4h5/1lafe75JJDYtr5mgX2l4UmG1Dy2IM/QcXaiSjfyHUcf9vUhwm4XzfIsSIhef2OSZ1ia+8FfRWBT+n3pFZwa2WIJs4YOFViyuLBwaIoOBdRaN5tXSIJaF+KsFBXv1BnLMVDeKbIuk+ba0NENXdzwxspaZfkr18GDgtxtbjN6MRdUXUwBiWUyBhI3VD+0PYFe482WaXrWkBylLPr8namncPSmSRNnk8CP6t0VeRTBoqaXgdE1mncJoFwQ73JX23U1c8PsmkZs0C/eseRjy6XA/rw/+ugq0ByyLBMgiZ2Q2toDG4FIByvI0sgJi49u2RAO46Xv9jJuH70B9q2czOao5T~3425093~4474180; Domain=.sec.gov; Path=/; Expires=Tue, 06 Oct 2026 03:41:25 GMT; Max-Age=14400; SameSite=None; Secure"
+    ]
+  ],
+  "transport": "HTTPS TLS verified; transfer framing removed by http.client",
+  "content_encoding": "identity",
+  "redirect_chain": [],
+  "redirect_policy": "never followed",
+  "received_bytes": 3763,
+  "sha256": "50a885e0831f37adc2ef981d9ffe9cb4c732ce6459056f872a2e6168b1cf28ae",
+  "body_artifact": "listings/SEC-0087.body",
+  "error": "",
+  "intent_artifact": "listings/SEC-0087.intent.json",
+  "schema": "SEC directory entries: json",
+  "outcome": "success",
+  "specimen": false,
+  "directory_name": "daily-index/",
+  "discovered_children": [
+    {
+      "last-modified": "11/24/2017 09:00:40 AM",
+      "name": "1994",
+      "type": "dir",
+      "href": "1994/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:01:43 AM",
+      "name": "1995",
+      "type": "dir",
+      "href": "1995/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:02:52 AM",
+      "name": "1996",
+      "type": "dir",
+      "href": "1996/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:04:06 AM",
+      "name": "1997",
+      "type": "dir",
+      "href": "1997/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:05:50 AM",
+      "name": "1998",
+      "type": "dir",
+      "href": "1998/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:07:30 AM",
+      "name": "1999",
+      "type": "dir",
+      "href": "1999/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:08:48 AM",
+      "name": "2000",
+      "type": "dir",
+      "href": "2000/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:10:09 AM",
+      "name": "2001",
+      "type": "dir",
+      "href": "2001/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:11:35 AM",
+      "name": "2002",
+      "type": "dir",
+      "href": "2002/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:13:13 AM",
+      "name": "2003",
+      "type": "dir",
+      "href": "2003/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:15:02 AM",
+      "name": "2004",
+      "type": "dir",
+      "href": "2004/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:16:52 AM",
+      "name": "2005",
+      "type": "dir",
+      "href": "2005/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:18:37 AM",
+      "name": "2006",
+      "type": "dir",
+      "href": "2006/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:20:31 AM",
+      "name": "2007",
+      "type": "dir",
+      "href": "2007/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:22:30 AM",
+      "name": "2008",
+      "type": "dir",
+      "href": "2008/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:24:20 AM",
+      "name": "2009",
+      "type": "dir",
+      "href": "2009/",
+      "size": ""
+    },
+    {
+      "last-modified": "09/03/2026 03:46:56 PM",
+      "name": "2010",
+      "type": "dir",
+      "href": "2010/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/07/2018 09:22:06 AM",
+      "name": "2011",
+      "type": "dir",
+      "href": "2011/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:29:37 AM",
+      "name": "2012",
+      "type": "dir",
+      "href": "2012/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:33:24 AM",
+      "name": "2013",
+      "type": "dir",
+      "href": "2013/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:38:10 AM",
+      "name": "2014",
+      "type": "dir",
+      "href": "2014/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:41:16 AM",
+      "name": "2015",
+      "type": "dir",
+      "href": "2015/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:44:20 AM",
+      "name": "2016",
+      "type": "dir",
+      "href": "2016/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/07/2017 10:02:34 PM",
+      "name": "2017",
+      "type": "dir",
+      "href": "2017/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/07/2018 10:03:06 PM",
+      "name": "2018",
+      "type": "dir",
+      "href": "2018/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/06/2019 10:06:19 PM",
+      "name": "2019",
+      "type": "dir",
+      "href": "2019/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/06/2020 11:22:51 AM",
+      "name": "2020",
+      "type": "dir",
+      "href": "2020/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/08/2021 10:06:30 PM",
+      "name": "2021",
+      "type": "dir",
+      "href": "2021/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/07/2022 10:06:44 PM",
+      "name": "2022",
+      "type": "dir",
+      "href": "2022/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/14/2023 10:05:48 PM",
+      "name": "2023",
+      "type": "dir",
+      "href": "2023/",
+      "size": ""
+    },
+    {
+      "last-modified": "12/06/2024 10:21:13 PM",
+      "name": "2024",
+      "type": "dir",
+      "href": "2024/",
+      "size": ""
+    },
+    {
+      "last-modified": "05/01/2026 01:13:43 PM",
+      "name": "2025",
+      "type": "dir",
+      "href": "2025/",
+      "size": ""
+    },
+    {
+      "last-modified": "09/30/2026 11:45:17 PM",
+      "name": "2026",
+      "type": "dir",
+      "href": "2026/",
+      "size": ""
+    },
+    {
+      "last-modified": "09/30/2026 08:34:49 AM",
+      "name": "bulkdata",
+      "type": "dir",
+      "href": "bulkdata/",
+      "size": ""
+    },
+    {
+      "last-modified": "09/30/2026 08:27:45 AM",
+      "name": "xbrl",
+      "type": "dir",
+      "href": "xbrl/",
+      "size": ""
+    },
+    {
+      "last-modified": "11/24/2017 09:47:25 AM",
+      "name": "sitemap.dailyindexes.xml",
+      "type": "file",
+      "href": "sitemap.dailyindexes.xml",
+      "size": "1 KB"
+    },
+    {
+      "last-modified": "11/24/2017 09:47:25 AM",
+      "name": "sitemap.xml",
+      "type": "file",
+      "href": "sitemap.xml",
+      "size": "173 KB"
+    }
+  ],
+  "selection_decision": "Validated name and dir/file type; no source-body support claim"
+}

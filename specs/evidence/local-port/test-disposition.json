@@ -1,0 +1,1519 @@
+{
+  "format_version": "sec-local-test-disposition-v1",
+  "source_commit": "0e7701a1e2e98b669334546c90f5c9d4c45b1537",
+  "counts": {
+    "source_test_modules": 56,
+    "retained_source_test_modules": 46,
+    "excluded_source_test_modules": 10,
+    "added_local_test_modules": 1
+  },
+  "baseline": [
+    "test_source_import.py",
+    "test_urls.py",
+    "test_validation.py"
+  ],
+  "scope": "Task 1 baseline only. Full retained-runtime/test AST import inventory is a mandatory passing Task 10 gate after mixed modules are ported. String references below are review candidates, not exclusions or skips.",
+  "forbidden_dependencies": [
+    "azure SDKs",
+    "msal"
+  ],
+  "excluded_runtime_paths": [
+    "packages/sec-edgar-ingest/src/sec_edgar_ingest/deployment.py",
+    "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/azure.py",
+    "packages/sec-edgar-ingest/src/sec_edgar_ingest/storage/identity.py"
+  ],
+  "excluded_support_paths": [
+    "packages/sec-edgar-ingest/tests/adf_interpreter.py",
+    "packages/sec-edgar-ingest/tests/image_smoke.py",
+    "packages/sec-edgar-ingest/tests/support_adf.py",
+    "packages/sec-edgar-ingest/tests/support_azure.py",
+    "packages/sec-edgar-ingest/tests/support_template.py"
+  ],
+  "retained_helpers": [
+    "packages/sec-edgar-ingest/tests/__init__.py",
+    "packages/sec-edgar-ingest/tests/etl_proof.py",
+    "packages/sec-edgar-ingest/tests/locked_proof.py",
+    "packages/sec-edgar-ingest/tests/network_guard.py",
+    "packages/sec-edgar-ingest/tests/support.py",
+    "packages/sec-edgar-ingest/tests/support_approval.py",
+    "packages/sec-edgar-ingest/tests/support_checked.py",
+    "packages/sec-edgar-ingest/tests/support_etl.py",
+    "packages/sec-edgar-ingest/tests/support_reconcile.py",
+    "packages/sec-edgar-ingest/tests/support_scenario.py",
+    "packages/sec-edgar-ingest/tests/support_workflow_evidence.py",
+    "packages/sec-edgar-ingest/tests/support_workflows.py",
+    "packages/sec-edgar-ingest/tests/workflow_proof.py"
+  ],
+  "preservation": "workflows/legacy.py and test_workflow_legacy.py are retained. No test class/method is broadly skipped. Original hashes remain in source-import.json.",
+  "tests": [
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_acquisition_processes.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_acquisition_processes.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "multiprocessing",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.coordination",
+        "sec_edgar_ingest.worksets",
+        "signal",
+        "support",
+        "tempfile",
+        "threading",
+        "time",
+        "types",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_adf_interpreter.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_approval_activation.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_approval_activation.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "azure.core.credentials",
+        "azure.data.tables",
+        "dataclasses",
+        "hashlib",
+        "network_guard",
+        "sec_edgar_ingest.etl.approval",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.rollback",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.azure",
+        "sec_edgar_ingest.storage.contracts",
+        "support",
+        "support_approval",
+        "test_azure_contracts",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_activation_rows_route_to_the_approvals_table",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_alerts.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_config_template.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_contracts.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_identity.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_roles.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_state_payloads.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_azure_template.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_cli.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "io",
+        "json",
+        "os",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.coordination",
+        "sec_edgar_ingest.download",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.results",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.identity",
+        "sec_edgar_ingest.storage.local",
+        "sec_edgar_ingest.worksets",
+        "shutil",
+        "subprocess",
+        "support",
+        "support_azure",
+        "sys",
+        "tempfile",
+        "threading",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_fixture_pack_required_and_overrides_rejected_in_azure_before_clients",
+          "line": 128
+        },
+        {
+          "name": "test_azure_fixture_arguments_and_distant_deadline_refuse_before_clients",
+          "line": 391
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_collection.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_collection.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "importlib.util",
+        "json",
+        "multiprocessing",
+        "pathlib",
+        "sec_edgar_ingest.download",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.worksets",
+        "support",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_mismatched_config_parser_image_or_client_refuses_before_request",
+          "line": 175
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_config.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_config.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "copy",
+        "dataclasses",
+        "datetime",
+        "importlib",
+        "importlib.util",
+        "pathlib",
+        "support",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_invalid_configuration_precedes_external_factories",
+          "line": 26
+        },
+        {
+          "name": "test_rejects_configuration_matrix",
+          "line": 37
+        },
+        {
+          "name": "test_azure_explicit_binding_and_credential_free_endpoints",
+          "line": 99
+        },
+        {
+          "name": "test_pin_context_checks_range_identity_and_deadline",
+          "line": 168
+        },
+        {
+          "name": "test_azure_deadlines_and_two_callers_share_one_binding",
+          "line": 199
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_coordination.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_coordination.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "azure.core.exceptions",
+        "azure.storage.blob",
+        "dataclasses",
+        "datetime",
+        "importlib",
+        "importlib.util",
+        "json",
+        "multiprocessing",
+        "pathlib",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.azure",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.local",
+        "sqlite3",
+        "support",
+        "tempfile",
+        "test_azure_contracts",
+        "threading",
+        "time",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_upper_bounds_include_server_date_precision_and_rtt",
+          "line": 67
+        },
+        {
+          "name": "test_azure_receive_sample_must_anchor_the_interval_without_unmeasured_delay",
+          "line": 83
+        },
+        {
+          "name": "test_date_precision_plus_rtt_must_fit_two_second_bound",
+          "line": 103
+        },
+        {
+          "name": "test_azure_journal_fences_read_and_write_with_lease_and_actual_etag",
+          "line": 117
+        },
+        {
+          "name": "test_actual_azure_release_never_writes_a_shortened_guard",
+          "line": 136
+        },
+        {
+          "name": "test_azure_journal_id_etag_and_outage_fail_closed",
+          "line": 163
+        },
+        {
+          "name": "test_conservative_known_and_unknown_release_preserve_guard_and_progress",
+          "line": 702
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_discovery.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_discovery.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sec_edgar_ingest.discovery",
+        "sec_edgar_ingest.download",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.local",
+        "sec_edgar_ingest.worksets",
+        "support",
+        "tempfile",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_cached_receipt_rejects_conflicting_or_invalid_transport_context",
+          "line": 483
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_download.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_download.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "email.utils",
+        "gzip",
+        "hashlib",
+        "http.client",
+        "importlib",
+        "importlib.util",
+        "json",
+        "multiprocessing",
+        "os",
+        "pathlib",
+        "requests",
+        "sec_edgar_ingest.coordination",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "subprocess",
+        "support",
+        "tempfile",
+        "test_azure_contracts",
+        "threading",
+        "time",
+        "unittest",
+        "unittest.mock",
+        "urllib3.exceptions"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_scripted_azure_routes_transport_to_attempts_and_run_halt_to_source_state",
+          "line": 971
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_approval.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_approval.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "network_guard",
+        "sec_edgar_ingest.etl.approval",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.publication",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "support",
+        "support_approval",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_catalog.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_catalog.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "io",
+        "json",
+        "os",
+        "pathlib",
+        "pyarrow",
+        "pyarrow.parquet",
+        "re",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl",
+        "sec_edgar_ingest.etl.catalog",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.etl.transform",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "shutil",
+        "support",
+        "support_etl",
+        "tempfile",
+        "unittest",
+        "unittest.mock",
+        "zipfile"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_existing_generation_preserves_producing_image",
+          "line": 223
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_cli.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "io",
+        "json",
+        "network_guard",
+        "os",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "sec_edgar_ingest.etl.commands",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.results",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.worksets",
+        "shutil",
+        "support",
+        "support_etl",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_completed_replay_is_exact_and_flag_changes_refuse",
+          "line": 128
+        },
+        {
+          "name": "test_begun_intent_refuses_changed_image_execution_and_config",
+          "line": 591
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_contracts.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "pyarrow",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.worksets",
+        "support",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_retained_stage2_worksets_and_registry_remain_byte_identical",
+          "line": 76
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_history.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_history.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "itertools",
+        "network_guard",
+        "sec_edgar_ingest.etl.approval",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.history",
+        "sec_edgar_ingest.storage.contracts",
+        "support",
+        "support_approval",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_parser.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_parser.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "sec_edgar_ingest.etl.parser",
+        "support",
+        "tempfile",
+        "unittest",
+        "unittest.mock",
+        "zipfile"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_processes.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_processes.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "etl_proof",
+        "importlib.util",
+        "inspect",
+        "io",
+        "json",
+        "multiprocessing",
+        "network_guard",
+        "os",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "shutil",
+        "signal",
+        "subprocess",
+        "sys",
+        "tempfile",
+        "threading",
+        "time",
+        "types",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_publication.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_publication.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "azure.core.credentials",
+        "azure.data.tables",
+        "azure.storage.blob",
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "importlib.util",
+        "json",
+        "os",
+        "pathlib",
+        "pyarrow",
+        "pyarrow.parquet",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl",
+        "sec_edgar_ingest.etl.catalog",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.publication",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.etl.transform",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.azure",
+        "sec_edgar_ingest.storage.contracts",
+        "shutil",
+        "support",
+        "support_etl",
+        "tempfile",
+        "test_azure_contracts",
+        "test_azure_state_payloads",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_mocked_sdk_actual_etags_412_and_large_candidate_descriptor",
+          "line": 306
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_rollback.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_rollback.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "json",
+        "network_guard",
+        "sec_edgar_ingest.etl.approval",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.rollback",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "support",
+        "support_approval",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_storage.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_storage.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "azure.core.credentials",
+        "azure.data.tables",
+        "azure.storage.blob",
+        "contextlib",
+        "dataclasses",
+        "json",
+        "pathlib",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.rollback",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.storage.azure",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.local",
+        "sqlite3",
+        "support_approval",
+        "tempfile",
+        "test_azure_contracts",
+        "test_azure_state_payloads",
+        "test_etl_contracts",
+        "unittest",
+        "unittest.mock",
+        "urllib.parse"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_logical_paths_use_accepted_containers",
+          "line": 7
+        },
+        {
+          "name": "test_azure_logical_writes_and_streamed_materialization_use_mapped_paths",
+          "line": 63
+        },
+        {
+          "name": "test_active_pointer_real_sdk_insert_replace_and_conflict",
+          "line": 83
+        },
+        {
+          "name": "test_withdrawal_approval_real_sdk_routes_to_the_approvals_table",
+          "line": 107
+        },
+        {
+          "name": "test_quarter_rollback_real_sdk_routes_to_the_approvals_table",
+          "line": 128
+        },
+        {
+          "name": "test_azure_missing_approval_blob_refuses_an_awaiting_approval_manifest",
+          "line": 161
+        },
+        {
+          "name": "test_rollback_without_an_approvals_client_uploads_its_record_then_refuses_the_index",
+          "line": 187
+        },
+        {
+          "name": "test_large_active_pointer_record_uses_verified_content_first_descriptor",
+          "line": 250
+        },
+        {
+          "name": "test_stream_failure_deletes_only_created_scratch",
+          "line": 279
+        },
+        {
+          "name": "test_missing_active_client_refuses_large_write_before_content_upload",
+          "line": 303
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_etl_transform.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_etl_transform.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "concurrent.futures",
+        "dataclasses",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.etl.transform",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.worksets",
+        "subprocess",
+        "support",
+        "support_etl",
+        "sys",
+        "tempfile",
+        "threading",
+        "unittest",
+        "unittest.mock",
+        "zipfile"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_image_change_adopts_original_producer_manifest_even_when_forced",
+          "line": 166
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_history_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_history_cli.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "json",
+        "network_guard",
+        "sec_edgar_ingest.etl.approval",
+        "sec_edgar_ingest.etl.rollback",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "support_approval",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_image_definition.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_network_guard.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_network_guard.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "importlib.util",
+        "json",
+        "multiprocessing",
+        "network_guard",
+        "os",
+        "pathlib",
+        "subprocess",
+        "sys",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_ordinary_support_import_installs_connection_resolution_and_auth_denial",
+          "line": 88
+        },
+        {
+          "name": "test_provider_construction_and_existing_instance_token_work_never_reach_stubs",
+          "line": 140
+        },
+        {
+          "name": "test_public_managed_identity_constructor_and_existing_tokens_never_reach_stubs",
+          "line": 155
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_operator_identity.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_operator_identity.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "json",
+        "network_guard",
+        "sec_edgar_ingest.storage",
+        "support_approval",
+        "support_azure",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_azure_approve_and_rollback_record_the_signed_in_principal",
+          "line": 55
+        },
+        {
+          "name": "test_azure_refuses_free_text_and_unusable_sign_ins_before_opening_stores",
+          "line": 65
+        },
+        {
+          "name": "test_azure_candidates_need_no_actor",
+          "line": 75
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_operator_open.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_operator_open.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "azure.storage.blob",
+        "contextlib",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.storage",
+        "sec_edgar_ingest.storage.contracts",
+        "support",
+        "support_approval",
+        "support_azure",
+        "tempfile",
+        "test_azure_contracts",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_an_existing_store_opens_without_writes_or_a_lease",
+          "line": 60
+        },
+        {
+          "name": "test_operator_open_reads_the_registry_and_never_writes",
+          "line": 94
+        },
+        {
+          "name": "test_a_missing_registry_is_store_missing_before_any_table_client",
+          "line": 105
+        },
+        {
+          "name": "test_a_different_registry_is_a_conflict",
+          "line": 111
+        },
+        {
+          "name": "test_open_stores_passes_access_and_credential_to_azure",
+          "line": 117
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_reconcile_acceptance.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_reconcile_acceptance.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "network_guard",
+        "sec_edgar_ingest.etl.history",
+        "sec_edgar_ingest.etl.state",
+        "support_approval",
+        "support_reconcile",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_reconcile_workflow.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_reconcile_workflow.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "datetime",
+        "hashlib",
+        "network_guard",
+        "sec_edgar_ingest.etl.approval",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.history",
+        "sec_edgar_ingest.etl.manifest",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.etl.transform",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.checked",
+        "sec_edgar_ingest.workflows.completion",
+        "sec_edgar_ingest.workflows.members",
+        "sec_edgar_ingest.workflows.results",
+        "sec_edgar_ingest.workflows.runner",
+        "support_approval",
+        "support_etl",
+        "support_reconcile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_run_worker_pipeline.py",
+      "disposition": "excluded_cloud_or_image_module",
+      "reason": "Explicit Task 1 exclusion; no cloud/image fallback is retained."
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_state.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_state.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "importlib",
+        "importlib.util",
+        "json",
+        "multiprocessing",
+        "os",
+        "pathlib",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "support",
+        "tempfile",
+        "time",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_storage.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_storage.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "hashlib",
+        "importlib",
+        "importlib.util",
+        "pathlib",
+        "sqlite3",
+        "support",
+        "tempfile",
+        "threading",
+        "time",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_urls.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_urls.py",
+      "disposition": "retained_task1_baseline",
+      "reason": "Required offline guarded Task 1 module.",
+      "imports": [
+        "hashlib",
+        "importlib",
+        "importlib.util",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_validation.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_validation.py",
+      "disposition": "retained_task1_baseline",
+      "reason": "Required offline guarded Task 1 module.",
+      "imports": [
+        "dataclasses",
+        "hashlib",
+        "importlib",
+        "importlib.util",
+        "io",
+        "json",
+        "pathlib",
+        "support",
+        "tempfile",
+        "unittest",
+        "zipfile",
+        "zlib"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_acceptance.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_acceptance.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "datetime",
+        "hashlib",
+        "json",
+        "network_guard",
+        "os",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "sec_edgar_ingest.etl.commands",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.workflows.checked",
+        "sec_edgar_ingest.workflows.completion",
+        "sec_edgar_ingest.workflows.results",
+        "shutil",
+        "support",
+        "support_workflows",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_checked.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_checked.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "hashlib",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.download",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.checked",
+        "support",
+        "support_checked",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_cli.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_cli.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "datetime",
+        "io",
+        "json",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.results",
+        "support",
+        "support_workflows",
+        "tempfile",
+        "time",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_completion.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_completion.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "copy",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "io",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.results",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.checked",
+        "sec_edgar_ingest.workflows.completion",
+        "sec_edgar_ingest.workflows.legacy",
+        "sec_edgar_ingest.workflows.members",
+        "sec_edgar_ingest.workflows.provenance",
+        "support",
+        "support_workflow_evidence",
+        "tempfile",
+        "unittest",
+        "unittest.mock",
+        "zipfile"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_config_env.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_config_env.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "datetime",
+        "io",
+        "json",
+        "network_guard",
+        "os",
+        "pathlib",
+        "sec_edgar_ingest.cli",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.identity",
+        "support_azure",
+        "support_workflows",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_config_env_runs_the_same_settings_through_every_child",
+          "line": 48
+        },
+        {
+          "name": "test_exactly_one_config_source_is_accepted",
+          "line": 55
+        },
+        {
+          "name": "test_an_unusable_config_env_is_a_configuration_error_before_stores",
+          "line": 62
+        },
+        {
+          "name": "test_the_execution_id_comes_from_the_job_execution",
+          "line": 87
+        },
+        {
+          "name": "test_azure_refuses_a_supplied_execution_id_and_missing_job_variables",
+          "line": 103
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_contracts.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_contracts.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "network_guard",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.results",
+        "sec_edgar_ingest.urls",
+        "sec_edgar_ingest.workflows.contracts",
+        "support",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_installed_lock.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_installed_lock.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "locked_proof",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.models",
+        "tempfile",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_complete_accepted_graph_rejects_wrong_transitive_with_direct_pins_intact",
+          "line": 48
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_legacy.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_legacy.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "copy",
+        "dataclasses",
+        "hashlib",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.local",
+        "sec_edgar_ingest.workflows.legacy",
+        "sec_edgar_ingest.workflows.provenance",
+        "support",
+        "support_workflows",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_process.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_process.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "network_guard",
+        "pathlib",
+        "tempfile",
+        "unittest",
+        "workflow_proof"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_processing.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_processing.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "copy",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.checked",
+        "sec_edgar_ingest.workflows.completion",
+        "sec_edgar_ingest.workflows.members",
+        "sec_edgar_ingest.workflows.processing",
+        "sec_edgar_ingest.workflows.provenance",
+        "sec_edgar_ingest.worksets",
+        "support_workflow_evidence",
+        "support_workflows",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_retry_prefix_is_retained_without_source_quarantine",
+          "line": 16
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_provenance.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_provenance.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "copy",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.etl.parser",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.local",
+        "sec_edgar_ingest.workflows.members",
+        "sec_edgar_ingest.workflows.provenance",
+        "sec_edgar_ingest.worksets",
+        "support",
+        "support_workflows",
+        "tempfile",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_results.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_results.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "copy",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.results",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.checked",
+        "sec_edgar_ingest.workflows.completion",
+        "sec_edgar_ingest.workflows.contracts",
+        "sec_edgar_ingest.workflows.members",
+        "sec_edgar_ingest.workflows.processing",
+        "sec_edgar_ingest.workflows.results",
+        "sec_edgar_ingest.worksets",
+        "sqlite3",
+        "support",
+        "support_workflow_evidence",
+        "support_workflows",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_exact_replay_after_deadline_and_changed_invocation_refusal",
+          "line": 199
+        },
+        {
+          "name": "test_parent_capture_retains_full_empty_discovery_authority",
+          "line": 303
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_runner.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_runner.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "copy",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.etl.contracts",
+        "sec_edgar_ingest.etl.reader",
+        "sec_edgar_ingest.etl.state",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.state",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.checked",
+        "sec_edgar_ingest.workflows.contracts",
+        "sec_edgar_ingest.workflows.members",
+        "sec_edgar_ingest.workflows.results",
+        "sec_edgar_ingest.workflows.runner",
+        "sqlite3",
+        "support_workflow_evidence",
+        "support_workflows",
+        "tempfile",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_deadline_after_selection_records_undispatched_units_without_child_work",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_selection_v1.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_selection_v1.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "json",
+        "pathlib",
+        "sec_edgar_ingest.config",
+        "sec_edgar_ingest.models",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.storage.local",
+        "sec_edgar_ingest.workflows.results",
+        "sec_edgar_ingest.workflows.runner",
+        "shutil",
+        "tempfile",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workflow_summary.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workflow_summary.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "azure.core.credentials",
+        "azure.data.tables",
+        "contextlib",
+        "datetime",
+        "json",
+        "network_guard",
+        "pathlib",
+        "sec_edgar_ingest.storage.azure",
+        "sec_edgar_ingest.storage.contracts",
+        "sec_edgar_ingest.workflows.summary",
+        "sqlite3",
+        "support_approval",
+        "support_reconcile",
+        "support_scenario",
+        "support_workflows",
+        "tempfile",
+        "test_azure_contracts",
+        "types",
+        "unittest",
+        "unittest.mock"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_milestone_rows_route_to_source_state_on_azure",
+          "line": 118
+        }
+      ]
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_worksets.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_worksets.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "copy",
+        "dataclasses",
+        "datetime",
+        "importlib",
+        "importlib.util",
+        "json",
+        "pathlib",
+        "support",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": []
+    },
+    {
+      "original_path": "packages/sec-edgar-ingest/tests/test_workspace.py",
+      "destination_path": "packages/sec-edgar-ingest/tests/test_workspace.py",
+      "disposition": "retained_deferred_full_suite",
+      "reason": "Keep assertions; adapt local/native contracts in later tasks and extract cloud-only cases in Task 10. Not imported by Task 1 baseline.",
+      "imports": [
+        "contextlib",
+        "importlib.metadata",
+        "io",
+        "pathlib",
+        "sec_edgar_ingest",
+        "sec_edgar_ingest.cli",
+        "subprocess",
+        "sys",
+        "tomllib",
+        "unittest"
+      ],
+      "cloud_or_image_related_cases_for_task10_review": [
+        {
+          "name": "test_installed_distribution_exposes_the_cli",
+          "line": 64
+        }
+      ]
+    }
+  ],
+  "added_tests": [
+    "packages/sec-edgar-ingest/tests/test_source_import.py"
+  ],
+  "deferred_gates": [
+    "CLI import after identity port in Task 4",
+    "Whole retained suite discovery and passing AST cloud-import inventory in Task 10",
+    "Native installed release and process acceptance in later tasks",
+    "L12 genuine SEC execution, separate from default offline tests"
+  ]
+}

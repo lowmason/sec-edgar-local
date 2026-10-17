@@ -1,0 +1,88 @@
+{
+  "quarterly.idx": [
+    {
+      "cik": "0000123456",
+      "company_name": "Example Corp",
+      "form_type": "10-K",
+      "filing_date": "2024-02-29",
+      "archive_path": "edgar/data/123456/0000123456-24-000001.txt",
+      "accession_number": "0000123456-24-000001",
+      "line_number": 4,
+      "original_fields": [
+        "123456",
+        "Example Corp",
+        "10-K",
+        "2024-02-29",
+        "edgar/data/123456/0000123456-24-000001.txt"
+      ]
+    },
+    {
+      "cik": "0000123456",
+      "company_name": "Example Corp",
+      "form_type": "10-K/A",
+      "filing_date": "2024-02-29",
+      "archive_path": "edgar/data/123456/0000123456-24-000002.txt",
+      "accession_number": "0000123456-24-000002",
+      "line_number": 5,
+      "original_fields": [
+        "123456",
+        "Example Corp",
+        "10-K/A",
+        "2024-02-29",
+        "edgar/data/123456/0000123456-24-000002.txt"
+      ]
+    }
+  ],
+  "daily.idx": [
+    {
+      "cik": "0000123456",
+      "company_name": "Example Corp",
+      "form_type": "10-K/A",
+      "filing_date": "2025-08-25",
+      "archive_path": "edgar/data/123456/0000123456-25-000001.txt",
+      "accession_number": "0000123456-25-000001",
+      "line_number": 3,
+      "original_fields": [
+        " 123456 ",
+        " Example Corp ",
+        "10-K/A",
+        "20250825",
+        "edgar/data/123456/0000123456-25-000001.txt"
+      ]
+    }
+  ],
+  "legacy.idx": [
+    {
+      "cik": "0000123456",
+      "company_name": "Legacy Corp",
+      "form_type": "10-K",
+      "filing_date": "1996-02-29",
+      "archive_path": "edgar/data/123456/legacy-annual.txt",
+      "accession_number": null,
+      "line_number": 3,
+      "original_fields": [
+        "123456",
+        "Legacy Corp",
+        "10-K",
+        "19960229",
+        "edgar/data/123456/legacy-annual.txt"
+      ]
+    },
+    {
+      "cik": "0000123456",
+      "company_name": "Legacy Corp",
+      "form_type": "10-K/A",
+      "filing_date": "1996-02-29",
+      "archive_path": "edgar/data/123456/Nested/Annual.TXT",
+      "accession_number": null,
+      "line_number": 4,
+      "original_fields": [
+        "123456",
+        "Legacy Corp",
+        "10-K/A",
+        "19960229",
+        "edgar/data/123456/Nested/Annual.TXT"
+      ]
+    }
+  ]
+}
