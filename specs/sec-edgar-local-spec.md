@@ -1,6 +1,6 @@
 # SEC EDGAR local ingestion design
 
-- **Status:** Proposed for owner review; implementation has not started.
+- **Status:** Approved (owner, 2026-10-17). Ready for implementation planning; implementation has not started.
 - **Date:** 2026-10-17.
 - **Destination:** `/Users/lowell/Projects/sec-edgar-local`.
 - **Source baseline:** `/Users/lowell/Projects/sec-edgar`, commit `0e7701a1e2e98b669334546c90f5c9d4c45b1537`.
