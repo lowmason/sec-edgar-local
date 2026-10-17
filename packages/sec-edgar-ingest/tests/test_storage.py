@@ -154,18 +154,18 @@ class StorageTests(unittest.TestCase):
 
     def test_fixed_registry_is_conditional_and_factory_shares_root_and_budget(self):
         storage = importlib.import_module("sec_edgar_ingest.storage")
-        settings = fixture_settings(storage={"root": "shared"})
-        first = storage.open_stores(settings, base_path=self.root)
+        settings = fixture_settings(root=self.root / "shared")
+        first = storage.open_stores(settings)
         self.addCleanup(first[0].close)
         first[0].insert("Source", "same", {"value": 1})
-        second = storage.open_stores(settings, base_path=self.root)
+        second = storage.open_stores(settings)
         self.addCleanup(second[0].close)
         self.assertEqual(second[0].get("Source", "same").value["value"], 1)
         registry = "locks/sec-owner-lowell-mason/binding.json"
         before = first[1].read(registry)
-        conflicting = fixture_settings(storage={"root": "shared"}, sec={"requests_per_second": 1})
+        conflicting = fixture_settings(root=self.root / "shared", sec={"requests_per_second": 1})
         with self.assertRaises(self.contracts.Conflict):
-            storage.open_stores(conflicting, base_path=self.root)
+            storage.open_stores(conflicting)
         self.assertEqual(first[1].read(registry), before)
         lease = first[2].acquire("one", 60)
         with self.assertRaises(self.contracts.Conflict):

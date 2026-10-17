@@ -7,7 +7,9 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Protocol
 
-from ..config import ACCOUNT_NAME, BINDING_REGISTRY_BLOB, COORDINATION_NAMESPACE, LOCK_BLOB, Settings
+from ..config import (ACTIVE_COLLECTOR_LIMIT, BINDING_REGISTRY_BLOB, CLOCK_UNCERTAINTY_LIMIT_SECONDS,
+                      COORDINATION_NAMESPACE, LEASE_SECONDS, LOCK_BLOB, OWNER_USER_AGENT,
+                      RENEW_EVERY_SECONDS, REQUEST_BUDGET_PER_SECOND, Settings)
 from ..models import RAW_SNAPSHOT_PATH, Versioned, canonical_json, quarter_value, require_hash, require_number, require_text, require_utc, safe_relative_path, to_mapping_value
 
 CAS_ATTEMPTS = 5
@@ -119,7 +121,7 @@ def observe(observer: BoundaryObserver | None, point: str) -> None:
 def exact_version(version: str) -> None:
     require_text(version, "version")
     if version == "*":
-        raise ValueError("exact service ETag or local revision required")
+        raise ValueError("exact local revision required")
 
 
 def identity(kind: str, key: str) -> tuple[str, str]:
@@ -161,38 +163,25 @@ def validate_raw_address(path: str, sha256: str, byte_count: int) -> None:
 
 
 def deployment_binding(settings: Settings | None = None, *, root: Path | None = None) -> dict[str, object]:
-    """Only shared issuer/storage policy participates, never a command or worker ID."""
+    """Bind one fresh local root to shared issuer policy and acquisition mode."""
     if settings is None:
-        sec = {"user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com", "requests_per_second": 3.0, "max_active_collectors": 1}
-        coordination = {"lease_seconds": 60.0, "renew_every_seconds": 20.0, "namespace": COORDINATION_NAMESPACE, "clock_uncertainty_seconds": 2.0}
-        storage = {"backend": "local-fixture", "source_table": "SourceState", "attempt_table": "Attempts",
-                   "blob_api_version": "2026-04-06", "table_api_version": "2020-12-06",
-                   "account_name": None, "blob_endpoint": None, "table_endpoint": None,
-                   "raw_container": "raw", "workset_container": "worksets", "quarantine_container": "quarantine",
-                   "lock_container": "locks", "lock_blob": LOCK_BLOB, "binding_registry_blob": BINDING_REGISTRY_BLOB}
+        if root is None:
+            raise ValueError("a settings-free local binding requires an explicit root")
+        mode = "fixture"
+        sec = {"user_agent": OWNER_USER_AGENT, "requests_per_second": float(REQUEST_BUDGET_PER_SECOND),
+               "max_active_collectors": ACTIVE_COLLECTOR_LIMIT}
+        coordination = {"lease_seconds": float(LEASE_SECONDS), "renew_every_seconds": float(RENEW_EVERY_SECONDS),
+                        "namespace": COORDINATION_NAMESPACE,
+                        "clock_uncertainty_seconds": float(CLOCK_UNCERTAINTY_LIMIT_SECONDS)}
     else:
         validated = Settings.from_mapping(settings.to_mapping())
+        mode = validated.acquisition.mode
         sec = validated.sec.to_mapping()
         coordination = validated.coordination.to_mapping()
-        storage = validated.storage.to_mapping()
-        storage.pop("root")
-    storage["local_root"] = str(root.resolve()) if root is not None else None
-    return {"binding_version": "sec-owner-binding-v1", "account": ACCOUNT_NAME,
-            "namespace": COORDINATION_NAMESPACE, "sec": sec, "coordination": coordination, "storage": storage}
-
-
-def blob_address(path: str) -> tuple[str, str]:
-    safe_relative_path(path, 'object path')
-    root, separator, tail = path.partition('/')
-    if not separator:
-        raise ValueError('object path requires a root and object key')
-    if root in {'raw', 'worksets', 'quarantine', 'locks', 'results',
-                'generations', 'manifests', 'approvals'}:
-        return root, tail
-    if root == 'staging':
-        return 'raw', path
-    if root == 'runs':
-        return 'results', path
-    if root in {'observations', 'curated'}:
-        return ('manifests' if path.endswith('/manifest.json') else 'generations'), path
-    raise ValueError('object path has no accepted Blob binding')
+        if root is None:
+            root = Path(validated.storage.root)
+            if not root.is_absolute():
+                raise ValueError("storage.root must be normalized to an absolute filesystem path")
+    return {"binding_version": "sec-local-binding-v1", "root": str(root.resolve()),
+            "acquisition_mode": mode, "namespace": COORDINATION_NAMESPACE,
+            "sec": sec, "coordination": coordination, "storage_contract": "sec-local-storage-v1"}

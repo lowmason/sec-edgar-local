@@ -1,10 +1,17 @@
-"""Pure runtime descriptors and canonical native release identity contracts."""
+"""Runtime descriptors, canonical release identity, and read-only configured provenance."""
+
+from __future__ import annotations
 
 from collections.abc import Mapping
 import hashlib
 import re
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .models import canonical_json, parse_json, require_hash, require_text, safe_relative_path
+
+if TYPE_CHECKING:
+    from .config import Settings
 
 
 IDENTITY_FIELDS = {
@@ -63,6 +70,25 @@ def native_descriptor(release_id: str) -> dict[str, object]:
         "format_version": "sec-native-runtime-v1", "kind": "native",
         "release_sha256": release_id,
     })
+
+
+def configured_descriptor(settings: Settings) -> dict[str, object]:
+    """Read saved provenance without installation, network access, or opening a store."""
+    from .config import Settings
+    validated = Settings.from_mapping(settings.to_mapping())
+    if validated.runtime.kind == "fixture":
+        return fixture_descriptor(validated.runtime.fixture_id)
+    path = Path(validated.runtime.release_manifest)
+    if not path.is_absolute():
+        raise ValueError("runtime.release_manifest must be normalized to an absolute filesystem path")
+    path = path.resolve()
+    if (path.name != "release.json" or path.parent.parent.name != "releases"
+            or re.fullmatch(r"sha256=[0-9a-f]{64}", path.parent.name) is None):
+        raise ValueError("resolved release manifest must use an explicit releases/sha256=<release-id>/release.json address")
+    manifest = validate_manifest(parse_json(path.read_bytes()))
+    if path.parent.name != "sha256=" + manifest["release_id"]:
+        raise ValueError("release manifest identity differs from its release directory address")
+    return native_descriptor(manifest["release_id"])
 
 
 def _exact_object(value: object, keys: set[str], label: str) -> dict[str, object]:

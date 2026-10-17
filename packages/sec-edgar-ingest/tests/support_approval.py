@@ -3,7 +3,6 @@ from network_guard import install
 install()
 
 import contextlib
-import hashlib
 import io
 import json
 import tempfile
@@ -13,6 +12,7 @@ from datetime import date
 from pathlib import Path
 
 from support import fixture_settings
+from support_fs import tree_snapshot
 from support_etl import etl_context, seed_observation
 from sec_edgar_ingest.cli import main
 from sec_edgar_ingest.config import pin_context
@@ -93,14 +93,3 @@ class GateFixture(unittest.TestCase):
         path = self.root / 'config.json'
         path.write_bytes(canonical_json(to_mapping_value(self.settings.to_mapping())))
         return path
-
-
-def tree_snapshot(root: Path) -> dict[str, str]:
-    """Every directory and file under root, files by content hash. SQLite's transient WAL files are
-    excluded: a reader creates and removes them without changing stored state."""
-    entries = {}
-    for path in sorted(Path(root).rglob('*')):
-        if path.name.endswith(('-wal', '-shm')):
-            continue
-        entries[str(path.relative_to(root))] = 'dir' if path.is_dir() else hashlib.sha256(path.read_bytes()).hexdigest()
-    return entries

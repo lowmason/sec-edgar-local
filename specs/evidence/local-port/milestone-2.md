@@ -35,3 +35,58 @@ The final passing suite covers exact descriptor formats/kinds/keys; non-string/l
 - First un-escalated test attempt exited 2 because uv could not create its cache lock temporary file under `/Users/lowell/.cache/uv`. Approved cache access allowed all guarded offline red/green runs; no network was enabled by the application guard.
 
 Self-review read the complete new runtime module and checked the task's contract list against the tests. Applied clean-code rules: N1/N4 for explicit identity/artifact names; G30 for cohesive descriptor, record, and inventory validators; G25 for named identity fields and validation patterns; F2 for detached return values; T1/T5/T6 for strict shape/path/hash/version boundaries; C3 for retaining the historical-version design intent. No adjacent cleanup was undertaken. `git diff --check` passed before staging. Only Task 2 runtime/tests/evidence files are part of the commit. Installed wheel/preflight verification is intentionally deferred to Task 7.
+
+
+# Task 3 checkpoint: strict configuration and one native local store
+
+Task 3 completed its configuration/factory checkpoint on 2026-10-17 against base `0ebae8955f45066b345524c0a863978e785750dc`. It does not claim command or installed-release readiness. Task 4 retains the context/pin/CLI migration and complete `test_config.py` gate; those old context builders still refer to worker image fields at this checkpoint.
+
+## Actual interfaces and policy decisions
+
+- `Settings` now contains the exact `acquisition`, `storage`, `runtime`, `logging`, and `execution` groups. `config_version` is independently `sec-local-config-v1`. Storage has only `backend=local` and a filesystem `root`. The native/fixture runtime dataclass union uses the existing strict decoder; opposite-variant fields are absent, including when a caller tries to supply null. Azure fields and worker/jobs/orchestration groups are rejected. `load_config_env` is removed.
+- `parse_config(text)` validates structure and policy without path expansion or manifest reads. `load_config(path)` validates completely, then `normalize_paths(settings, path.resolve().parent)` expands home paths and resolves storage root, logging root, and native release-manifest path. Parent paths and absolute filesystem paths are valid. Logical object-key validation is unchanged. The factory requires an absolute normalized settings root; it has no `base_path`, credential, or provider fallback.
+- `Settings.to_mapping()` omits an absent fixture group, allowing a live normalized mapping to replay unchanged. A supplied null fixture group is rejected; only the two boolean override keys are accepted. Existing false defaults inside a supplied fixture group remain false. Live rejects any supplied fixture group, even an empty object or false override.
+- Live uses the exact accepted HTTP values 5/2/120/15/60/90/67108864/536870912, exact 60-second lease/20-second renewal/2-second uncertainty and namespace, `execution.max_run_seconds=3600`, native runtime, and `sec-index-parser-v1`. The owner identity and one active collector are fixed; positive request rates at or below 3 remain valid. Fixture acquisition permits native or fixture runtime, safe explicit parser aliases, positive lower HTTP bounds, finite lease values at or below 60 with positive renewal below expiry, uncertainty in 0..2, and a positive integer execution allowance. Individual clock/deadline override authorization is consumed by Task 4 pinning; this task does not weaken it.
+- `runtime.configured_descriptor(settings)` returns an independently hashed fixture descriptor or reads and strictly validates a native manifest. It requires an absolute manifest path, resolves symlinks, verifies the resolved `releases/sha256=<id>/release.json` address, and checks the directory digest against the validated canonical manifest identity. It performs no installation, network, store open, or subprocess work. Historical saved-version validation remains independent of the executing package version.
+- `deployment_binding(settings=None, *, root=None)` emits exactly `binding_version=sec-local-binding-v1`, resolved `root`, `acquisition_mode`, fixed `namespace`, normalized `sec`, normalized `coordination`, and `storage_contract=sec-local-storage-v1`. Settings-free constructors require an explicit root and use fixture mode/default accepted policies. Explicit-root calls remain available as specified; factory calls use only normalized settings. Range, parser, release, and command IDs do not enter binding. Changed root/mode/shared policy and legacy registries conflict unchanged, before creating a database.
+- `table_for` preserves `ActivePointers`, `Approvals`, `Attempts`, and `SourceState` as SQLite state categories. `blob_address` and cloud routing are removed. Native SQLite CAS/locking/retry, WAL/SHM handling, sentinel journal semantics, symlink defenses, filesystem atomicity and fsync algorithms are unchanged.
+- `fixture_settings(root=...)` builds the new map and normalizes paths; factory tests supply absolute temporary roots. `fixture_snapshot` directly uses the same `2026-10-06T00:00:00+00:00` specimen time rather than constructing a context. The existing `tree_snapshot` implementation moved unchanged to `support_fs.py`, imported by `support_approval` and `test_operator_open`. Local factory tests now load without CLI or Azure imports. Public command tests are retained for later tasks.
+- `Settings.config_sha256` hashes the canonical effective normalized mapping. Tests independently preserve/hash source bytes and show that differently formatted/source-relative JSON can have different input hashes but identical normalized effective hashes. No input-hash metadata was added to serialized Settings. The later invocation archival consumer must read the original bytes and archive its input SHA-256 separately, as required by Task 11.
+
+## Task 3 red/green evidence
+
+Commands ran from `/Users/lowell/Projects/sec-edgar-local`. Each config cycle used:
+
+```sh
+uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p test_local_config.py -v
+```
+
+1. Initial un-escalated attempt exited 2: `Could not acquire lock`, `Operation not permitted` creating `/Users/lowell/.cache/uv/.tmpWICvGB`. This was tooling setup, not accepted as RED. Approved uv cache access enabled subsequent offline runs.
+2. Supplied config RED: exit 1, `Ran 13 tests in 0.003s`, `FAILED (failures=13)`. Every test intentionally asserted the missing Task 3 contract after the current Settings refused `acquisition`, `execution`, `logging`, and `runtime` as unknown keys. After adding binding cases, RED was exit 1, `Ran 19 tests in 0.005s`, `FAILED (failures=19)` for the same intentional missing contract. Implementing strict settings, normalization, local binding and local-only factory produced GREEN: exit 0, `Ran 19 tests in 0.120s`, `OK`.
+3. Configured descriptor RED: exit 1, `Ran 24 tests in 0.115s`, `FAILED (failures=5)`; the prior 19 tests stayed green. The five new tests intentionally asserted missing `configured_descriptor`. Minimal read-only descriptor implementation produced GREEN: exit 0, `Ran 24 tests in 0.127s`, `OK`.
+4. Self-review found that checking only the lexical absolute manifest address could admit a symlink to a file outside the required release address. Added the real-filesystem regression first. RED: exit 1, `Ran 26 tests in 0.131s`, `FAILED (failures=1)`, exact failure `ValueError not raised`. Resolving and revalidating the release address produced GREEN: exit 0, `Ran 26 tests in 0.131s`, `OK`.
+5. The actual-cwd and legacy-registry assertions strengthen already-implemented invariants: two real cwd changes with relative config filenames resolve the same original paths; a legacy registry remains byte-identical and prevents database creation.
+
+The exact required final factory gate was:
+
+```sh
+for test_file in test_local_config.py test_storage.py test_operator_open.py; do
+  uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p "$test_file" -v
+done
+```
+
+Final output: exit 0; `Ran 26 tests in 0.129s`, `OK`; `Ran 14 tests in 0.688s`, `OK`; `Ran 5 tests in 0.045s`, `OK` (45 total). One earlier premature gate attempt followed a setup script stopping because `conf/` was absent, so the operator import extraction had not run: config 24 and storage 14 passed; operator import failed with `ModuleNotFoundError: No module named 'azure'`. This was not RED evidence. Created the required conf directory, completed the prescribed extraction, and reran the entire gate successfully before further work. The factory suite no longer imports the old cloud class.
+
+The changed runtime module also received this regression command:
+
+```sh
+uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p test_runtime.py -v
+```
+
+Final output: exit 0, `Ran 23 tests in 0.007s`, `OK`. No SEC requests or source-repository mutations occurred. Complete default checks/builds and genuine L12 are later release gates and were not claimed here.
+
+## Task 3 environment and self-review
+
+The native environment remains Darwin arm64, uv `0.13.1 (Homebrew 2026-10-14 aarch64-apple-darwin)`, CPython `3.14.0 (main, Oct 14 2025, 21:10:22) [Clang 20.1.4]`, installed application `0.2.0`, Requests `2.34.2`, and PyArrow `25.0.1`. No interpreter, dependency, backend or lock changes. No build ran. The declared backend remains `uv_build>=0.12.15,<0.13.0`; Task 1's exact setup backend was `0.12.24` and is not installed in the application environment.
+
+Self-review read the changed production functions and tests against the brief, including final resolved-path validation, canonical policy equality, failure-before-DB creation, lease sentinel preservation, and context/CLI deferral. Clean-code applications: G30/G34 for separating supplied validation, path normalization, configured provenance and persistence binding; N1/N4 for acquisition/runtime/path naming; G25 for accepted policy constants; F2 for detached normalized return values; T1/T5/T6 for closed union/JSON/policy/path/replay/binding boundary tests; C2/C3 for updating obsolete fixture/cloud comments while preserving the SQLite WAL and fsync design intent. No adjacent cleanup was undertaken. `git diff --check` passed after removing the extra newline left by the helper move. Only Task 3 owned paths are staged. The ignored `.sdd` report remains local execution evidence.

@@ -1,23 +1,17 @@
-"""Validated, side-effect-free settings for the acquisition boundary.
-
-Configuration files use JSON syntax, a subset of YAML 1.2; general YAML is unsupported.
-"""
+"""Strict native-local settings; filesystem paths resolve at the configuration boundary."""
 from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
-from .models import (FORMAT_VERSION, IMAGE_PATTERN, SCHEMA_VERSION, Record, RunContext,
-                     canonical_json, parse_json, quarter_for, quarter_value, record_from_mapping,
-                     require_number, require_text, safe_relative_path, validate_record_fields)
+from .models import (SCHEMA_VERSION, Record, RunContext, canonical_json, parse_json, quarter_for,
+                     quarter_value, record_from_mapping, require_number, require_text, validate_record_fields)
 
-ACCOUNT_NAME = "secedgardevb8617"
+CONFIG_VERSION = "sec-local-config-v1"
 COORDINATION_NAMESPACE = "sec-owner-lowell-mason"
 LOCK_BLOB = COORDINATION_NAMESPACE + "/sentinel.json"
 BINDING_REGISTRY_BLOB = COORDINATION_NAMESPACE + "/binding.json"
@@ -26,13 +20,18 @@ REQUEST_BUDGET_PER_SECOND = 3
 ACTIVE_COLLECTOR_LIMIT = 1
 HTTP_ATTEMPT_LIMIT = 5
 CLOCK_UNCERTAINTY_LIMIT_SECONDS = 2
-AZURE_LEASE_MIN_SECONDS = 15
-AZURE_LEASE_MAX_SECONDS = 60
-TRANSIENT_REPLAY_LIMIT = 1
+LEASE_SECONDS = 60
+RENEW_EVERY_SECONDS = 20
 WORKER_ALLOWANCE_SECONDS = 3600
 MAX_EXCHANGE_SECONDS = 90
 MAX_RECEIVED_BYTES = 67108864
 MAX_EXPANDED_BYTES = 536870912
+HTTP_POLICY = {
+    "max_attempts": HTTP_ATTEMPT_LIMIT, "retry_base_seconds": 2, "retry_cap_seconds": 120,
+    "connect_timeout_seconds": 15, "read_timeout_seconds": 60,
+    "exchange_deadline_seconds": MAX_EXCHANGE_SECONDS,
+    "max_received_bytes": MAX_RECEIVED_BYTES, "max_expanded_bytes": MAX_EXPANDED_BYTES,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,43 +74,44 @@ class CoordinationSettings(Record):
 
 @dataclass(frozen=True, slots=True)
 class StorageSettings(Record):
-    backend: Literal["local-fixture", "azure"]
-    source_table: str
-    attempt_table: str
-    blob_api_version: str
-    table_api_version: str
-    root: str | None = None
-    account_name: str | None = None
-    blob_endpoint: str | None = None
-    table_endpoint: str | None = None
-    raw_container: str = "raw"
-    workset_container: str = "worksets"
-    quarantine_container: str = "quarantine"
-    lock_container: str = "locks"
-    lock_blob: str = LOCK_BLOB
-    binding_registry_blob: str = BINDING_REGISTRY_BLOB
+    backend: Literal["local"]
+    root: str
+
+
+@dataclass(frozen=True, slots=True)
+class AcquisitionSettings(Record):
+    mode: Literal["live", "fixture"]
+
+
+@dataclass(frozen=True, slots=True)
+class NativeRuntimeSettings(Record):
+    kind: Literal["native"]
+    release_manifest: str
+
+
+@dataclass(frozen=True, slots=True)
+class FixtureRuntimeSettings(Record):
+    kind: Literal["fixture"]
+    fixture_id: str
+
+
+RuntimeSettings = NativeRuntimeSettings | FixtureRuntimeSettings
+
+
+@dataclass(frozen=True, slots=True)
+class LoggingSettings(Record):
+    root: str
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionSettings(Record):
+    max_run_seconds: int
 
 
 @dataclass(frozen=True, slots=True)
 class EtlSettings(Record):
     parser_version: str
     schema_version: str
-
-
-@dataclass(frozen=True, slots=True)
-class WorkerSettings(Record):
-    image_digest: str
-    provenance: str
-
-
-@dataclass(frozen=True, slots=True)
-class JobsSettings(Record):
-    replica_retry_limit: int
-
-
-@dataclass(frozen=True, slots=True)
-class OrchestrationSettings(Record):
-    transient_replays: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,122 +134,118 @@ class Settings(Record):
     http: HttpSettings
     coordination: CoordinationSettings
     storage: StorageSettings
+    acquisition: AcquisitionSettings
+    runtime: RuntimeSettings
+    logging: LoggingSettings
+    execution: ExecutionSettings
     etl: EtlSettings
-    worker: WorkerSettings
-    jobs: JobsSettings
-    orchestration: OrchestrationSettings
     reconciliation: ReconciliationSettings
     fixture: FixtureOverrides | None = None
 
     def __post_init__(self):
         validate_record_fields(self)
-        if self.config_version != FORMAT_VERSION:
+        if self.config_version != CONFIG_VERSION:
             raise ValueError("unsupported config_version")
         start = quarter_value(self.backfill.start_quarter)
         if self.backfill.end_quarter != "open" and quarter_value(self.backfill.end_quarter) < start:
             raise ValueError("backfill quarters are reversed")
         if type(self.daily.start_date) is not date:
             raise ValueError("daily.start_date must be an ISO date")
-        require_text(self.sec.user_agent, "sec.user_agent")
-        if self.sec.user_agent != OWNER_USER_AGENT:
-            raise ValueError("sec.user_agent must use the accepted owner identity")
-        require_number(self.sec.requests_per_second, "sec.requests_per_second", positive=True)
-        if self.sec.requests_per_second > REQUEST_BUDGET_PER_SECOND:
-            raise ValueError("sec.requests_per_second exceeds the accepted shared request budget")
-        if type(self.sec.max_active_collectors) is not int or self.sec.max_active_collectors != ACTIVE_COLLECTOR_LIMIT:
-            raise ValueError("sec.max_active_collectors must equal 1")
-        for label in ("max_attempts", "max_received_bytes", "max_expanded_bytes"):
-            require_number(getattr(self.http, label), "http." + label, positive=True, integer=True)
-        for label in ("retry_base_seconds", "retry_cap_seconds", "connect_timeout_seconds",
-                      "read_timeout_seconds", "exchange_deadline_seconds"):
-            require_number(getattr(self.http, label), "http." + label, positive=True)
-        if self.http.max_attempts > HTTP_ATTEMPT_LIMIT or self.http.retry_cap_seconds < self.http.retry_base_seconds:
-            raise ValueError("http retry settings exceed the accepted attempts or reverse the delay bounds")
-        if self.http.exchange_deadline_seconds > MAX_EXCHANGE_SECONDS or self.http.max_received_bytes > MAX_RECEIVED_BYTES or self.http.max_expanded_bytes > MAX_EXPANDED_BYTES:
-            raise ValueError("http guard settings exceed accepted acquisition bounds")
-        for label in ("lease_seconds", "renew_every_seconds"):
-            require_number(getattr(self.coordination, label), "coordination." + label, positive=True)
-        require_number(self.coordination.clock_uncertainty_seconds, "coordination.clock_uncertainty_seconds")
-        if self.coordination.clock_uncertainty_seconds > CLOCK_UNCERTAINTY_LIMIT_SECONDS:
-            raise ValueError("coordination.clock_uncertainty_seconds exceeds accepted bound")
-        if self.coordination.renew_every_seconds >= self.coordination.lease_seconds:
-            raise ValueError("coordination requires 0 < renew_every_seconds < lease_seconds")
-        if self.coordination.namespace != COORDINATION_NAMESPACE:
-            raise ValueError("coordination.namespace must use the one deployment binding")
-        _validate_storage(self.storage)
+        _validate_issuer(self.sec)
+        _validate_http(self.http)
+        _validate_coordination(self.coordination)
+        require_text(self.storage.root, "storage.root filesystem path")
+        require_text(self.logging.root, "logging.root filesystem path")
+        if self.runtime.kind == "native":
+            _validate_manifest_path(self.runtime.release_manifest)
+        else:
+            require_text(self.runtime.fixture_id, "runtime.fixture_id")
+        require_number(self.execution.max_run_seconds, "execution.max_run_seconds", positive=True, integer=True)
         require_text(self.etl.parser_version, "etl.parser_version")
         if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", self.etl.parser_version) is None or self.etl.parser_version.lower() in ("latest", "open"):
             raise ValueError("etl.parser_version must be explicit immutable provenance")
         if self.etl.schema_version != SCHEMA_VERSION:
             raise ValueError("unsupported etl.schema_version")
-        if not isinstance(self.worker.image_digest, str) or IMAGE_PATTERN.fullmatch(self.worker.image_digest) is None:
-            raise ValueError("worker.image_digest must be an immutable sha256 digest")
-        require_text(self.worker.provenance, "worker.provenance")
-        if type(self.jobs.replica_retry_limit) is not int or self.jobs.replica_retry_limit != 0:
-            raise ValueError("jobs.replica_retry_limit must equal 0")
-        if type(self.orchestration.transient_replays) is not int or not 0 <= self.orchestration.transient_replays <= TRANSIENT_REPLAY_LIMIT:
-            raise ValueError("orchestration.transient_replays must be at most 1")
         if self.reconciliation.require_withdrawal_approval is not True:
             raise ValueError("reconciliation.require_withdrawal_approval must be true")
-        if self.storage.backend == "azure":
-            _validate_azure_policy(self)
+        if self.acquisition.mode == "live":
+            _validate_live_policy(self)
 
     @classmethod
     def from_mapping(cls, value: dict[str, object]) -> Settings:
-        if isinstance(value, dict) and isinstance(value.get("storage"), dict) and value["storage"].get("backend") == "azure":
-            required = {"account_name", "blob_endpoint", "table_endpoint", "raw_container", "workset_container",
-                        "quarantine_container", "lock_container", "lock_blob", "binding_registry_blob",
-                        "source_table", "attempt_table", "blob_api_version", "table_api_version"}
-            if required - value["storage"].keys():
-                raise ValueError(f"azure storage missing explicit bindings: {sorted(required - value['storage'].keys())}")
+        if isinstance(value, dict) and "fixture" in value and value["fixture"] is None:
+            raise ValueError("fixture must be an explicit object when supplied")
         return record_from_mapping(cls, value, require_all=False)
+
+    def to_mapping(self) -> dict[str, object]:
+        mapping = super(Settings, self).to_mapping()
+        if self.fixture is None:
+            mapping.pop("fixture")
+        return mapping
 
     @property
     def config_sha256(self) -> str:
         return hashlib.sha256(canonical_json(self.to_mapping())).hexdigest()
 
 
-def _validate_storage(storage: StorageSettings) -> None:
-    if storage.source_table != "SourceState" or storage.attempt_table != "Attempts":
-        raise ValueError("storage tables must use the accepted SourceState/Attempts binding")
-    if storage.blob_api_version != "2026-04-06" or storage.table_api_version != "2020-12-06":
-        raise ValueError("unsupported storage data-plane API versions")
-    for label, expected in (("raw_container", "raw"), ("workset_container", "worksets"),
-                            ("quarantine_container", "quarantine"), ("lock_container", "locks"),
-                            ("lock_blob", LOCK_BLOB), ("binding_registry_blob", BINDING_REGISTRY_BLOB)):
-        if getattr(storage, label) != expected:
-            raise ValueError(f"storage.{label} must use the one deployment binding")
-    if storage.backend == "local-fixture":
-        safe_relative_path(storage.root, "storage.root")
-        if any(getattr(storage, label) is not None for label in ("account_name", "blob_endpoint", "table_endpoint")):
-            raise ValueError("local-fixture storage cannot include Azure account endpoints")
-    elif storage.backend == "azure":
-        if storage.root is not None or storage.account_name != ACCOUNT_NAME:
-            raise ValueError("azure storage must use the accepted account binding")
-        for kind, endpoint in (("blob", storage.blob_endpoint), ("table", storage.table_endpoint)):
-            require_text(endpoint, f"storage.{kind}_endpoint")
-            parsed = urlsplit(endpoint)
-            if parsed.scheme != "https" or parsed.netloc != f"{ACCOUNT_NAME}.{kind}.core.windows.net" or parsed.path not in ("", "/") or parsed.query or parsed.fragment or "?" in endpoint or "#" in endpoint:
-                raise ValueError(f"storage.{kind}_endpoint must be the accepted credential-free HTTPS endpoint")
-    else:
-        raise ValueError("unsupported storage.backend")
+def _validate_issuer(sec: SecSettings) -> None:
+    if sec.user_agent != OWNER_USER_AGENT:
+        raise ValueError("sec.user_agent must use the accepted owner identity")
+    require_number(sec.requests_per_second, "sec.requests_per_second", positive=True)
+    if sec.requests_per_second > REQUEST_BUDGET_PER_SECOND:
+        raise ValueError("sec.requests_per_second exceeds the accepted shared request budget")
+    if sec.max_active_collectors != ACTIVE_COLLECTOR_LIMIT:
+        raise ValueError("sec.max_active_collectors must equal 1")
 
 
-def _validate_azure_policy(settings: Settings) -> None:
+def _validate_http(http: HttpSettings) -> None:
+    for label, maximum in HTTP_POLICY.items():
+        value = getattr(http, label)
+        require_number(value, "http." + label, positive=True,
+                       integer=label in ("max_attempts", "max_received_bytes", "max_expanded_bytes"))
+        if value > maximum:
+            raise ValueError(f"http.{label} exceeds the accepted acquisition bound")
+    if http.retry_cap_seconds < http.retry_base_seconds:
+        raise ValueError("http retry settings reverse the delay bounds")
+
+
+def _validate_coordination(coordination: CoordinationSettings) -> None:
+    for label in ("lease_seconds", "renew_every_seconds"):
+        require_number(getattr(coordination, label), "coordination." + label, positive=True)
+    require_number(coordination.clock_uncertainty_seconds, "coordination.clock_uncertainty_seconds")
+    if coordination.clock_uncertainty_seconds > CLOCK_UNCERTAINTY_LIMIT_SECONDS:
+        raise ValueError("coordination.clock_uncertainty_seconds exceeds accepted bound")
+    if coordination.lease_seconds > LEASE_SECONDS:
+        raise ValueError("coordination.lease_seconds exceeds the accepted finite lease")
+    if coordination.renew_every_seconds >= coordination.lease_seconds:
+        raise ValueError("coordination requires 0 < renew_every_seconds < lease_seconds")
+    if coordination.namespace != COORDINATION_NAMESPACE:
+        raise ValueError("coordination.namespace must use the one deployment binding")
+
+
+def _validate_manifest_path(value: str) -> None:
+    require_text(value, "runtime.release_manifest filesystem path")
+    parts = Path(value).parts
+    if (len(parts) < 3 or parts[-3] != "releases" or parts[-1] != "release.json"
+            or re.fullmatch(r"sha256=[0-9a-f]{64}", parts[-2]) is None):
+        raise ValueError("runtime.release_manifest must name releases/sha256=<release-id>/release.json")
+
+
+def _validate_live_policy(settings: Settings) -> None:
     if settings.fixture is not None:
-        raise ValueError("fixture overrides are permitted only for local-fixture storage")
-    if settings.sec.requests_per_second != REQUEST_BUDGET_PER_SECOND:
-        raise ValueError("azure request budget must match the deployment binding")
-    if "fixture" in settings.worker.provenance.lower() or "synthetic" in settings.worker.provenance.lower() or settings.worker.image_digest == "sha256:" + "0" * 64:
-        raise ValueError("synthetic fixture image is forbidden for Azure")
-    if "fixture" in settings.etl.parser_version.lower():
-        raise ValueError("fixture parser provenance is forbidden for Azure")
-    if (settings.http.exchange_deadline_seconds != MAX_EXCHANGE_SECONDS
-            or settings.http.max_received_bytes != MAX_RECEIVED_BYTES
-            or settings.http.max_expanded_bytes != MAX_EXPANDED_BYTES):
-        raise ValueError("lower HTTP guard overrides are fixture-only")
-    if not AZURE_LEASE_MIN_SECONDS <= settings.coordination.lease_seconds <= AZURE_LEASE_MAX_SECONDS:
-        raise ValueError("azure finite lease_seconds must be in the supported 15..60 second range")
+        raise ValueError("fixture overrides are permitted only for fixture acquisition")
+    if settings.runtime.kind != "native":
+        raise ValueError("live acquisition requires native runtime")
+    if settings.etl.parser_version != "sec-index-parser-v1":
+        raise ValueError("live acquisition requires sec-index-parser-v1")
+    if settings.http.to_mapping() != HTTP_POLICY:
+        raise ValueError("live HTTP settings must match the accepted acquisition policy")
+    if (settings.coordination.lease_seconds != LEASE_SECONDS
+            or settings.coordination.renew_every_seconds != RENEW_EVERY_SECONDS
+            or settings.coordination.clock_uncertainty_seconds != CLOCK_UNCERTAINTY_LIMIT_SECONDS):
+        raise ValueError("live coordination settings must match the accepted finite lease policy")
+    if settings.execution.max_run_seconds != WORKER_ALLOWANCE_SECONDS:
+        raise ValueError("live execution.max_run_seconds must equal 3600")
 
 
 def parse_config(text: str) -> Settings:
@@ -260,22 +256,29 @@ def parse_config(text: str) -> Settings:
     return Settings.from_mapping(value)
 
 
+def normalize_paths(settings: Settings, config_parent: Path) -> Settings:
+    """Resolve filesystem fields once; absolute archived snapshots replay unchanged."""
+    def absolute_field(value: str) -> str:
+        require_text(value, "filesystem path")
+        candidate = Path(value).expanduser()
+        if not candidate.is_absolute():
+            candidate = config_parent / candidate
+        return str(candidate.resolve())
+
+    validated = Settings.from_mapping(settings.to_mapping())
+    runtime = validated.runtime
+    if runtime.kind == "native":
+        runtime = replace(runtime, release_manifest=absolute_field(runtime.release_manifest))
+    return replace(validated, storage=replace(validated.storage, root=absolute_field(validated.storage.root)),
+                   logging=replace(validated.logging, root=absolute_field(validated.logging.root)), runtime=runtime)
+
+
 def load_config(path: Path) -> Settings:
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError as error:
         raise ValueError("configuration requires strict JSON syntax (YAML 1.2 subset)") from error
-    return parse_config(text)
-
-
-def load_config_env(name: str, environ: Mapping[str, str]) -> Settings:
-    """The same strict configuration, carried by one environment variable (the Azure job secret)."""
-    if not isinstance(name, str) or re.fullmatch(r"[A-Z][A-Z0-9_]*", name) is None:
-        raise ValueError("--config-env must name an upper-case environment variable")
-    text = environ.get(name)
-    if not text:
-        raise ValueError(f"configuration environment variable {name} is unset or empty")
-    return parse_config(text)
+    return normalize_paths(parse_config(text), path.resolve().parent)
 
 
 def pin_context(settings: Settings, context: RunContext, today: date) -> tuple[RunContext, str]:

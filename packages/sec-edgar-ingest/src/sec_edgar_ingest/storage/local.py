@@ -1,4 +1,4 @@
-"""SQLite CAS and durable write-once files for offline acquisition fixtures."""
+"""SQLite CAS and durable write-once files for native local acquisition."""
 from __future__ import annotations
 
 import errno

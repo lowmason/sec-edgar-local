@@ -41,15 +41,17 @@ def retained_path(original_path: str) -> Path:
     return target
 
 
-def fixture_settings(**overrides: object) -> "Settings":
-    from sec_edgar_ingest.config import Settings
+def fixture_settings(*, root: Path | None = None, **overrides: object) -> "Settings":
+    from sec_edgar_ingest.config import Settings, normalize_paths
     value = json.loads(FIXTURE_CONFIG.read_text())
     for key, override in overrides.items():
         if isinstance(override, dict) and isinstance(value.get(key), dict):
             value[key].update(override)
         else:
             value[key] = override
-    return Settings.from_mapping(value)
+    if root is not None:
+        value["storage"]["root"] = str(root.resolve())
+    return normalize_paths(Settings.from_mapping(value), FIXTURE_CONFIG.resolve().parent)
 
 
 def spawn_tolerant_settings(**overrides: dict) -> "Settings":
@@ -127,7 +129,7 @@ def fixture_snapshot(source: "Source", body: bytes) -> "Snapshot":
     envelope = QUARTERLY_ENVELOPE_VERSION if source.kind == "quarterly" else DAILY_ENVELOPE_VERSION
     return Snapshot(source.source_id, digest,
                     f"raw/sec/indexes/kind={source.kind}/period={source.period}/sha256={digest}/master.{source.representation}",
-                    len(body), fixture_context().started_at, {}, source.representation, envelope)
+                    len(body), datetime(2026, 10, 6, tzinfo=timezone.utc), {}, source.representation, envelope)
 
 
 def exception_texts(type_name: str) -> tuple[tuple[str, str], ...]:
