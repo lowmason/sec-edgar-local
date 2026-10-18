@@ -4,20 +4,25 @@
   "actual_run_executed": false,
   "format_version": "sec-local-sec-acceptance-checkpoint-v1",
   "genuine_sec_http": false,
+  "harness_review": "round1 corrections implemented; scoped re-review pending",
   "next_gate": "Independent code review of committed harness before actual preparation or genuine execution.",
   "offline_tests": {
     "errors": 0,
     "failures": 0,
     "module": "test_acceptance_selection.py",
     "network_guard": true,
-    "seconds": 9.917,
+    "seconds": 12.712,
     "skips": 0,
-    "tests": 29
+    "tests": 34
   },
   "owner_amendment": "Wrap download.validate_envelope with the same retained real validator alongside collection and etl.transform.",
   "payload_revision": "3ca50c78558bbf072a4eb75412af7d58a9e0f61b",
   "proof_kind": "offline tests, fake boundary receipts and local processes only",
   "readiness": false,
   "release_id": "fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec",
+  "review_corrections": [
+    "Full native driver under original UTC and monotonic supervised process boundary.",
+    "Inventory all frozen launches and derive L12 from selected durable evidence and reconciled conservative ledger."
+  ],
   "stage": "offline_harness_implemented_pending_independent_review"
 }

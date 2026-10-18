@@ -375,6 +375,13 @@ class AcceptanceTests(unittest.TestCase):
         for mode in ('quarterly', 'daily'):
             selected['inventory'][mode + '_listing_urls'] = [url for url in listings if ('full-index' if mode == 'quarterly' else 'daily-index') in url]
         self.path.write_bytes(self.api['canonical'](selected))
+        for mode, fixture_harness in command_harnesses.items():
+            fixture_harness.config = fixture_harness.root / (mode + '-config.json')
+            fixture_harness.deadline = datetime.fromisoformat(selected['window']['deadline_utc'])
+            fixture_harness.config.write_bytes(canonical_json(to_mapping_value(fixture_harness.settings.to_mapping())))
+            selected['configs'][mode] = {'path': str(fixture_harness.config),
+                'sha256': self.api['digest'](fixture_harness.config.read_bytes()), 'effective_sha256': fixture_harness.settings.config_sha256}
+        self.path.write_bytes(self.api['canonical'](selected))
         seen = []
         api = self.api
         class OfflineEngine(api['AcceptanceRun']):
@@ -388,6 +395,34 @@ class AcceptanceTests(unittest.TestCase):
                 from sec_edgar_ingest.results import read_result
                 from sec_edgar_ingest.etl.commands import read_etl_result
                 result = (read_etl_result if command in ('transform', 'publish') else read_result)(message['result_ref'], harness.objects)
+                import uuid
+                frozen = harness.calls[-1]['argv']
+                public = [frozen[0]]
+                for name, value in zip(frozen[1::2], frozen[2::2]):
+                    if name not in ('--today', '--fixture-pack'): public.extend((name, value))
+                call = api['make_call'](selected, self.path, public)
+                attempt = self.root / 'commands' / label / 'attempt-000'
+                call_path = attempt / 'call.json'
+                api['write_once'](call_path, api['canonical'](call))
+                launch_id = uuid.uuid4().hex
+                launch = attempt / 'launches' / ('launch-' + launch_id)
+                argv = api['child_argv'](selected, self.path, call_path)
+                dispatch = {'format_version': 'sec-local-sec-dispatch-v1',
+                    'selection_sha256': api['digest'](self.path.read_bytes()), 'call_path': str(call_path),
+                    'call_sha256': api['digest'](call_path.read_bytes()), 'launch_path': str(launch),
+                    'argv': argv, 'dispatched_utc': datetime.now(timezone.utc).isoformat()}
+                api['write_once'](launch / 'dispatch.json', api['canonical'](dispatch))
+                api['write_once'](self.root / 'dispatches' / (launch_id + '.json'), api['canonical'](dispatch))
+                stdout, stderr = api['canonical'](message) + b'\n', b'explicit offline fake process boundary\n'
+                execution = {'pid': 10000 + len(seen), 'argv': argv, 'returncode': code, 'drained': True,
+                    'stdout_sha256': api['digest'](stdout), 'stderr_sha256': api['digest'](stderr),
+                    'stdout_path': str(launch / 'stdout'), 'stderr_path': str(launch / 'stderr')}
+                for path, body in [(launch / 'started.json', api['canonical']({'pid': execution['pid']})),
+                        (launch / 'stdout', stdout), (launch / 'stderr', stderr),
+                        (launch / 'execution.json', api['canonical'](execution)),
+                        (attempt / 'result.json', harness.objects.read(message['result_ref']))]:
+                    api['write_once'](path, body)
+                if not (attempt / 'execution.json').exists(): api['write_once'](attempt / 'execution.json', api['canonical'](execution))
                 engine.results.append({'label': label})
                 if replay: engine.replays.append({'label': label})
                 return result
@@ -402,6 +437,69 @@ class AcceptanceTests(unittest.TestCase):
         quarterly_position = next(i for i, item in enumerate(seen) if item[0] == '2024Q1-collect')
         self.assertLess(quarterly_position, daily_position)
         self.assertEqual(len(list((self.root / 'members').glob('*.json'))), 3)
+        records, launches = api['inspect_commands'](self.path, selected, command_harnesses['daily'].objects)
+        self.assertEqual(len(records), len(seen))
+        proof = api['derive_source_proof'](selected, launches, [], command_harnesses['daily'].store, command_harnesses['daily'].objects)
+        self.assertEqual(len(proof['selected_acquired']), 3)
+        self.assertEqual(len(proof['selected_reused']), 3)
+        self.assertEqual(len(proof['selected_replayed']), 3)
+        self.assertEqual(len(proof['selected_publications']), 3)
+        self.assertFalse(proof['genuine_native'], 'explicit fixtures cannot establish genuine native acquisition')
+        no_replay = [item for item in launches if sum(other['record']['call_path'] == item['record']['call_path'] for other in launches[:launches.index(item)]) == 0]
+        absent = api['derive_source_proof'](selected, no_replay, [], command_harnesses['daily'].store, command_harnesses['daily'].objects)
+        self.assertEqual(absent['selected_replayed'], [])
+        no_reuse = [item for item in launches if not item['record']['label'].endswith('-reuse')]
+        absent = api['derive_source_proof'](selected, no_reuse, [], command_harnesses['daily'].store, command_harnesses['daily'].objects)
+        self.assertEqual(absent['selected_reused'], [])
+        removed = Path(records[0]['execution_path'])
+        original = removed.read_bytes()
+        removed.unlink()
+        with self.assertRaises(OSError): api['inspect_commands'](self.path, selected, command_harnesses['daily'].objects)
+        removed.write_bytes(original)
+        # A complete fixture-backed archive is verifiable but remains L12 incomplete.
+        commands, ledger, derived = api['derive_evidence'](self.path, selected, command_harnesses['daily'].store, command_harnesses['daily'].objects)
+        worker = self.root / 'workers/offline-boundary'
+        worker.mkdir(parents=True)
+        started = datetime.now(timezone.utc)
+        request = {'format_version': 'sec-local-sec-worker-v1', 'selection_sha256': api['digest'](self.path.read_bytes()),
+            'selection_path': str(self.path), 'supervisor_pid': 1234}
+        (worker / 'request.json').write_bytes(api['canonical'](request))
+        (worker / 'started.json').write_bytes(api['canonical']({'pid': 2345}))
+        (worker / 'stdout').write_bytes(b'explicit offline worker boundary\n')
+        (worker / 'stderr').write_bytes(b'')
+        report = {'selection_sha256': api['digest'](self.path.read_bytes()), 'release_id': selected['release_id'],
+            'commands': commands, 'proof': derived, 'status': api['evaluate_l12'](derived), 'reason': None,
+            'budget': ledger, 'ended_utc': datetime.now(timezone.utc).isoformat(),
+            'worker_request': str(worker / 'request.json')}
+        report_path = self.root / 'run-offline.json'
+        report_path.write_bytes(api['canonical'](report))
+        watch = {'selection_sha256': request['selection_sha256'], 'argv': api['worker_argv'](self.path, selected),
+            'pid': 2345, 'drained': True, 'returncode': 12, 'outcome': 'completed',
+            'started_utc': started.isoformat(), 'ended_utc': datetime.now(timezone.utc).isoformat(),
+            'stdout_sha256': api['digest']((worker / 'stdout').read_bytes()), 'stderr_sha256': api['digest'](b''),
+            'monotonic_budget': 800, 'monotonic_elapsed': 0.01}
+        (worker / 'watchdog.json').write_bytes(api['canonical'](watch))
+        self.assertEqual(api['verify_acceptance'](self.path, selected, engine.settings), api['LIMIT_EXIT'])
+        # The same archive cannot omit a replay/reuse or alter budget totals.
+        for change in ('replay', 'reuse', 'budget'):
+            altered = copy.deepcopy(report)
+            if change == 'budget': altered['budget']['totals']['attempts'] += 1
+            elif change == 'reuse': altered['commands'] = [item for item in altered['commands'] if not item['label'].endswith('-reuse')]
+            else:
+                label = selected['sources'][0]['period'] + '-collect'
+                replay = [item for item in altered['commands'] if item['label'] == label][-1]
+                altered['commands'].remove(replay)
+            report_path.write_bytes(api['canonical'](altered))
+            with self.assertRaises(ValueError): api['verify_acceptance'](self.path, selected, engine.settings)
+        report_path.write_bytes(api['canonical'](report))
+        # Extra capture files remain unrelated even if an otherwise valid frozen
+        # capture is copied into the evidence directory under another identity.
+        capture_path = next(path for path in (self.root / 'captures').glob('*.json') if not path.name.endswith('.read.json'))
+        unrelated = self.root / 'captures/unrelated-valid-capture.json'
+        unrelated.write_bytes(capture_path.read_bytes())
+        with self.assertRaisesRegex(ValueError, 'unrelated'):
+            api['verify_acceptance'](self.path, selected, engine.settings)
+        unrelated.unlink()
 
 
     def test_preparation_receipt_refuses_canonical_selection_edit_before_first_run(self):
@@ -518,6 +616,147 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(identity, {'request_id': 'real-request-id', 'command_key': attempt_key(context), 'ordinal': 1})
         with self.assertRaisesRegex(ValueError, 'exact production'):
             self.api['production_request_identity'](url, context, SimpleNamespace(request_id='substituted'))
+
+    def test_overall_watchdog_interrupts_direct_blocking_capture_in_c(self):
+        import ctypes
+        import time
+        from unittest.mock import patch
+        selected = copy.deepcopy(self.selection)
+        deadline = datetime.now(timezone.utc) + timedelta(seconds=0.1)
+        selected['window'] = {'started_utc': (deadline - timedelta(seconds=900)).isoformat(), 'deadline_utc': deadline.isoformat()}
+        engine = SimpleNamespace(budget=SimpleNamespace(selection_sha256='a' * 64,
+            summary=lambda: {'actual_sent_requests': 0, 'reservations': [], 'totals': {}}),
+            reuse=[], replays=[], reads=[], results=[], acquisitions=[], parents=[])
+        marker = self.root / 'capture-finished'
+        def blocked_capture(engine):
+            ctypes.PyDLL(None).usleep(750000)
+            marker.write_text('late capture finished')
+        scope = self.selection['inventory']
+        import sys
+        code = 'import ctypes,pathlib;ctypes.PyDLL(None).usleep(750000);pathlib.Path(' + repr(str(marker)) + ').write_text("late capture finished")'
+        updates = {'inventory': lambda *args: scope, 'AcceptanceRun': lambda *args: engine, 'execute_case': blocked_capture,
+                   'worker_argv': lambda *args: [sys.executable, '-I', '-c', code]}
+        started = time.monotonic()
+        with patch.dict(self.api['run_acceptance'].__globals__, updates):
+            result = self.api['run_acceptance'](self.path, selected, {})
+        self.assertEqual(result, self.api['LIMIT_EXIT'])
+        self.assertLess(time.monotonic() - started, 0.5, 'overall bound only detected after blocking C capture returned')
+        self.assertFalse(marker.exists(), 'blocked capture completed past the immutable boundary')
+        receipts = list((self.root / 'workers').glob('*/watchdog.json'))
+        self.assertEqual(len(receipts), 1)
+        receipt = self.api['read_json'](receipts[0])
+        self.assertFalse(receipt['drained'])
+        self.assertEqual(receipt['outcome'], 'acceptance_limit')
+
+    def test_verifier_rejects_report_only_pass_and_omitted_evidence(self):
+        from unittest.mock import patch
+        budget = self.ledger()
+        dummy_read = {'quarter': '1999Q1', 'generation_id': 'e' * 64, 'rows': 1, 'validated': True}
+        capture = {'quarter': '1999Q1', 'generation_id': 'e' * 64,
+            'manifest_ref': 'etl/sec/1999Q1/manifest.json', 'manifest_sha256': 'f' * 64, 'manifest_bytes': 1}
+        captures = self.root / 'captures'
+        captures.mkdir()
+        (captures / ('1999Q1-' + 'e' * 64 + '.json')).write_bytes(self.api['canonical'](capture))
+        proof = {'genuine_native': True, 'persistence': True, 'restart_reuse': True, 'exact_replay': True,
+                 'bounded': True, 'published_reads': [dummy_read]}
+        report = {'selection_sha256': self.api['digest'](self.path.read_bytes()), 'release_id': self.selection['release_id'],
+                  'commands': [], 'proof': proof, 'status': {'status': 'pass', 'reasons': []},
+                  'budget': budget.summary(), 'ended_utc': datetime.now(timezone.utc).isoformat()}
+        path = self.root / 'run-forged.json'
+        for variant in ('omitted-replay', 'omitted-reuse', 'missing-failed-launch', 'inconsistent-budget', 'unrelated-capture'):
+            altered = copy.deepcopy(report)
+            if variant == 'inconsistent-budget': altered['budget']['totals']['attempts'] = 99
+            if variant == 'missing-failed-launch':
+                dispatches = self.root / 'dispatches'
+                dispatches.mkdir(exist_ok=True)
+                (dispatches / 'missing.json').write_text('{}')
+            path.write_bytes(self.api['canonical'](altered))
+            with self.subTest(variant=variant), patch('sec_edgar_ingest.storage.open_stores', return_value=(None, None, None)), \
+                    patch.dict(self.api['verify_acceptance'].__globals__, {'validate_read': lambda *args: dummy_read}):
+                try:
+                    result = self.api['verify_acceptance'](self.path, self.selection, {'daily': None})
+                except (ValueError, OSError):
+                    continue
+                self.assertNotEqual(result, 0, 'verifier accepted report claims without selected acquisition/replay/reuse evidence')
+
+    def test_ledger_verifier_reconciles_crash_charge_refund_and_transport_hashes(self):
+        import sqlite3
+        budget = self.ledger()
+        url = self.selection['sources'][0]['url']
+        rid = budget.reserve_send(url, 'actual-attempt', request_id='actual-request', ordinal=1)
+        row = SimpleNamespace(value={'request_id': 'actual-request'}, to_mapping=lambda: {'value': {
+            'request_id': 'actual-request', 'attempt_key': 'actual-attempt', 'url': url, 'ordinal': 1}})
+        store = SimpleNamespace(scan=lambda *args: [row])
+        summary, admissions = self.api['inspect_budget'](self.path, self.selection, store)
+        self.assertEqual(summary['totals']['received_bytes'], 67108864)
+        self.assertFalse(admissions[0]['socket_started'])
+        with sqlite3.connect(budget.path) as db:
+            db.execute("UPDATE totals SET charged=0 WHERE kind='received_bytes'")
+        db.close()
+        with self.assertRaisesRegex(ValueError, 'conservative reservations'):
+            self.api['inspect_budget'](self.path, self.selection, store)
+        with sqlite3.connect(budget.path) as db:
+            db.execute("UPDATE totals SET charged=67108864 WHERE kind='received_bytes'")
+        db.close()
+        spool = self.root / 'fake-receipt'
+        spool.mkdir()
+        (spool / 'body').write_bytes(b'abc')
+        (spool / 'receipt.json').write_text(json.dumps({'complete': True, 'unsafe': False, 'error': None}))
+        (spool / 'transport.jsonl').write_text(json.dumps({'event': 'socket-start',
+            'utc': datetime.now(timezone.utc).isoformat()}) + '\n')
+        budget.retain_transport(rid, SimpleNamespace(temporary_path=spool / 'body', complete=True, byte_count=3), confirmed=True)
+        budget.settle(rid, 3)
+        summary, admissions = self.api['inspect_budget'](self.path, self.selection, store)
+        self.assertEqual(summary, budget.summary())
+        self.assertEqual(admissions[0]['sha256'], self.api['digest'](b'abc'))
+        (self.root / 'transports' / rid / 'body').write_bytes(b'xyz')
+        with self.assertRaisesRegex(ValueError, 'hash/length'):
+            self.api['inspect_budget'](self.path, self.selection, store)
+
+    def test_ledger_verifier_refuses_unconfirmed_recovery_refund(self):
+        budget = self.ledger()
+        url = self.selection['sources'][0]['url']
+        rid = budget.reserve_send(url, 'actual-attempt', request_id='actual-request', ordinal=1)
+        budget.settle(rid, 0)
+        row = SimpleNamespace(value={'request_id': 'actual-request'}, to_mapping=lambda: {'value': {
+            'request_id': 'actual-request', 'attempt_key': 'actual-attempt', 'url': url, 'ordinal': 1}})
+        store = SimpleNamespace(scan=lambda *args: [row])
+        with self.assertRaisesRegex(ValueError, 'refund lacks complete'):
+            self.api['inspect_budget'](self.path, self.selection, store)
+
+    def test_failed_limited_launch_is_inventoried_and_cannot_be_removed(self):
+        import shutil
+        call_path = self.root / 'commands/failure/attempt-000/call.json'
+        public = ['discover', '--config', self.selection['configs']['quarterly']['path'],
+            '--run-id', 'r', '--execution-id', 'e', '--attempt-id', 'failure',
+            '--deadline', self.selection['window']['deadline_utc'], '--mode', 'quarterly', '--discovery-id', 'd']
+        call = self.api['make_call'](self.selection, self.path, public)
+        self.api['write_once'](call_path, self.api['canonical'](call))
+        launch = call_path.parent / 'launches/launch-negative'
+        argv = self.api['child_argv'](self.selection, self.path, call_path)
+        dispatch = {'format_version': 'sec-local-sec-dispatch-v1', 'selection_sha256': self.api['digest'](self.path.read_bytes()),
+            'call_path': str(call_path), 'call_sha256': self.api['digest'](call_path.read_bytes()),
+            'launch_path': str(launch), 'argv': argv, 'dispatched_utc': datetime.now(timezone.utc).isoformat()}
+        for path in (launch / 'dispatch.json', self.root / 'dispatches/negative.json'):
+            self.api['write_once'](path, self.api['canonical'](dispatch))
+        stdout, stderr = b'', b'acceptance limit refused before send\n'
+        execution = {'argv': argv, 'pid': 12345, 'returncode': 12, 'drained': True,
+            'stdout_path': str(launch / 'stdout'), 'stderr_path': str(launch / 'stderr'),
+            'stdout_sha256': self.api['digest'](stdout), 'stderr_sha256': self.api['digest'](stderr)}
+        for path, body in [(launch / 'started.json', self.api['canonical']({'pid': 12345})),
+                (launch / 'stdout', stdout), (launch / 'stderr', stderr),
+                (launch / 'execution.json', self.api['canonical'](execution)),
+                (call_path.parent / 'execution.json', self.api['canonical'](execution))]:
+            self.api['write_once'](path, body)
+        def absent(ref): raise FileNotFoundError(ref)
+        records, launches = self.api['inspect_commands'](self.path, self.selection, SimpleNamespace(read=absent))
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]['returncode'], 12)
+        self.assertIsNone(records[0]['result_ref'])
+        self.assertEqual(launches, [])
+        shutil.rmtree(launch)
+        with self.assertRaisesRegex(ValueError, 'including failed launches'):
+            self.api['inspect_commands'](self.path, self.selection, SimpleNamespace(read=absent))
 
 
 if __name__ == '__main__':
