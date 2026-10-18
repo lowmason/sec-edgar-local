@@ -17,6 +17,7 @@ import zipfile
 from pathlib import PurePosixPath
 import hashlib
 import re
+import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -311,6 +312,12 @@ def native_python_argv(python: Path) -> list[str]:
     return [str(python), '-I', '-B', '-X', 'pycache_prefix=' + os.devnull]
 
 
+def native_console_script(python: Path) -> bytes:
+    """Derive the installed console bootstrap without importing application code."""
+    command = shlex.join([*native_python_argv(python), '-m', 'sec_edgar_ingest'])
+    return ('#!/bin/sh\nexec ' + command + ' "$@"\n').encode()
+
+
 def wheel_payload(wheel: Path) -> list[dict[str, str]]:
     """Inventory all package bytes, refusing ambiguous or escaping ZIP entries."""
     records, names = [], set()
@@ -500,6 +507,9 @@ def _preflight(manifest_path: Path, *, executable: Path | None = None, require_r
     if executable is not None and executable.absolute() != python:
         raise ValueError('interpreter must be the referenced installation executable')
     identity = manifest['identity']
+    console = directory / 'venv/bin/sec-edgar-ingest'
+    if console.is_symlink() or console.read_bytes() != native_console_script(python):
+        raise ValueError('installed console bootstrap differs from required isolated source execution')
     _verify_payload(directory, identity)
     if require_receipt:
         receipt = parse_json((directory / 'installation.json').read_bytes())

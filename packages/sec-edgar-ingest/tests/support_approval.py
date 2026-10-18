@@ -43,7 +43,7 @@ class GateFixture(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.settings, self.context = etl_context(command='publish', root=self.root / '.fixture-state')
         self.pin(date(2026, 10, 7))
-        self.store, self.objects, leases = open_stores(self.settings, base_path=self.root)
+        self.store, self.objects, leases = open_stores(self.settings)
         leases.close()
         self.addCleanup(self.store.close)
         self.state = EtlState(self.store)

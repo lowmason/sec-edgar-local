@@ -221,6 +221,10 @@ def run_publish(transformed_workset_ref: str, context: RunContext, settings: Set
         raise TimeoutError('publication command deadline exceeded')
     validate_workset_ref(transformed_workset_ref, 'transformed')
     workset = decode_transformed(objects.read(transformed_workset_ref))
+    if settings.acquisition.mode == 'live' and any(
+            origin.effective_config['acquisition']['mode'] != 'live'
+            for origin in (workset.origin_context, workset.context)):
+        raise ValueError('live publish refuses fixture acquisition provenance')
     if transformed_ref(workset) != transformed_workset_ref:
         raise Conflict('transformed workset path differs from payload identity')
     if (workset.context.parser_version, workset.context.schema_version) != (context.parser_version, context.schema_version):

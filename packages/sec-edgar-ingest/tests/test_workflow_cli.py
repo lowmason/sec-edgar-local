@@ -72,7 +72,7 @@ class WorkflowCliTests(unittest.TestCase):
         self.assertEqual(self.h.objects.read(self.h.calls[0]['stdout']['result_ref']), original)
 
     def test_omitted_today_reopens_saved_pin_before_next_day_validation(self):
-        self.h.settings = fixture_settings(
+        self.h.settings = fixture_settings(root=self.root / '.fixture-state',
             backfill={'start_quarter': '2026Q3', 'end_quarter': 'open'},
             etl={'parser_version': 'fixture-index-parser-v1'},
             fixture={'allow_clock_override': True, 'allow_deadline_override': True})
@@ -137,3 +137,25 @@ class WorkflowCliTests(unittest.TestCase):
                 event = json.loads(self.h.calls[-1]['stderr'].splitlines()[-1])
                 self.assertEqual((event['event'], event['fields']['error']['details']), ('command_error', {'type': 'RuntimeError'}))
                 require_text(event['fields']['error']['message'], 'message')
+
+    def test_unfinished_expired_attempt_requires_new_attempt(self):
+        with patch('sec_edgar_ingest.cli.run_workflow', side_effect=Conflict('interrupted')):
+            code, message = self.h.invoke('backfill', run='expired')
+        self.assertEqual(code, 9)
+        before = [row.to_mapping() for row in self.h.store.scan('WorkflowAttempt', {})]
+        with patch('sec_edgar_ingest.cli.Clock.now', return_value=self.h.deadline + timedelta(days=1)), \
+                patch('sec_edgar_ingest.cli.WorkflowDispatcher', side_effect=AssertionError('expired attempt dispatched')):
+            code, message, _ = cli_call(self.h.calls[-1]['argv'])
+        self.assertEqual(code, 2, message)
+        self.assertIsNone(message['result_ref'])
+        self.assertEqual([row.to_mapping() for row in self.h.store.scan('WorkflowAttempt', {})], before)
+
+    def test_distant_new_deadline_refuses_before_store_construction(self):
+        args = ['backfill', '--config', str(self.h.config), '--run-id', 'too-long',
+                '--execution-id', 'e', '--attempt-id', 'a',
+                '--deadline', (self.h.deadline + timedelta(hours=2)).isoformat(),
+                '--fixture-pack', str(self.h.pack)]
+        with patch('sec_edgar_ingest.cli.open_stores', side_effect=AssertionError('opened stores')) as opened:
+            code, message, errors = cli_call(args)
+        self.assertEqual((code, message), (2, None), errors)
+        opened.assert_not_called()

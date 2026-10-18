@@ -4,13 +4,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import re
+import subprocess
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from .runtime import configured_descriptor
+from .runtime import configured_descriptor, preflight_current, retain_manifest
 from . import __version__
 from .collection import collect
 from .config import Settings, load_config, pin_context
@@ -19,6 +20,7 @@ from .discovery import discover
 from .etl.approval import activation_ref, approve
 from .etl.commands import (PublicationRepairPending, read_etl_result, run_transform, run_publish,
                            write_etl_result, validate_workset_ref)
+from .etl.contracts import MAX_OPERATOR_CHARS, MAX_REASON_CHARS, require_line
 from .etl.history import quarter_history, withdrawal_candidates
 from .etl.manifest import approval_ref
 from .etl.parser import supported_parser, SCHEMA_VERSION
@@ -145,6 +147,15 @@ def _validate(args) -> tuple[Settings, date | None, datetime, FixturePack | None
             if end != quarter_for(checked.pinned_on):
                 raise ValueError('daily discovery endpoint must include the current quarter')
     return settings, today, deadline, pack
+
+
+def _verified_runtime(settings):
+    if settings.runtime.kind == 'native':
+        try:
+            return preflight_current(Path(settings.runtime.release_manifest))
+        except subprocess.CalledProcessError as error:
+            raise ValueError('native runtime installation probe failed') from error
+    return None
 
 
 def _fixture_pack(settings, path, today, *, required):
@@ -344,6 +355,9 @@ def _validate_workflow(args):
     if args.today and today.isoformat() != args.today:
         raise ValueError('today must be a canonical ISO date')
     pack = _fixture_pack(settings, args.fixture_pack, today, required=True)
+    if (deadline - Clock().now()).total_seconds() > settings.execution.max_run_seconds and not (
+            settings.fixture and settings.fixture.allow_deadline_override):
+        raise ValueError('deadline exceeds execution.max_run_seconds')
     # Do not construct a fresh context here: the immutable saved pin must be read first.
     return settings, today, deadline, pack
 
@@ -411,6 +425,7 @@ def _workflow_stdout(result, reference):
 def _workflow_main(args):
     try:
         settings, today, deadline, pack = _validate_workflow(args)
+        verified = _verified_runtime(settings)
     except (ValueError, OSError, TypeError) as error:
         sys.stderr.write(canonical_json(to_mapping_value({'outcome': 'configuration', 'error': str(error)})).decode() + '\n')
         return 2
@@ -418,6 +433,8 @@ def _workflow_main(args):
     try:
         opened = open_stores(settings)
         store, objects, leases = opened
+        if verified is not None:
+            retain_manifest(objects, verified.manifest)
         frozen = _workflow_saved(args, store, objects)
         saved = None if frozen is None else RunContext.from_mapping(frozen['context'])
         started = saved.started_at if saved is not None else Clock().now()
@@ -442,6 +459,8 @@ def _workflow_main(args):
         if completed is not None:
             log_event(context, 'result_replayed', {'result_ref': workflow_path(context)})
             return _workflow_stdout(completed, workflow_path(context))
+        if deadline <= Clock().now():
+            raise _ExpiredAttempt('an unfinished expired workflow requires a new attempt')
         # Adapters belonging to children are constructed only inside their public CLI paths.
         dispatcher = WorkflowDispatcher(context, settings,
             Path(args.fixture_pack) if args.fixture_pack else None,
@@ -492,8 +511,7 @@ def _configuration_error(error: Exception) -> int:
 def _operator_identity(settings: Settings, supplied: str | None, flag: str | None):
     """Return the explicit local audit label for commands that record an actor."""
     if flag is not None:
-        from .models import require_text
-        require_text(supplied, '--' + flag)
+        require_line(supplied, '--' + flag, MAX_OPERATOR_CHARS)
     return supplied
 
 
@@ -504,7 +522,10 @@ def _operator_main(args, event: str | None, empty: dict[str, object], run, actor
     """
     try:
         settings = _operator_settings(args)
+        _verified_runtime(settings)
         principal = _operator_identity(settings, None if actor is None else getattr(args, actor), actor)
+        if args.command == 'rollback':
+            require_line(args.reason, '--reason', MAX_REASON_CHARS)
     except (ValueError, OSError, TypeError) as error:
         return _configuration_error(error)
     opened = ()
@@ -587,6 +608,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _rollback_main(args)
     try:
         settings, today, deadline, pack = _validate(args)
+        verified = _verified_runtime(settings)
     except (ValueError, OSError, TypeError) as error:
         sys.stderr.write(canonical_json({'outcome': 'configuration', 'error': str(error)}).decode() + '\n')
         return 2
@@ -596,6 +618,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         clock = Clock()
         opened = open_stores(settings)
         store, objects, leases = opened
+        if verified is not None:
+            retain_manifest(objects, verified.manifest)
         state = AcquisitionState(store, clock=clock)
         path = f'runs/sec/{args.run_id}/{args.command}/{args.attempt_id}/result.json'
         try:
@@ -634,7 +658,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                           ('transformed', 'published', 'unchanged', 'quarantined', 'awaiting_approval', 'failed')}})
             return _stdout(result, reference)
         coordinator = Coordinator(settings, store, leases, clock)
-        sender = _CheckedSender(pack.sender(store) if pack is not None else BoundedSender(settings, clock))
+        sender = _CheckedSender(BoundedSender(settings, clock) if settings.acquisition.mode == 'live'
+                                else pack.sender(store))
         client = RequestClient(settings, coordinator, sender, state, clock)
         log_event(context, 'command_started', {'command': args.command})
         if args.command == 'discover':

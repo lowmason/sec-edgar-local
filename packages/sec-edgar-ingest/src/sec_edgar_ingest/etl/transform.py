@@ -287,6 +287,9 @@ def transform_workset(snapshot_ref: str, context: RunContext, settings: Settings
                       observer: BoundaryObserver | None = None) -> TransformedWorkset:
     _validate_context(context, settings)
     snapshots, sources = _pinned_members(snapshot_ref, objects, acquisition)
+    if (settings.acquisition.mode == 'live'
+            and snapshots.context.effective_config['acquisition']['mode'] != 'live'):
+        raise ValueError('live transform refuses fixture acquisition provenance')
     observations, failures = [], []
     for snapshot in snapshots.snapshots:
         source = sources[snapshot.source_id]

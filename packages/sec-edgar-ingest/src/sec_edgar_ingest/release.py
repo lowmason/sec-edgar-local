@@ -22,7 +22,7 @@ from . import __version__
 from .models import canonical_json, parse_json
 from .runtime import (
     _preflight, hash_file, interpreter_identity, isolated_environment,
-    locked_dependencies, preflight, release_id, retained_release,
+    locked_dependencies, native_console_script, preflight, release_id, retained_release,
     validate_manifest, verify_requirements, wheel_payload,
 )
 
@@ -214,6 +214,9 @@ def _install(manifest: dict[str, object], releases: Path, retained: Path, python
     subprocess.run(['uv', 'pip', 'install', '--python', str(venv / 'bin/python'),
                     '--offline', '--no-deps', str(wheel)], check=True,
                    env=environment, capture_output=True, text=True)
+    console = venv / 'bin/sec-edgar-ingest'
+    console.write_bytes(native_console_script(venv / 'bin/python'))
+    console.chmod(0o755)
     _preflight(directory / 'release.json', require_receipt=False)
     (directory / 'installation.json').write_bytes(canonical_json({
         'format_version': 'sec-native-installation-v1', 'release_id': manifest['release_id'],

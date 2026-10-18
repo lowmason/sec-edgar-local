@@ -502,3 +502,27 @@ class CompletedDeadlineTests(unittest.TestCase):
         self.assertEqual(code, 0, errors.getvalue())
         self.assertEqual(output.getvalue(), first.stdout)
         self.assertEqual(h.read_durable_result(json.loads(first.stdout)['result_ref']), record)
+
+
+class PublicHelpTests(unittest.TestCase):
+    def test_all_eleven_command_help_pages_preserve_local_flags(self):
+        from sec_edgar_ingest.cli import main
+        commands = ('discover', 'collect', 'transform', 'publish', 'backfill', 'daily',
+                    'reconcile', 'candidates', 'approve', 'history', 'rollback')
+        for command in commands:
+            output = io.StringIO()
+            with self.subTest(command=command), contextlib.redirect_stdout(output), self.assertRaises(SystemExit) as caught:
+                main([command, '--help'])
+            self.assertEqual(caught.exception.code, 0)
+            text = output.getvalue()
+            self.assertIn('--config', text)
+            for removed in ('--config-env', '--state-dir', '--credential', '--worker-client-id', '--tenant-id'):
+                self.assertNotIn(removed, text)
+            if command in ('discover', 'collect', 'transform', 'publish', 'backfill', 'daily', 'reconcile'):
+                for flag in ('--run-id', '--execution-id', '--attempt-id', '--deadline'):
+                    self.assertIn(flag, text)
+            elif command == 'approve':
+                self.assertIn('--approver', text)
+            elif command == 'rollback':
+                self.assertIn('--operator', text)
+                self.assertIn('--reason', text)
