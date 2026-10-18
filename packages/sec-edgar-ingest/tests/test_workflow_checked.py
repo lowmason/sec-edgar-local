@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from support import Faults, CollectionCrash
 from support_checked import workflow_fixture, dispatch_chain, cursor_values
+from support_process import checked_dispatcher as Dispatcher, CheckedRunner
 from sec_edgar_ingest.config import Settings, pin_context
 from sec_edgar_ingest.models import Binding, canonical_json, parse_json, to_mapping_value
 from sec_edgar_ingest.state import AcquisitionState
@@ -17,7 +18,7 @@ from sec_edgar_ingest.storage.contracts import Conflict
 from sec_edgar_ingest.etl.reader import capture_quarter, read_quarter
 from sec_edgar_ingest.etl.state import EtlState
 from sec_edgar_ingest.workflows.checked import (
-    Dispatcher, ChildUnfinished, call_ref, child_attempt_id, read_child,
+    ChildUnfinished, call_ref, child_attempt_id, read_child,
 )
 
 
@@ -169,17 +170,14 @@ class CheckedWorkflowTests(unittest.TestCase):
             ('--workset', found.result.source_workset_ref))
         transformed = self.dispatcher.execute('transform', 'transform-one', self.settings,
             ('--workset', collected.result.snapshot_workset_ref))
-        original = EtlState.record_publication
-        failures = []
-        def fail_once(state, manifest):
-            if not failures:
-                failures.append(True)
-                raise OSError('ordinary ancillary failure after CAS')
-            return original(state, manifest)
-        with patch.object(EtlState, 'record_publication', fail_once):
-            with self.assertRaises(ChildUnfinished) as raised:
-                self.dispatcher.execute('publish', 'publish-one', self.settings,
-                    ('--workset', transformed.result.transformed_workset_ref))
+        marker = self.root / 'publication-fault.json'
+        runner = CheckedRunner(fault={'point': 'publication.record_failure', 'action': 'raise',
+            'marker': str(marker), 'ack': str(marker.with_suffix('.ack'))})
+        self.dispatcher.child_runner = runner
+        with self.assertRaises(ChildUnfinished) as raised:
+            self.dispatcher.execute('publish', 'publish-one', self.settings,
+                ('--workset', transformed.result.transformed_workset_ref))
+        self.dispatcher.child_runner = CheckedRunner()
         error = raised.exception
         self.assertTrue(error.repair_pending)
         with self.assertRaises(FileNotFoundError):

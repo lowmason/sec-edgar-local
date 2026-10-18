@@ -3,16 +3,15 @@ from .contracts import LOCAL_CONTRACT, require_contract
 
 import argparse
 import hashlib
-import io
 import re
 from collections.abc import Mapping
-from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TypedDict
 
+from .. import runtime
 from ..runtime import configured_descriptor
 from ..config import Settings, pin_context
 from ..download import FixturePack
@@ -394,7 +393,7 @@ def _flags(command, flags):
 
 
 class Dispatcher:
-    def __init__(self, context, settings, fixture_pack, state_dir, store, objects, observer=None):
+    def __init__(self, context, settings, fixture_pack, state_dir, store, objects, observer=None, *, child_runner=runtime.run_child):
         if context.command not in WORKFLOW_COMMANDS or context.pinned_on is None:
             raise ValueError('dispatcher requires a pinned workflow context')
         if pin_context(settings, context, context.pinned_on)[0] != context:
@@ -409,9 +408,9 @@ class Dispatcher:
             self.pack = None
         self.context, self.settings, self.fixture_pack = context, settings, fixture_pack
         self.state_dir, self.store, self.objects, self.observer = state_dir, store, objects, observer
+        self.child_runner = child_runner
 
     def execute(self, command, step_id, settings, flags):
-        from ..cli import main
         if command not in CHILD_COMMANDS or not isinstance(flags, tuple):
             raise ValueError('child command/flags require their closed interface')
         if deployment_binding(settings) != deployment_binding(self.settings):
@@ -450,21 +449,137 @@ class Dispatcher:
                     raise Conflict('publication dispatch differs from transformed input versions')
         if self.fixture_pack is not None and FixturePack.load(self.fixture_pack).manifest_sha256 != self.pack.manifest_sha256:
             raise Conflict('fixture manifest changed after dispatcher construction')
+        child_python, child_runtime = runtime.resolve_child(settings)
+        if child_runtime != to_mapping_value(child.runtime):
+            raise ValueError('child executable differs from pinned runtime')
         _remember_call(call, self.store, self.objects)
         observe(self.observer, 'workflow_child.after_call')
+        key = call_key(call)
+        previous = self.store.get('WorkflowChildExecution', key)
+        sequence = 0
+        if previous is not None:
+            saved = previous.to_mapping()['value']
+            fields = {'contract_version', 'format_version', 'call_ref', 'sequence', 'exit_ref', 'exit_sha256', 'exit_bytes'}
+            if (set(saved) != fields or saved['contract_version'] != LOCAL_CONTRACT
+                    or saved['format_version'] != 'sec-local-child-execution-v1'
+                    or saved['call_ref'] != call_ref(call)
+                    or type(saved['sequence']) is not int or saved['sequence'] < 0):
+                raise Conflict('child execution receipt index fields differ')
+            sequence = saved['sequence']
+            prefix = call_ref(call).rsplit('/', 1)[0] + '/executions/' + str(sequence)
+            launch = self._launch(call, sequence, child_python)
+            if self.objects.read(prefix + '/launch.json') != canonical_json(to_mapping_value(launch)):
+                raise Conflict('child execution receipt launch differs')
+            if self.objects.read(prefix + '/config.json') != canonical_json(to_mapping_value(settings.to_mapping())):
+                raise Conflict('child execution receipt config snapshot differs')
+            if saved['exit_ref'] is None:
+                if saved['exit_sha256'] is not None or saved['exit_bytes'] is not None:
+                    raise Conflict('child execution receipt has an incomplete exit address')
+                raise Conflict('ambiguous child execution cannot be automatically relaunched')
+            if saved['exit_ref'] != prefix + '/exit.json':
+                raise Conflict('child execution receipt exit reference differs')
+            try:
+                require_hash(saved['exit_sha256'], 'child exit sha256')
+                if type(saved['exit_bytes']) is not int or saved['exit_bytes'] < 0:
+                    raise ValueError('child exit bytes must be nonnegative')
+                self.objects.verify(saved['exit_ref'], saved['exit_sha256'], saved['exit_bytes'])
+            except (ValueError, OSError) as error:
+                raise Conflict('child execution receipt exit bytes differ') from error
+            execution, observed_at = self._read_exit(saved['exit_ref'], call, sequence)
+            try:
+                return self._check_exit(call, execution, observed_at)
+            except ChildUnfinished as error:
+                if not error.repair_pending:
+                    raise
+            sequence += 1
+        else:
+            try:
+                self.objects.read(call_ref(call).rsplit('/', 1)[0] + '/executions/0/launch.json')
+            except FileNotFoundError:
+                pass
+            else:
+                raise Conflict('ambiguous child launch lacks its execution index')
+        index = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-child-execution-v1',
+                 'call_ref': call_ref(call), 'sequence': sequence, 'exit_ref': None,
+                 'exit_sha256': None, 'exit_bytes': None}
+        if previous is not None:
+            execution_row = self.store.replace('WorkflowChildExecution', key, index, previous.version)
+        else:
+            try:
+                execution_row = self.store.insert('WorkflowChildExecution', key, index)
+            except AlreadyExists as error:
+                raise Conflict('ambiguous concurrent child execution cannot be relaunched') from error
+        prefix = call_ref(call).rsplit('/', 1)[0] + '/executions/' + str(sequence)
+        self.objects.put_once(prefix + '/launch.json', canonical_json(to_mapping_value(
+            self._launch(call, sequence, child_python))))
+        frozen_config = canonical_json(to_mapping_value(settings.to_mapping()))
+        self.objects.put_once(prefix + '/config.json', frozen_config)
         with TemporaryDirectory(prefix='sec-workflow-child-') as directory:
             config = Path(directory) / 'config.json'
-            config.write_bytes(canonical_json(to_mapping_value(settings.to_mapping())))
-            argv = [command, '--config', str(config), '--run-id', parent.run_id,
+            config.write_bytes(frozen_config)
+            config.chmod(0o444)
+            argv = [*runtime.native_python_argv(child_python), '-m', 'sec_edgar_ingest', command, '--config', str(config), '--run-id', parent.run_id,
                 '--execution-id', parent.execution_id, '--attempt-id', attempt,
                 '--deadline', parent.deadline.isoformat(), *flags]
             if today is not None:
                 argv.extend(('--today', today.isoformat()))
             if command in ('discover', 'collect') and self.fixture_pack is not None:
                 argv.extend(('--fixture-pack', str(self.fixture_pack)))
-            stdout, stderr = io.StringIO(), io.StringIO()
-            with redirect_stdout(stdout), redirect_stderr(stderr):
-                code = main(argv)
+            execution = self.child_runner(child_python, argv, deadline=child.deadline,
+                environ=runtime.isolated_environment())
+        observed_at = datetime.now(timezone.utc)
+        exit_ref = prefix + '/exit.json'
+        observed = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-child-exit-v1',
+            'call_ref': call_ref(call), 'sequence': sequence, 'returncode': execution.returncode,
+            'stdout_hex': execution.stdout.hex(), 'stderr_hex': execution.stderr.hex(),
+            'drained': execution.drained, 'observed_at': observed_at.isoformat()}
+        exit_body = canonical_json(to_mapping_value(observed))
+        self.objects.put_once(exit_ref, exit_body)
+        self.store.replace('WorkflowChildExecution', key,
+            {**index, 'exit_ref': exit_ref, 'exit_sha256': hashlib.sha256(exit_body).hexdigest(),
+             'exit_bytes': len(exit_body)}, execution_row.version)
+        result = self._check_exit(call, execution, observed_at)
+        observe(self.observer, 'workflow_child.after_result')
+        return result
+
+    def _launch(self, call, sequence, python):
+        return {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-child-launch-v1',
+            'call_ref': call_ref(call), 'sequence': sequence, 'python': str(python),
+            'runtime': to_mapping_value(call['context']['runtime']),
+            'config_sha256': call['context']['config_sha256']}
+
+    def _read_exit(self, path, call, sequence):
+        body = self.objects.read(path)
+        fields = {'contract_version', 'format_version', 'call_ref', 'sequence', 'returncode',
+                  'stdout_hex', 'stderr_hex', 'drained', 'observed_at'}
+        try:
+            value = parse_json(body)
+            if (not isinstance(value, dict) or set(value) != fields or value['contract_version'] != LOCAL_CONTRACT
+                    or value['format_version'] != 'sec-local-child-exit-v1'
+                    or value['call_ref'] != call_ref(call) or type(value['sequence']) is not int
+                    or value['sequence'] != sequence or type(value['returncode']) is not int
+                    or type(value['drained']) is not bool or canonical_json(value) != body):
+                raise ValueError('closed exit fields differ')
+            stdout, stderr = bytes.fromhex(value['stdout_hex']), bytes.fromhex(value['stderr_hex'])
+            if (stdout.hex(), stderr.hex()) != (value['stdout_hex'], value['stderr_hex']):
+                raise ValueError('noncanonical output encoding')
+            observed_at = datetime.fromisoformat(value['observed_at'])
+            if observed_at.tzinfo != timezone.utc or observed_at.isoformat() != value['observed_at']:
+                raise ValueError('observation time must use canonical UTC')
+        except (ValueError, TypeError, KeyError) as error:
+            raise Conflict('child execution receipt fields differ') from error
+        return runtime.ChildExit(value['returncode'], stdout, stderr, value['drained']), observed_at
+
+    def _check_exit(self, call, execution, observed_at):
+        child = RunContext.from_mapping(to_mapping_value(call['context']))
+        command = child.command
+        code = execution.returncode
+        stdout = execution.stdout.decode('utf-8', errors='replace')
+        stderr = execution.stderr.decode('utf-8', errors='replace')
+        if not execution.drained:
+            raise Conflict('child shutdown/drain was not confirmed')
+        if not child.started_at <= observed_at < child.deadline:
+            raise Conflict('child completed after its deadline')
         try:
             result = read_child(call, self.store, self.objects)
         except FileNotFoundError:
@@ -472,14 +587,27 @@ class Dispatcher:
             outcome = next((gap.code for gap in gaps), 'internal_error')
             if exit_code(outcome) != code:
                 raise Conflict('unfinished retained error differs from child exit')
-            raise ChildUnfinished(call, outcome, gaps, code, stdout.getvalue(), stderr.getvalue())
+            try:
+                printed = parse_json(execution.stdout)
+            except ValueError as error:
+                raise Conflict('unfinished child stdout lacks its result descriptor') from error
+            if printed != {'outcome': outcome, 'result_ref': None,
+                           'source_workset_ref': None, 'snapshot_workset_ref': None}:
+                raise Conflict('unfinished child stdout differs from retained error')
+            raise ChildUnfinished(call, outcome, gaps, code, stdout, stderr)
         if exit_code(result.outcome) != code:
             raise Conflict('durable child result differs from child exit')
         try:
-            printed = parse_json(stdout.getvalue())
+            printed = parse_json(execution.stdout)
         except ValueError as error:
             raise Conflict('child stdout lacks its exact result descriptor') from error
-        if printed.get('outcome') != result.outcome or printed.get('result_ref') != call['result_ref']:
+        expected_stdout = {'outcome': result.outcome, 'result_ref': call['result_ref']}
+        if command in ('transform', 'publish'):
+            expected_stdout.update(input_ref=result.input_ref,
+                transformed_workset_ref=result.transformed_workset_ref)
+        else:
+            expected_stdout.update(source_workset_ref=result.source_workset_ref,
+                snapshot_workset_ref=result.snapshot_workset_ref)
+        if printed != expected_stdout:
             raise Conflict('child stdout differs from independently read durable result')
-        observe(self.observer, 'workflow_child.after_result')
         return CheckedChild(call, call['result_ref'], result)

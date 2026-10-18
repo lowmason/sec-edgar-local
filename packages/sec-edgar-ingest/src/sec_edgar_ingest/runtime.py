@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 import ast
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import importlib.metadata
 import importlib.util
 import json
@@ -558,3 +559,121 @@ def preflight_current(manifest_path: Path) -> VerifiedRelease:
                              'pycache_prefix': sys.pycache_prefix}},
         verified.directory, verified.manifest['identity'], verified.python)
     return verified
+
+
+@dataclass(frozen=True, slots=True)
+class ChildExit:
+    returncode: int
+    stdout: bytes
+    stderr: bytes
+    drained: bool
+
+
+def resolve_child(settings: Settings) -> tuple[Path, Mapping[str, object]]:
+    """Select only the installation named by the child's saved configuration."""
+    descriptor = configured_descriptor(settings)
+    if descriptor['kind'] == 'fixture':
+        return Path(sys.executable).absolute(), descriptor
+    verified = preflight(Path(settings.runtime.release_manifest))
+    if native_descriptor(verified.release_id) != descriptor:
+        raise ValueError('verified child installation differs from saved runtime')
+    return verified.python, descriptor
+
+
+CHILD_OUTPUT_LIMIT = 1_048_576
+CHILD_DRAIN_SECONDS = 5.0
+
+
+def run_child(python: Path, argv: Sequence[str], *, deadline: datetime,
+              environ: Mapping[str, str]) -> ChildExit:
+    """Supervise one POSIX stage group with bounded output and shutdown time.
+
+    A forced reap does not establish graceful HTTP-child drain. Deadline, signal,
+    output overflow or a surviving group therefore always returns drained=False.
+    """
+    import selectors
+    import signal
+    import threading
+    import time
+
+    if not argv or argv[0] != str(python) or not python.is_absolute():
+        raise ValueError('child argv must begin with its exact absolute executable')
+    if deadline.tzinfo is None:
+        raise ValueError('child deadline must be timezone aware')
+    if datetime.now(timezone.utc) >= deadline:
+        return ChildExit(-signal.SIGTERM, b'', b'child deadline expired before launch', False)
+    environment = {key: value for key, value in environ.items()
+                   if not key.startswith('PYTHON') and key != 'VIRTUAL_ENV'}
+    process = subprocess.Popen(list(argv), env=environment, stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    buffers = {process.stdout: bytearray(), process.stderr: bytearray()}
+    stopped_at = None
+    interrupted = False
+
+    def forward(signum, frame=None):
+        nonlocal stopped_at, interrupted
+        interrupted = True
+        if stopped_at is None:
+            stopped_at = time.monotonic()
+        try:
+            os.killpg(process.pid, signum)
+        except ProcessLookupError:
+            pass
+
+    handlers = {}
+    if threading.current_thread() is threading.main_thread():
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            handlers[signum] = signal.signal(signum, forward)
+    try:
+        with selectors.DefaultSelector() as selector:
+            for stream in buffers:
+                os.set_blocking(stream.fileno(), False)
+                selector.register(stream, selectors.EVENT_READ)
+            while selector.get_map() or process.poll() is None:
+                if stopped_at is None and datetime.now(timezone.utc) >= deadline:
+                    forward(signal.SIGTERM)
+                if stopped_at is not None and time.monotonic() - stopped_at >= CHILD_DRAIN_SECONDS:
+                    forward(signal.SIGKILL)
+                    break
+                for key, _ in selector.select(0.05):
+                    chunk = os.read(key.fd, 65_536)
+                    if not chunk:
+                        selector.unregister(key.fileobj)
+                        continue
+                    buffer = buffers[key.fileobj]
+                    remaining = CHILD_OUTPUT_LIMIT - len(buffer)
+                    buffer.extend(chunk[:remaining])
+                    if len(chunk) > remaining:
+                        forward(signal.SIGTERM)
+            try:
+                process.wait(timeout=CHILD_DRAIN_SECONDS)
+            except subprocess.TimeoutExpired:
+                forward(signal.SIGKILL)
+                process.wait(timeout=CHILD_DRAIN_SECONDS)
+        # Pipes can close before detached descendants exit. Never infer group
+        # drain from the stage's exit code alone.
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            group_drained = True
+        else:
+            group_drained = False
+            forward(signal.SIGTERM)
+            end = time.monotonic() + CHILD_DRAIN_SECONDS
+            while time.monotonic() < end:
+                try:
+                    os.killpg(process.pid, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(0.05)
+            forward(signal.SIGKILL)
+        return ChildExit(process.returncode, bytes(buffers[process.stdout]),
+                         bytes(buffers[process.stderr]), group_drained and not interrupted)
+    finally:
+        for stream in buffers:
+            stream.close()
+        for signum, handler in handlers.items():
+            signal.signal(signum, handler)
+        if process.poll() is None:
+            forward(signal.SIGKILL)
+            process.wait(timeout=CHILD_DRAIN_SECONDS)

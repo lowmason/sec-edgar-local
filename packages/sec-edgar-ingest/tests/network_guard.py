@@ -133,6 +133,13 @@ def main(argv=None) -> None:
     unittest.main(module=None, argv=['unittest', *(sys.argv[1:] if argv is None else argv)])
 
 
+def current_origins() -> tuple[str, ...]:
+    """Snapshot explicit fixture authorizations for an exec boundary."""
+    with _LOCK:
+        return tuple(sorted('http://' + ('[' + host + ']' if ':' in host else host) + ':' + str(port)
+                            for (host, port), count in _ORIGINS.items() if count > 0))
+
+
 if __name__ in ('__main__', '__mp_main__'):
     # Support and spawn targets share one guard instance when run as a file.
     sys.modules.setdefault('network_guard', sys.modules[__name__])

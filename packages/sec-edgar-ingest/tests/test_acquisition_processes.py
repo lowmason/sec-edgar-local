@@ -30,6 +30,18 @@ class AcquisitionProcessTests(unittest.TestCase):
         self.assertEqual(context.pinned_on, now.date())
         self.assertTrue(settings.fixture is None or not settings.fixture.allow_clock_override)
 
+    def test_production_sender_still_rejects_loopback_and_logical_clocks(self):
+        from sec_edgar_ingest.coordination import Clock, ManualClock
+        from sec_edgar_ingest.download import BoundedSender
+        from support import fixture_settings, fixture_context, real_context, real_permit
+        settings, clock = fixture_settings(), Clock()
+        sender = BoundedSender(settings, clock)
+        with self.assertRaises(ValueError):
+            sender.send('http://127.0.0.1:1234/fixture', real_context(clock, settings),
+                real_permit(clock), cancellation=multiprocessing.get_context('spawn').Event())
+        with self.assertRaises(ValueError):
+            BoundedSender(settings, ManualClock(fixture_context().started_at))
+
     def test_three_independent_collectors_barrier_request_and_actual_binding_race(self):
         import support
         self.assertTrue(hasattr(support, 'acquisition_race_entry'), 'Task 8 needs three independent collecting processes and request/binding barriers')
@@ -37,8 +49,8 @@ class AcquisitionProcessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='sec-acquisition-race-') as temporary:
             root = Path(temporary)
             source = fixture_source('2026-10-01', 'daily')
-            workset = fixture_workset((source,))
             h = collection_harness(root, [])
+            workset = fixture_workset((source,), context=h.context)
             h.objects.put_once(h.source_workset_path(workset), encode_workset(workset))
             (root / 'input-workset.json').write_bytes(encode_workset(workset))
             h.close()

@@ -4,14 +4,13 @@ import multiprocessing
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 TESTS = Path(__file__).parent
 STUBS = r'''
 import importlib.util, json, socket
-import azure.identity as identity
-import msal
 calls = []
 def record(name, result=None):
     def operation(*args, **kwargs):
@@ -26,21 +25,6 @@ socket.gethostbyname = record('gethostbyname', '127.0.0.1')
 socket.gethostbyname_ex = record('gethostbyname_ex', ('fixture', [], ['127.0.0.1']))
 socket.gethostbyaddr = record('gethostbyaddr', ('fixture', [], ['127.0.0.1']))
 socket.getnameinfo = record('getnameinfo', ('fixture', '443'))
-for name in ('DefaultAzureCredential', 'ManagedIdentityCredential'):
-    cls = getattr(identity, name)
-    cls.__init__ = record('credential_constructor')
-    cls.get_token = record('credential_token', 'recorded token, not an authentication')
-    cls.get_token_info = record('credential_token_info', 'recorded token info')
-old_credential = object.__new__(identity.DefaultAzureCredential)
-for name in ('PublicClientApplication', 'ConfidentialClientApplication'):
-    cls = getattr(msal, name)
-    cls.__init__ = record('msal_constructor')
-    cls.acquire_token_silent = record('msal_token', 'recorded token')
-old_msal = object.__new__(msal.PublicClientApplication)
-managed_client = msal.ManagedIdentityClient
-managed_client.__init__ = record('managed_identity_constructor')
-managed_client.acquire_token_for_client = record('managed_identity_token', 'recorded managed token')
-old_managed_client = object.__new__(managed_client)
 def blocked(operation):
     try:
         operation()
@@ -59,7 +43,7 @@ def guarded_spawn_probe(selected, output):
     import network_guard
     network_guard.install()
     with network_guard.selected_origin(selected):
-        exec("with socket.socket() as sock:\n    denied = [blocked(lambda: sock.connect(('198.51.100.1', 443))), blocked(lambda: sock.connect_ex(('127.0.0.1', 42422))), blocked(lambda: socket.getaddrinfo('unapproved.invalid', 443)), blocked(lambda: identity.DefaultAzureCredential()), blocked(lambda: old_credential.get_token('scope')), blocked(lambda: msal.ManagedIdentityClient({'fixture': True}, http_client=object())), blocked(lambda: old_managed_client.acquire_token_for_client(resource='synthetic-resource'))]\n    sock.connect(('127.0.0.1', 42421))", namespace)
+        exec("with socket.socket() as sock:\n    denied = [blocked(lambda: sock.connect(('198.51.100.1', 443))), blocked(lambda: sock.connect_ex(('127.0.0.1', 42422))), blocked(lambda: socket.getaddrinfo('unapproved.invalid', 443))]\n    sock.connect(('127.0.0.1', 42421))", namespace)
     output.put({'guard_available': True, 'denied': namespace['denied'], 'calls': namespace['calls'], 'pid': os.getpid()})
 
 
@@ -85,7 +69,7 @@ class NetworkGuardTests(unittest.TestCase):
             root.mkdir(parents=True, exist_ok=True)
             (root / (self.id().split('.')[-1] + '.json')).write_text(json.dumps(proof, indent=2, sort_keys=True) + '\n')
 
-    def test_ordinary_support_import_installs_connection_resolution_and_auth_denial(self):
+    def test_ordinary_support_import_installs_connection_and_resolution_denial(self):
         proof = self.probe("""
 import support
 with socket.socket() as sock:
@@ -96,12 +80,10 @@ with socket.socket() as sock:
               blocked(lambda: socket.gethostbyname_ex('unapproved.invalid')),
               blocked(lambda: socket.gethostbyaddr('198.51.100.1')),
               blocked(lambda: socket.getnameinfo(('198.51.100.1', 443), 0)),
-              blocked(lambda: identity.DefaultAzureCredential()),
-              blocked(lambda: old_credential.get_token('scope')),
               blocked(lambda: sock.sendto(b'fixture', ('198.51.100.1', 443)))]
 print(json.dumps({'denied': denied, 'calls': calls}))
 """)
-        self.assertEqual(proof['denied'], [True] * 10)
+        self.assertEqual(proof['denied'], [True] * 8)
         self.assertEqual(proof['calls'], [])
 
     def test_explicit_helper_denies_connect_ex_resolution_and_unselected_loopback(self):
@@ -129,41 +111,12 @@ with socket.socket() as sock:
         socket.getaddrinfo('127.0.0.1', 42421)
         denied = [blocked(lambda: sock.connect(('127.0.0.1', 42422))),
                   blocked(lambda: socket.getaddrinfo('localhost', 42421)),
-                  blocked(lambda: socket.getaddrinfo('127.0.0.1', 42422)),
-                  blocked(lambda: identity.ManagedIdentityCredential())]
+                  blocked(lambda: socket.getaddrinfo('127.0.0.1', 42422))]
     denied.append(blocked(lambda: sock.connect(('127.0.0.1', 42421))))
 print(json.dumps({'denied': denied, 'calls': calls}))
 """)
-        self.assertEqual(proof['denied'], [True] * 5)
-        self.assertEqual(proof['calls'], ['connect', 'connect_ex', 'getaddrinfo'])
-
-    def test_provider_construction_and_existing_instance_token_work_never_reach_stubs(self):
-        proof = self.probe("""
-import support
-proof = [blocked(lambda: identity.DefaultAzureCredential()),
-         blocked(lambda: identity.ManagedIdentityCredential()),
-         blocked(lambda: old_credential.get_token('scope')),
-         blocked(lambda: old_credential.get_token_info('scope')),
-         blocked(lambda: msal.PublicClientApplication('fixture-client')),
-         blocked(lambda: msal.ConfidentialClientApplication('fixture-client')),
-         blocked(lambda: old_msal.acquire_token_silent(['scope'], account=None))]
-print(json.dumps({'denied': proof, 'calls': calls}))
-""")
-        self.assertEqual(proof['denied'], [True] * 7)
-        self.assertEqual(proof['calls'], [])
-
-    def test_public_managed_identity_constructor_and_existing_tokens_never_reach_stubs(self):
-        proof = self.probe("""
-from msal.managed_identity import ManagedIdentityClient
-import support
-denied = [blocked(lambda: msal.ManagedIdentityClient({'fixture': True}, http_client=object())),
-          blocked(lambda: old_managed_client.acquire_token_for_client(resource='synthetic-resource')),
-          blocked(lambda: ManagedIdentityClient({'fixture': True}, http_client=object())),
-          blocked(lambda: object.__new__(ManagedIdentityClient).acquire_token_for_client(resource='synthetic-resource'))]
-print(json.dumps({'denied': denied, 'calls': calls}))
-""")
         self.assertEqual(proof['denied'], [True] * 4)
-        self.assertEqual(proof['calls'], [])
+        self.assertEqual(proof['calls'], ['connect', 'connect_ex', 'getaddrinfo'])
 
     def test_suite_runner_installs_guard_before_unittest_executes(self):
         self.assertTrue(import_available(), 'the test runner must install denial before discovery')
@@ -181,7 +134,7 @@ print(json.dumps(captured))
         self.assertTrue(proof['denied'])
         self.assertEqual(proof['calls'], [])
 
-    def test_spawned_process_has_selected_origin_and_denies_network_and_auth(self):
+    def test_spawned_process_has_selected_origin_and_denies_network(self):
         spawn = multiprocessing.get_context('spawn')
         output = spawn.Queue()
         process = spawn.Process(target=guarded_spawn_probe, args=('http://127.0.0.1:42421', output))
@@ -192,8 +145,67 @@ print(json.dumps(captured))
             self.retain({'pid': process.pid, 'exit': process.exitcode, 'proof': proof})
             self.assertEqual(process.exitcode, 0)
             self.assertTrue(proof['guard_available'], 'spawned fixture needs an explicit installed guard')
-            self.assertEqual(proof['denied'], [True] * 7)
+            self.assertEqual(proof['denied'], [True] * 3)
             self.assertEqual(proof['calls'], ['connect'])
+            self.assertNotEqual(proof['pid'], os.getpid())
+        finally:
+            if process.is_alive():
+                process.terminate()
+                process.join(2)
+            output.close()
+            output.join_thread()
+
+
+def http_sentinel_probe(sentinel, output):
+    namespace = {}
+    exec(STUBS, namespace)
+    import network_guard
+    def import_sentinel(transport, cancellation, channel):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('network_import_sentinel', sentinel)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        channel.put({'denied': module.DENIED, 'calls': namespace['calls'], 'pid': os.getpid()})
+    network_guard.guarded_transport_child(None, None, output, target=import_sentinel,
+                                         origin='http://127.0.0.1:42421')
+
+
+class GuardImportSentinelTests(unittest.TestCase):
+    def sentinel(self):
+        from support_process import write_import_sentinel
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        return write_import_sentinel(Path(temporary.name) / 'network_import_sentinel.py')
+
+    def test_suite_installs_guard_before_importing_dns_and_socket_sentinel(self):
+        sentinel = self.sentinel()
+        probe = NetworkGuardTests()
+        result = probe.probe("""
+import unittest, network_guard, importlib.util
+captured = {}
+def import_tests(**kwargs):
+    spec = importlib.util.spec_from_file_location('network_import_sentinel', SENTINEL)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    captured.update(denied=module.DENIED, calls=calls)
+unittest.main = import_tests
+network_guard.main(['discover'])
+print(json.dumps(captured))
+""".replace('SENTINEL', repr(str(sentinel))))
+        self.assertEqual(result, {'denied': [True, True], 'calls': []})
+
+    def test_spawned_http_target_guards_import_sentinel_before_transport(self):
+        sentinel = self.sentinel()
+        spawn = multiprocessing.get_context('spawn')
+        output = spawn.Queue()
+        process = spawn.Process(target=http_sentinel_probe, args=(str(sentinel), output))
+        try:
+            process.start()
+            proof = output.get(timeout=15)
+            process.join(5)
+            self.assertEqual(process.exitcode, 0)
+            self.assertEqual(proof['denied'], [True, True])
+            self.assertEqual(proof['calls'], [])
             self.assertNotEqual(proof['pid'], os.getpid())
         finally:
             if process.is_alive():

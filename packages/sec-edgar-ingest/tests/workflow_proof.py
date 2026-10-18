@@ -7,10 +7,18 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 from support import fixture_settings
-from support_workflows import BASE, CommandHarness, listing, idx, simple_pack
+from support_workflows import BASE, CommandHarness as BaseCommandHarness, listing, idx, simple_pack
+from support_process import CheckedRunner, checked_dispatcher
 from sec_edgar_ingest.models import canonical_json
 from sec_edgar_ingest.storage import open_stores
 from sec_edgar_ingest.workflows.results import read_workflow_result
+
+
+class CommandHarness(BaseCommandHarness):
+    def invoke(self, *args, **kwargs):
+        import sec_edgar_ingest.cli as cli
+        with patch.object(cli, 'WorkflowDispatcher', side_effect=checked_dispatcher):
+            return super().invoke(*args, **kwargs)
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / 'fixtures/workflows/proof'
 BODY_FILES = ('full-root.json', 'full-year.json', 'full-q3.json', 'full-q4.json',
@@ -57,7 +65,8 @@ def write_proof_fixtures(destination):
 def harness_files() -> tuple[Path, ...]:
     root = Path(__file__).resolve().parent
     fixed = ('support_workflows.py', 'workflow_proof.py', 'network_guard.py',
-             'support.py', 'support_etl.py', 'locked_proof.py', 'fixtures/config/local.json')
+             'support.py', 'support_etl.py', 'locked_proof.py', 'support_process.py',
+             'checked_child_bootstrap.py', 'fixtures/config/local.json')
     values = tuple(root / name for name in fixed) + tuple(
         FIXTURE_ROOT / name for name in ('manifest.json', 'expected.json', *BODY_FILES))
     if any(not path.is_file() for path in values):
@@ -182,9 +191,20 @@ def process_worker(config, pack, state_dir, argv, point, marker):
             stream.write(canonical_json(to_mapping_value({'point': name, 'pid': os.getpid()})))
             stream.flush()
             os.fsync(stream.fileno())
+        acknowledgment = Path(marker).with_suffix('.ack')
+        until = time.monotonic() + 15
+        while not acknowledgment.is_file():
+            if time.monotonic() >= until:
+                raise AssertionError('named workflow boundary acknowledgment timed out')
+            time.sleep(0.01)
         os._exit(91)
     def dispatch(*args, **kwargs):
         kwargs['observer'] = boundary
+        stage_points = {'collection.after_binding', 'publication.after_pointer',
+                        'publication.after_repair', 'etl_result.after_object'}
+        fault = {'point': point, 'action': 'crash', 'marker': str(marker),
+                 'ack': str(Path(marker).with_suffix('.ack'))} if point in stage_points else None
+        kwargs['child_runner'] = CheckedRunner(fault=fault, die_with_child=True)
         return Dispatcher(*args, **kwargs)
     def runner(*args, **kwargs):
         kwargs['observer'] = boundary
@@ -232,8 +252,9 @@ def process_case(output, point):
         etl={'parser_version': 'fixture-index-parser-v1'},
         fixture={'allow_clock_override': True, 'allow_deadline_override': False})
     h = CommandHarness(output, pack, settings)
+    settings = h.settings
     argv = ['backfill', '--config', str(h.config), '--run-id', 'process', '--execution-id', 'manual',
-            '--attempt-id', 'a', '--deadline', h.deadline.isoformat(), '--state-dir', str(output),
+            '--attempt-id', 'a', '--deadline', h.deadline.isoformat(),
             '--fixture-pack', str(pack), '--today', '2026-10-07']
     h.close()
     marker = output / 'death.json'
@@ -241,6 +262,11 @@ def process_case(output, point):
     child = multiprocessing.get_context('spawn').Process(target=process_worker,
         args=(h.config, pack, output, argv, point, marker))
     child.start()
+    until = time.monotonic() + 30
+    while not marker.is_file() and child.is_alive() and time.monotonic() < until:
+        time.sleep(0.01)
+    if marker.is_file():
+        marker.with_suffix('.ack').touch(exist_ok=True)
     child.join(30)
     if child.is_alive():
         child.terminate(); child.join(5)
@@ -248,7 +274,7 @@ def process_case(output, point):
     if child.exitcode != 91 or not marker.is_file() or json.loads(marker.read_text())['point'] != point:
         raise AssertionError({'point': point, 'exit': child.exitcode})
     put_json(output / 'worker-exit.json', {'exit': child.exitcode, 'point': point})
-    opened = open_stores(settings, base_path=output)
+    opened = open_stores(settings)
     store, objects, leases = opened
     try:
         before = [row.to_mapping() for row in store.scan('QuarterPublication', {})]
@@ -278,6 +304,13 @@ def process_case(output, point):
     h.deadline = datetime.fromisoformat(argv[argv.index('--deadline') + 1])
     try:
         code, message = h.invoke('backfill', run='process', attempt='a')
+        exact_retry_exit = code
+        ambiguous = point in {'collection.after_binding', 'publication.after_pointer',
+                              'publication.after_repair', 'etl_result.after_object'}
+        if ambiguous:
+            if code == 0:
+                raise AssertionError('ambiguous exact retry claimed success')
+            code, message = h.invoke('backfill', run='process', attempt='continuation')
         if code != 0: raise AssertionError(h.calls[-1])
         result = durable_report(h, message)
         capture, rows = h.capture('2026Q4')
@@ -290,7 +323,9 @@ def process_case(output, point):
             raise AssertionError('completed historical report was rewritten during recovery')
         put_json(output / 'reopened.json', {'calls': h.calls, 'report': result.to_mapping(),
             'reader': capture.to_mapping(), 'rows': rows, 'pointers_before': before, 'pointers_after': after})
-        return {'point': point, 'exit': 0, 'worker_exit': child.exitcode, 'report': message['result_ref']}
+        return {'point': point, 'exit': 0, 'exact_retry_exit': exact_retry_exit,
+                'worker_exit': child.exitcode, 'report': message['result_ref'],
+                'acknowledged': marker.with_suffix('.ack').is_file()}
     finally:
         h.close()
 

@@ -19,4 +19,5 @@ class WorkflowProcessTests(unittest.TestCase):
                 with self.subTest(point=point):
                     result = process_case(Path(tmp) / point.replace('.', '-'), point)
                     self.assertEqual(result['worker_exit'], 91)
+                    self.assertTrue(result.get('acknowledged', False))
                     self.assertEqual(result['exit'], 0)
