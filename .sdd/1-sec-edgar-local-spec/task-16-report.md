@@ -262,3 +262,29 @@ The check parsed the committed JSON, compared every absolute/logical file refere
 The final source-code verification remains retained log `25-native-adjudication-integration.log`: 36 guarded offline tests passed in 15.719 seconds, zero failures/errors/skips/warnings. No code changed after that gate; this final commit changes evidence/report/log only. No whole default suite or actual analyzer was repeated for documentation. Static checker SHA256 is `def6274f1ceb263a02fb5005b768f9481d72948e007e86d14191db112e95b71a`.
 
 Self-review checked that original incomplete flags were not overwritten, the supplemental pass is separately identified, all three native sources are linked to reviewed analysis, acquisition and ETL statuses stay separate, quarantine/pending outcomes remain visible, exact budgets/ordinals/drain are retained, and row counts distinguish successive reads from latest captured totals. The selected release/payload/spec/plan/lock/default config remain untouched. Final independent Task16 review is the next gate.
+
+## Final whole-branch review P3 documentation correction
+
+The final whole-branch review (`final-whole-branch-review.md`, range `3c40471..420e8c5`) found no Critical/Important issues and one P3: current operator entry points still reported the superseded Task14-pending/L12-not-run checkpoint. Read the complete finding and checked the renewed offline and actual genuine evidence before applying its consolidated correction. This is a current-documentation status fix; historical Task14/15 checkpoint evidence remains unchanged.
+
+Changed only the current status paragraphs in `README.md`, `packages/sec-edgar-ingest/README.md`, `docs/runbooks/native-setup.md`, `docs/runbooks/release-upgrades.md`, and `docs/runbooks/local-ingestion.md`. Each now links `offline-renewal-task15.md` and `sec-acceptance.md`, states the reviewed supplemental L12 pass separately from original run/verification incomplete/exit12, retains the historical-coverage limitation, and explicitly says the preserved generated default config references old `900952a8…` and was not selected. No runtime examples, production code, config, store, release or historical evidence were changed.
+
+Fresh validation commands:
+
+```sh
+python3 /private/tmp/task16-current-doc-links.py
+git diff --check
+```
+
+The docs-only checker resolves every relative Markdown link in all five documents, checks current status distinctions and absence of superseded pending/not_run phrases, verifies the preserved default-config SHA256, and compares Task14/15 historical evidence bytes with HEAD. Exact checker output (exit 0):
+
+```text
+README.md: 6 relative links resolve; current status distinctions present
+packages/sec-edgar-ingest/README.md: 6 relative links resolve; current status distinctions present
+docs/runbooks/native-setup.md: 3 relative links resolve; current status distinctions present
+docs/runbooks/release-upgrades.md: 4 relative links resolve; current status distinctions present
+docs/runbooks/local-ingestion.md: 4 relative links resolve; current status distinctions present
+PASS: 5 documents, 23 relative links; preserved default config hash and unchanged historical Task14/15 evidence verified. No code/runtime/store changes or test rerun.
+```
+
+`git diff --check` returned 0 without output. No test suite, HTTP, acceptance run, verification or actual adjudication was repeated for this prose-only correction. Scoped final-review follow-up is the next controller gate.
