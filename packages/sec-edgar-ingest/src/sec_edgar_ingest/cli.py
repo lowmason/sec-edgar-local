@@ -222,7 +222,9 @@ def _read_admission(path, objects, intent):
         raise Conflict('attempt admission fields, format or canonical bytes differ')
     require_contract(value)
     context = RunContext.from_mapping(value['context'])
-    if path != result_path(context).rsplit('/', 1)[0] + '/admission.json' or value['intent'] != intent:
+    expected = canonical_json({'contract_version': LOCAL_CONTRACT, 'format_version': ADMISSION_FORMAT,
+                               'context': context.to_mapping(), 'intent': intent})
+    if path != result_path(context).rsplit('/', 1)[0] + '/admission.json' or body != expected:
         raise Conflict('attempt admission differs from its stable command address or frozen inputs')
     return context
 
@@ -298,6 +300,8 @@ def _existing_etl_context(current, state, objects, intent, explicit_today):
                 or canonical_json(frozen) != frozen_body or frozen['intent'] != intent):
             raise Conflict('ETL command differs from its frozen invocation')
         prior = RunContext.from_mapping(frozen['context'])
+        if canonical_json({'context': prior.to_mapping(), 'intent': intent}) != frozen_body:
+            raise Conflict('ETL intent context differs from its exact canonical context')
     else:
         if saved is not None:
             raise Conflict('completed ETL result has no command intent')

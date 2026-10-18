@@ -273,6 +273,89 @@ class AttemptAdmissionTests(unittest.TestCase):
             target.write_bytes(canonical_json(receipt))
             self.assertEqual(self.admit(original, state, objects, intent), (original, None))
 
+    def test_admission_only_prefix_refuses_numeric_boolean_aliases_without_mutation(self):
+        from sec_edgar_ingest.results import result_path
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for command, flag in (('discover', 'refresh'), ('transform', 'force')):
+            for expected, aliases in ((False, (0, 0.0)), (True, (1, 1.0))):
+                for alias in aliases:
+                    with self.subTest(command=command, expected=expected, alias=repr(alias)):
+                        _, state, objects, context, intent = self.bundle(command)
+                        intent = {**intent, flag: expected}
+                        base = result_path(context).rsplit('/', 1)[0]
+                        receipt = {'contract_version': 'sec-local-contract-v1',
+                                   'format_version': 'sec-local-attempt-admission-v1',
+                                   'context': context.to_mapping(), 'intent': {**intent, flag: alias}}
+                        objects.put_once(base + '/admission.json', canonical_json(receipt))
+                        self.assertEqual(tuple(state.store.scan('Attempt', {})), ())
+                        with self.assertRaises(FileNotFoundError):
+                            objects.read(base + '/command.json')
+                        before = self.snapshot(state, objects)
+                        with self.assertRaises(Conflict):
+                            self.admit(context, state, objects, intent)
+                        self.assertEqual(self.snapshot(state, objects), before)
+
+    def test_admission_only_prefix_refuses_normalized_context_timestamps_without_mutation(self):
+        from sec_edgar_ingest.results import result_path
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for command in ('discover', 'transform'):
+            for field in ('started_at', 'deadline'):
+                with self.subTest(command=command, field=field):
+                    _, state, objects, context, intent = self.bundle(command)
+                    mapping = context.to_mapping()
+                    mapping[field] = mapping[field].replace('+00:00', 'Z')
+                    self.assertNotEqual(canonical_json(mapping), canonical_json(context.to_mapping()))
+                    base = result_path(context).rsplit('/', 1)[0]
+                    objects.put_once(base + '/admission.json', canonical_json({
+                        'contract_version': 'sec-local-contract-v1',
+                        'format_version': 'sec-local-attempt-admission-v1',
+                        'context': mapping, 'intent': intent}))
+                    self.assertEqual(tuple(state.store.scan('Attempt', {})), ())
+                    with self.assertRaises(FileNotFoundError):
+                        objects.read(base + '/command.json')
+                    before = self.snapshot(state, objects)
+                    with self.assertRaises(Conflict):
+                        self.admit(context, state, objects, intent)
+                    self.assertEqual(self.snapshot(state, objects), before)
+
+    def test_legacy_etl_numeric_boolean_aliases_refuse_before_admission_mutation(self):
+        from sec_edgar_ingest.results import result_path
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for expected, aliases in ((False, (0, 0.0)), (True, (1, 1.0))):
+            for alias in aliases:
+                with self.subTest(expected=expected, alias=repr(alias)):
+                    _, state, objects, context, intent = self.bundle('transform')
+                    intent = {**intent, 'force': expected}
+                    base = result_path(context).rsplit('/', 1)[0]
+                    objects.put_once(base + '/command.json', canonical_json({
+                        'context': context.to_mapping(), 'intent': {**intent, 'force': alias}}))
+                    before = self.snapshot(state, objects)
+                    with self.assertRaises(Conflict):
+                        self.admit(context, state, objects, intent)
+                    self.assertEqual(self.snapshot(state, objects), before)
+                    valid = canonical_json({'context': context.to_mapping(), 'intent': intent})
+                    (objects.directory / base / 'command.json').write_bytes(valid)
+                    self.assertEqual(self.admit(context, state, objects, intent), (context, None))
+                    self.assertEqual(objects.read(base + '/command.json'), valid)
+
+    def test_legacy_etl_normalized_context_timestamps_refuse_before_admission_mutation(self):
+        from sec_edgar_ingest.results import result_path
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for command in ('transform', 'publish'):
+            for field in ('started_at', 'deadline'):
+                with self.subTest(command=command, field=field):
+                    _, state, objects, context, intent = self.bundle(command)
+                    if command == 'publish':
+                        intent = {**intent, 'force': None}
+                    mapping = context.to_mapping()
+                    mapping[field] = mapping[field].replace('+00:00', 'Z')
+                    base = result_path(context).rsplit('/', 1)[0]
+                    objects.put_once(base + '/command.json', canonical_json({'context': mapping, 'intent': intent}))
+                    before = self.snapshot(state, objects)
+                    with self.assertRaises(Conflict):
+                        self.admit(context, state, objects, intent)
+                    self.assertEqual(self.snapshot(state, objects), before)
+
 
 class LocalAcquisitionContracts(unittest.TestCase):
     def test_context_requires_local_runtime_and_format(self):
