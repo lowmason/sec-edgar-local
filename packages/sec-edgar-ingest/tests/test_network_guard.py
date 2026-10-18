@@ -489,3 +489,40 @@ print(json.dumps({'denied':denied,'allowed':allowed,'parent_cwd':str(pathlib.Pat
             {'exit': 0, 'stdout': 'safe'}])
         self.assertEqual(proof['parent_cwd'], proof['outside'])
         self.assertTrue(proof['direct_spawn'], 'explicit posix_spawn path does not search child PATH')
+
+    def test_subprocess_checks_later_path_candidates_after_invalid_executable(self):
+        project = TESTS.resolve().parents[2]
+        with tempfile.TemporaryDirectory(prefix='audit-fallback-', dir=project / 'releases') as directory:
+            selected = Path(directory) / 'releases' / ('sha256=' + 'd' * 64)
+            selected.mkdir(parents=True)
+            tool = selected / 'fallback-tool'
+            tool.write_text('#!/bin/sh\nprintf selected\n')
+            tool.chmod(0o755)
+            body = '''
+import json,pathlib,subprocess,network_guard
+outside=pathlib.Path.cwd();bad=outside/'bad';good=outside/'good'
+bad.mkdir();good.mkdir()
+for name in ('verify-native-release.py','fallback-tool'):
+    (bad/name).write_text('not a loadable executable\\n');(bad/name).chmod(0o755)
+(good/'verify-native-release.py').write_text('#!/bin/sh\\nexit 0\\n')
+(good/'verify-native-release.py').chmod(0o755)
+(good/'fallback-tool').write_text('#!/bin/sh\\nprintf outside\\n')
+(good/'fallback-tool').chmod(0o755)
+selected=pathlib.Path(SELECTED)
+network_guard.install_checkout_policy((str(selected),))
+denied=[];outcomes=[]
+for first in (bad,good):
+    environment={'PATH':str(first)+':/Users/lowell/Projects/sec-edgar-local/scripts:/usr/bin:/bin'}
+    try:done=subprocess.run(['verify-native-release.py','--help'],cwd=outside,env=environment,capture_output=True,text=True)
+    except PermissionError:denied.append(True);outcomes.append({'denied':True})
+    else:denied.append(False);outcomes.append({'exit':done.returncode,'help':'usage:' in done.stdout})
+allowed=[]
+for last in (good,selected):
+    done=subprocess.run(['fallback-tool'],cwd=outside,env={'PATH':str(bad)+':'+str(last)},capture_output=True,text=True)
+    allowed.append({'exit':done.returncode,'stdout':done.stdout})
+print(json.dumps({'denied':denied,'outcomes':outcomes,'allowed':allowed}))
+'''.replace('SELECTED', repr(str(selected)))
+            proof = self.isolated_probe(body)
+        self.assertEqual(proof['denied'], [True, True], proof)
+        self.assertEqual(proof['allowed'], [
+            {'exit': 0, 'stdout': 'outside'}, {'exit': 0, 'stdout': 'selected'}])

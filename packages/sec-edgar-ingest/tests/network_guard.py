@@ -119,14 +119,14 @@ def install_checkout_policy(releases):
                     require_path(executable, cwd=child_cwd)
                 else:
                     environment = args[3] if event == 'subprocess.Popen' else args[2]
-                    # Match POSIX child PATH lookup, including child-relative entries.
+                    # Load errors can advance PATH search. Conservatively validate
+                    # every executable candidate, including child-relative entries.
                     for entry in os.get_exec_path(environment):
                         candidate = Path(entry or '.') / executable
                         if not candidate.is_absolute():
                             candidate = child_cwd / candidate
                         if candidate.is_file() and os.access(candidate, os.X_OK):
                             require_path(candidate)
-                            break
             # Python script execution is distinct from data/provenance arguments.
             argv = args[1]
             if (isinstance(argv, (list, tuple)) and not isinstance(executable, int)
