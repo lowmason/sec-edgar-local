@@ -1,3 +1,4 @@
+from support_process import checked_fault, checked_clock
 from network_guard import install
 install()
 from sec_edgar_ingest.models import to_mapping_value
@@ -276,19 +277,12 @@ class WorkflowAcceptanceTests(unittest.TestCase):
 
     def test_F3_ordinary_post_CAS_failure_has_no_report_then_fresh_checked_repair(self):
         h = self.harness(simple_pack(self.root / 'pack'), start='2026Q4')
-        import sec_edgar_ingest.cli as cli
-        from sec_edgar_ingest.etl.commands import run_publish
-        fired = []
-        def boundary(point):
-            if point == 'publication.after_pointer' and not fired:
-                fired.append(True)
-                raise OSError('ordinary retained post-CAS failure')
-        def publish(*args, **kwargs): return run_publish(*args, observer=boundary, **kwargs)
-        with patch.object(cli, 'run_publish', side_effect=publish):
+        with checked_fault(self.root, point='publication.after_pointer') as fault:
             code, message = h.invoke('backfill', run='repair', attempt='original')
         self.assertEqual(code, 9, h.calls[-1])
         self.assertIsNone(message['result_ref'])
-        self.assertEqual(fired, [True])
+        self.assertTrue(Path(fault['marker']).is_file())
+        self.assertTrue(Path(fault['ack']).is_file())
         pointers = [row.to_mapping() for row in h.store.scan('QuarterPublication', {})]
         self.assertEqual(len(pointers), 1)
         attempts = [row.to_mapping() for row in h.store.scan('Attempt', {}) if row.value['context']['command'] == 'publish']

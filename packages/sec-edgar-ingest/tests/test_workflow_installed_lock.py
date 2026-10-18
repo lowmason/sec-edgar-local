@@ -18,7 +18,7 @@ def small_lock_and_export():
     lock = f'''version = 1
 [[package]]
 name = "sec-edgar-ingest"
-version = "0.1.0"
+version = "0.2.0"
 source = {{ editable = "packages/sec-edgar-ingest" }}
 dependencies = [{{name="requests"}}, {{name="pycparser", marker="implementation_name != 'PyPy'"}}]
 [[package]]
@@ -41,26 +41,31 @@ class InstalledLockTests(unittest.TestCase):
     def setUp(self):
         self.repo = Path(__file__).resolve().parents[3]
         self.lock = (self.repo / 'uv.lock').read_bytes()
-        self.export = (self.repo / 'specs/evidence/sec-filing-index-ingestion/stage-3/'
-                       'verification/installed/requirements.txt').read_text()
+        import subprocess
+        self.export = subprocess.run(['uv', 'export', '--offline', '--locked', '--package',
+            'sec-edgar-ingest', '--no-dev', '--no-emit-workspace', '--format', 'requirements.txt'],
+            cwd=self.repo, check=True, capture_output=True, text=True).stdout
         self.environment = marker_environment()
 
     def test_complete_accepted_graph_rejects_wrong_transitive_with_direct_pins_intact(self):
         expected = locked_requirements(self.lock, self.export, self.environment)
-        self.assertEqual(len(expected), 19 if self.environment['platform_python_implementation'] == 'PyPy' else 21)
-        actual = dict(expected, **{'sec-edgar-ingest': '0.1.0'})
+        self.assertEqual(expected['requests'], '2.34.2')
+        self.assertEqual(expected['pyarrow'], '25.0.1')
+        self.assertTrue({'urllib3', 'certifi', 'charset-normalizer', 'idna'} <= expected.keys())
+        self.assertFalse(any(name.startswith(('azure', 'msal')) for name in expected))
+        actual = dict(expected, **{'sec-edgar-ingest': '0.2.0'})
         actual['urllib3'] = '2.7.0'
-        for direct in ('pyarrow', 'requests', 'azure-identity', 'azure-storage-blob', 'azure-data-tables'):
+        for direct in ('pyarrow', 'requests'):
             self.assertEqual(actual[direct], expected[direct])
         with self.assertRaisesRegex(ValueError, 'installed dependency set'):
-            assert_inventory(expected, actual, '0.1.0')
+            assert_inventory(expected, actual, '0.2.0')
 
     def test_exact_set_rejects_missing_and_extra_distribution(self):
         expected = locked_requirements(self.lock, self.export, self.environment)
-        for actual in (dict(expected), dict(expected, **{'sec-edgar-ingest': '0.1.0', 'unrequested': '1.0'})):
+        for actual in (dict(expected), dict(expected, **{'sec-edgar-ingest': '0.2.0', 'unrequested': '1.0'})):
             with self.assertRaisesRegex(ValueError, 'installed dependency set'):
-                assert_inventory(expected, actual, '0.1.0')
-        self.assertIsNone(assert_inventory(expected, dict(expected, **{'sec-edgar-ingest': '0.1.0'}), '0.1.0'))
+                assert_inventory(expected, actual, '0.2.0')
+        self.assertIsNone(assert_inventory(expected, dict(expected, **{'sec-edgar-ingest': '0.2.0'}), '0.2.0'))
 
     def test_marker_exclusion_does_not_drop_other_transitives(self):
         lock, export = small_lock_and_export()
@@ -96,7 +101,7 @@ class InstalledLockTests(unittest.TestCase):
             root = Path(directory)
             package = root / 'sec_edgar_ingest'
             package.mkdir()
-            (package / '__init__.py').write_bytes(b'__version__="0.1.0"\n')
+            (package / '__init__.py').write_bytes(b'__version__="0.2.0"\n')
             (package / 'py.typed').write_bytes(b'')
             (package / 'schema.bin').write_bytes(b'production retained data')
             cache = package / '__pycache__'

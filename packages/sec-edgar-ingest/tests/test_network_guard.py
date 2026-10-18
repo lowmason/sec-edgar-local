@@ -213,3 +213,19 @@ print(json.dumps(captured))
                 process.join(2)
             output.close()
             output.join_thread()
+
+
+class CloudImportInventoryTests(unittest.TestCase):
+    def test_all_default_test_support_and_application_imports_exclude_cloud_sdks(self):
+        import ast
+        roots = (TESTS, TESTS.parent / 'src' / 'sec_edgar_ingest')
+        forbidden = []
+        for root in roots:
+            for path in root.rglob('*.py'):
+                for node in ast.walk(ast.parse(path.read_text())):
+                    names = ([alias.name for alias in node.names] if isinstance(node, ast.Import)
+                             else [node.module or ''] if isinstance(node, ast.ImportFrom) else [])
+                    for name in names:
+                        if name.split('.')[0] in ('azure', 'msal'):
+                            forbidden.append((str(path), node.lineno, name))
+        self.assertEqual(forbidden, [])

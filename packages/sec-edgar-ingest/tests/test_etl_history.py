@@ -27,7 +27,7 @@ class HistoryTests(GateFixture):
         return result
 
     def candidates_cli(self):
-        return operator_cli('candidates', '--config', str(self.write_config()), '--state-dir', str(self.root))
+        return operator_cli('candidates', '--config', str(self.write_config()))
 
     def test_lineage_refuses_a_cycle_or_a_self_reference(self):
         base, _, candidate = self.gated()
@@ -92,8 +92,7 @@ class HistoryTests(GateFixture):
 
     def test_candidates_cli_prints_the_listing(self):
         _, _, candidate = self.gated()
-        code, message, _ = operator_cli('candidates', '--config', str(self.write_config()),
-                                        '--state-dir', str(self.root))
+        code, message, _ = operator_cli('candidates', '--config', str(self.write_config()))
         self.assertEqual((code, message['outcome'], message['error']), (0, 'success', None))
         self.assertEqual([entry['generation_id'] for entry in message['candidates']],
                          [candidate.manifest.generation_id])

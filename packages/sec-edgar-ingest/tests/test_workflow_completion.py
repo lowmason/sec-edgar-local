@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from support_workflow_evidence import EvidenceFixture, quarterly_bytes
+from support_process import checked_clock, checked_dispatcher, checked_fault
 from sec_edgar_ingest.etl.contracts import decode_transformed
 from sec_edgar_ingest.etl.reader import capture_quarter, read_quarter
 from sec_edgar_ingest.etl.state import EtlState
@@ -109,14 +110,7 @@ class CompletionTests(unittest.TestCase):
 
     def test_fresh_attempt_resolves_repair_without_rewriting_original_attempt(self):
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        original = EtlState._record_membership
-        fired = []
-        def fail_once(state, *args):
-            if not fired:
-                fired.append(True)
-                raise Conflict('retained ordinary ancillary failure')
-            return original(state, *args)
-        with patch.object(EtlState, '_record_membership', fail_once):
+        with checked_fault(self.f.root):
             code, failed_call, result = self.f.invoke('publish', transformed)
         self.assertEqual(code, 9)
         self.assertIsNone(result)
@@ -142,9 +136,8 @@ class CompletionTests(unittest.TestCase):
         from dataclasses import replace
         from sec_edgar_ingest.state import attempt_key
         from sec_edgar_ingest.models import RunContext
-        from sec_edgar_ingest.workflows.checked import Dispatcher
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')):
+        with checked_fault(self.f.root):
             code, call, result = self.f.invoke('publish', transformed)
         obligation = self.evaluate().obligations[0]
         self.assertEqual(code, 9)
@@ -153,18 +146,18 @@ class CompletionTests(unittest.TestCase):
         command_ref = call['result_ref'].rsplit('/', 1)[0] + '/command.json'
         command_body = self.f.objects.read(command_ref)
         clock = self.f.workflow.deadline + timedelta(seconds=1)
-        dispatcher = Dispatcher(self.f.workflow, self.f.settings, self.f.pack,
+        dispatcher = checked_dispatcher(self.f.workflow, self.f.settings, self.f.pack,
                                 self.f.root.parent, self.f.store, self.f.objects)
-        with patch('sec_edgar_ingest.cli.Clock.now', return_value=clock), self.assertRaises(Conflict):
+        with checked_clock(self.f.root, clock), self.assertRaises(Conflict):
             dispatcher.execute('publish', call['step_id'], self.f.settings,
                                ('--workset', transformed))
         self.assertEqual(self.f.store.get('Attempt', actual_key).to_mapping(), old_attempt)
         self.assertEqual(self.f.objects.read(command_ref), command_body)
         self.assertFalse(self.evaluate().complete)
+        now = datetime.now(timezone.utc)
         self.f.workflow = replace(self.f.workflow, attempt_id='fresh-after-expiry',
-                                  started_at=clock, deadline=clock + timedelta(seconds=3600))
-        with patch('sec_edgar_ingest.cli.Clock.now', return_value=clock):
-            code, fresh_call, result = self.f.invoke('publish', transformed)
+                                  started_at=now, deadline=now + timedelta(seconds=3600))
+        code, fresh_call, result = self.f.invoke('publish', transformed)
         self.assertEqual(code, 0)
         resolve_repair(obligation, fresh_call, self.f.store, self.f.objects)
         self.assertTrue(self.evaluate().complete)
@@ -247,7 +240,7 @@ class CompletionTests(unittest.TestCase):
         import hashlib
         from sec_edgar_ingest.models import canonical_json, parse_json
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary repair')):
+        with checked_fault(self.f.root):
             code, original_call, result = self.f.invoke('publish', transformed)
         self.assertEqual(code, 9)
         obligation = self.evaluate().obligations[0]
@@ -389,9 +382,9 @@ class CompletionTests(unittest.TestCase):
         import hashlib
         from sec_edgar_ingest.models import canonical_json, parse_json, to_mapping_value
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')):
-            self.assertEqual(self.f.invoke('publish', transformed)[0], 9)
-            self.assertEqual(self.f.invoke('publish', transformed)[0], 9)
+        for _ in range(2):
+            with checked_fault(self.f.root):
+                self.assertEqual(self.f.invoke('publish', transformed)[0], 9)
         obligations = self.evaluate().obligations
         self.assertEqual(len(obligations), 2)
         originals = [r.to_mapping() for r in self.f.store.scan('Attempt', {})]
@@ -414,7 +407,7 @@ class CompletionTests(unittest.TestCase):
         from sec_edgar_ingest.models import RunContext
         from sec_edgar_ingest.state import attempt_key
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')):
+        with checked_fault(self.f.root):
             code, call, _ = self.f.invoke('publish', transformed)
         self.assertEqual(code, 9)
         self.assertEqual(self.f.invoke('publish', transformed)[0], 0)
@@ -473,13 +466,12 @@ class CompletionTests(unittest.TestCase):
         self.assertTrue(evaluated.gaps)
 
     def test_valid_checked_call_before_begin_has_no_repair_obligation(self):
-        from sec_edgar_ingest.workflows.checked import Dispatcher
         transformed = self.transform(quarterly_bytes('2026-07-01'))
         self.assertEqual(self.f.invoke('publish', transformed)[0], 0)
         def before_begin(point):
             if point == 'workflow_child.after_call':
                 raise Conflict('retained valid call before begin')
-        dispatcher = Dispatcher(self.f.workflow, self.f.settings, self.f.pack,
+        dispatcher = checked_dispatcher(self.f.workflow, self.f.settings, self.f.pack,
                                 self.f.root.parent, self.f.store, self.f.objects,
                                 observer=before_begin)
         with self.assertRaises(Conflict):
@@ -506,7 +498,7 @@ class CompletionTests(unittest.TestCase):
         self.assertEqual(self.f.invoke('publish', initial)[0], 0)
         self.f.revised_member()
         replacement = self.transform(quarterly_bytes('2026-07-01', 'Changed'), seconds=1)
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')):
+        with checked_fault(self.f.root):
             self.assertEqual(self.f.invoke('publish', replacement)[0], 9)
         obligation = self.evaluate().obligations[0]
         original = parse_json(self.f.objects.read(obligation['ref']))
@@ -535,7 +527,7 @@ class CompletionTests(unittest.TestCase):
         from sec_edgar_ingest.storage.contracts import identity, table_for
         from sec_edgar_ingest.workflows.completion import outstanding_repairs
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')):
+        with checked_fault(self.f.root):
             self.assertEqual(self.f.invoke('publish', transformed)[0], 9)
         obligation = self.evaluate().obligations[0]
         original = parse_json(self.f.objects.read(obligation['ref']))
@@ -561,7 +553,7 @@ class CompletionTests(unittest.TestCase):
         import hashlib
         from sec_edgar_ingest.models import canonical_json, parse_json, to_mapping_value
         transformed = self.transform(quarterly_bytes('2026-07-01'))
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')):
+        with checked_fault(self.f.root):
             code, call, _ = self.f.invoke('publish', transformed)
         self.assertEqual(code, 9)
         key = hashlib.sha256(canonical_json(to_mapping_value(call))).hexdigest()

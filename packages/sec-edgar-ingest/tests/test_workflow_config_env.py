@@ -58,3 +58,20 @@ class LocalConfigSourceTests(unittest.TestCase):
                 main([*self.argv(), flag, 'unsupported'])
             self.assertEqual(caught.exception.code, 2)
             opened.assert_not_called()
+
+
+    def test_missing_or_invalid_explicit_config_refuses_before_stores(self):
+        for name, body in (('missing.json', None), ('invalid.json', b'{broken'),
+                           ('duplicate.json', b'{"config_version":"one","config_version":"two"}')):
+            path = self.root / name
+            if body is not None:
+                path.write_bytes(body)
+            args = self.argv()
+            args[args.index('--config') + 1] = str(path)
+            with self.subTest(name=name), \
+                    patch('sec_edgar_ingest.cli.open_stores', side_effect=AssertionError('opened stores')) as opened, \
+                    contextlib.redirect_stderr(io.StringIO()) as events:
+                code = main(args)
+            self.assertEqual(code, 2)
+            self.assertEqual(json.loads(events.getvalue())['outcome'], 'configuration')
+            opened.assert_not_called()

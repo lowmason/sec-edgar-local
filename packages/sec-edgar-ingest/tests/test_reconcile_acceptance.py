@@ -21,7 +21,7 @@ class ReconcileAcceptanceTests(ReconcileFixture):
                          (10, 'awaiting_approval', 1), h.calls[-1])
         self.assertEqual(self.names(h, '2026Q3'), ['A', 'B'])
 
-        operator = ('--config', str(h.config), '--state-dir', str(h.root))
+        operator = ('--config', str(h.config))
         code, listing, _ = operator_cli('candidates', *operator)
         self.assertEqual(code, 0)
         request, = listing['candidates']

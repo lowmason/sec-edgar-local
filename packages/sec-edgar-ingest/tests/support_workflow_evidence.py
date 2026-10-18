@@ -88,7 +88,7 @@ class EvidenceFixture:
         self.pack = self.root.parent / 'listing-manifest.json'
         self.pack.write_bytes(canonical_json(to_mapping_value({'fixture_version': 'sec-acquisition-fixture-v1',
                             'provenance': 'synthetic', 'responses': responses})))
-        from sec_edgar_ingest.workflows.checked import Dispatcher
+        from support_process import checked_dispatcher as Dispatcher
         dispatcher = Dispatcher(self.workflow, self.settings, self.pack,
                                 self.root.parent, self.store, self.objects)
         found = dispatcher.execute('discover', 'initial-discovery', self.settings,
@@ -102,7 +102,7 @@ class EvidenceFixture:
         self.h.close()
 
     def revised_member(self):
-        from sec_edgar_ingest.workflows.checked import Dispatcher
+        from support_process import checked_dispatcher as Dispatcher
         self.sequence += 1
         dispatcher = Dispatcher(self.workflow, self.settings, self.pack,
                                 self.root.parent, self.store, self.objects)
@@ -132,7 +132,8 @@ class EvidenceFixture:
         return ref
 
     def invoke(self, command, input_ref, *, deadline=None):
-        from sec_edgar_ingest.workflows.checked import Dispatcher, ChildUnfinished
+        from sec_edgar_ingest.workflows.checked import ChildUnfinished
+        from support_process import checked_dispatcher as Dispatcher
         self.sequence += 1
         workflow = self.workflow if deadline is None else replace(self.workflow, deadline=deadline)
         dispatcher = Dispatcher(workflow, self.settings, self.pack,

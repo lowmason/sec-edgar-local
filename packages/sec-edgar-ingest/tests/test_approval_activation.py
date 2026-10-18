@@ -95,7 +95,7 @@ class ActivationTests(GateFixture):
 
     def test_approve_cli_prints_the_activation_reference(self):
         _, revised, candidate = self.gated()
-        command = ('approve', '--config', str(self.write_config()), '--state-dir', str(self.root),
+        command = ('approve', '--config', str(self.write_config()),
                    '--quarter', '2026Q4', '--generation', candidate.manifest.generation_id,
                    '--quarterly-sha256', revised.snapshot.sha256, '--approver', 'Lowell Mason')
         code, message, _ = operator_cli(*command)
@@ -106,22 +106,15 @@ class ActivationTests(GateFixture):
         self.assertEqual((code, message['outcome'], message['activation'], message['activation_ref']),
                          (0, 'unchanged', None, None))
 
-    def test_activation_rows_route_to_the_approvals_table(self):
-        from azure.core.credentials import AzureSasCredential
-        from azure.data.tables import TableServiceClient
-        from sec_edgar_ingest.storage.azure import AzureStateStore
-        from test_azure_contracts import RETRY, TABLE_ENDPOINT, ScriptedTransport, table_response
+    def test_activation_rows_route_to_the_approvals_table_locally(self):
+        import sqlite3
+        from contextlib import closing
         self.assertEqual(table_for('ApprovalActivation'), 'Approvals')
-        transport = ScriptedTransport([table_response(201, etag='W/"activation"')])
-        service = TableServiceClient(TABLE_ENDPOINT, credential=AzureSasCredential('sv=offline&sig=synthetic'),
-                                     api_version='2020-12-06', transport=transport, **RETRY)
-        self.addCleanup(service.close)
-        tables = service.get_table_client
-        store = AzureStateStore(tables('SourceState'), tables('Attempts'), active_client=tables('ActivePointers'),
-                                approval_client=tables('Approvals'))
-        self.assertEqual(store.insert('ApprovalActivation', 'c' * 64, {'actor': 'Lowell Mason'}).version,
-                         'W/"activation"')
-        self.assertIn('/Approvals', transport.requests[0].url)
+        created = self.store.insert('ApprovalActivation', 'c' * 64, {'actor': 'Lowell Mason'})
+        self.assertEqual(self.store.get('ApprovalActivation', 'c' * 64), created)
+        with closing(sqlite3.connect(self.store.database)) as connection:
+            row = connection.execute("SELECT table_name FROM records WHERE key=?", ('c' * 64,)).fetchone()
+        self.assertEqual(row, ('Approvals',))
 
 
 if __name__ == '__main__':

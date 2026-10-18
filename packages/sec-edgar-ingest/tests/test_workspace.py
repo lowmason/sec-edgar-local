@@ -42,7 +42,7 @@ class CliTests(unittest.TestCase):
         from sec_edgar_ingest.cli import main
 
         for argument, expected in (("--help", "usage: sec-edgar-ingest"),
-                                   ("--version", "0.1.0")):
+                                   ("--version", "0.2.0")):
             with self.subTest(argument=argument):
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
@@ -75,8 +75,7 @@ class CliTests(unittest.TestCase):
         self.assertIs(entry_points[0].load(), main)
         requirements = set(distribution.requires or ())
         self.assertEqual(requirements, {
-            "pyarrow==25.0.1", "requests==2.34.2", "azure-identity==1.26.0",
-            "azure-storage-blob==12.31.0", "azure-data-tables==12.7.0",
+            "pyarrow==25.0.1", "requests==2.34.2",
         })
 
     def test_module_and_console_invocations(self):
@@ -84,7 +83,7 @@ class CliTests(unittest.TestCase):
         for invocation in ((sys.executable, "-m", "sec_edgar_ingest"),
                            (str(console),)):
             for argument, expected in (("--help", "usage: sec-edgar-ingest"),
-                                       ("--version", "0.1.0")):
+                                       ("--version", "0.2.0")):
                 with self.subTest(invocation=invocation, argument=argument):
                     # Install the mandatory child guard before either installed entry point loads.
                     bootstrap = ("import sys; sys.path.insert(0, " + repr(str(pathlib.Path(__file__).parent)) + "); "

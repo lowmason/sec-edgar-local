@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 def payload(path):
     value = json.loads(Path(path).read_bytes())
-    if not isinstance(value, dict) or set(value) != {'version', 'origins', 'fault', 'pid_log', 'sentinel'}:
+    if not isinstance(value, dict) or set(value) != {'version', 'origins', 'fault', 'clock', 'pid_log', 'sentinel'}:
         raise ValueError('checked harness payload requires exact fields')
     if value['version'] != 'sec-checked-harness-v1':
         raise ValueError('unsupported checked harness payload')
@@ -35,7 +35,9 @@ def payload(path):
         if not isinstance(fault, dict) or set(fault) != {'point', 'action', 'marker', 'ack'}:
             raise ValueError('checked fault requires exact fields')
         points = {'collection.after_binding', 'publication.after_pointer',
-                  'publication.after_repair', 'etl_result.after_object', 'publication.record_failure'}
+                  'publication.after_repair', 'etl_result.after_object', 'publication.record_failure',
+                  'publication.membership_failure', 'discovery.finish_failure',
+                  'collection.entry_failure', 'discovery.entry_ownership_lost', 'discovery.after_begin_failure'}
         if fault['point'] not in points or fault['action'] not in ('crash', 'raise'):
             raise ValueError('unsupported named checked fault')
         for key in ('marker', 'ack'):
@@ -49,6 +51,8 @@ def boundary(value, name):
     if fault is None or fault['point'] != name:
         return
     marker = Path(fault['marker'])
+    if marker.exists():
+        return
     with marker.open('x') as stream:
         json.dump({'point': name, 'pid': os.getpid()}, stream)
         stream.flush()
@@ -60,6 +64,11 @@ def boundary(value, name):
         time.sleep(0.01)
     if fault['action'] == 'crash':
         os._exit(91)
+    if name == 'discovery.entry_ownership_lost':
+        from sec_edgar_ingest.storage.contracts import OwnershipLost
+        raise OwnershipLost('acknowledged discovery ownership failure')
+    if name.startswith(('discovery.', 'collection.entry')):
+        raise RuntimeError('acknowledged retained command failure')
     raise OSError('acknowledged ordinary ancillary publication failure')
 
 
@@ -73,10 +82,15 @@ def run(value):
     from support_process import CheckedRunner
     from unittest.mock import patch
     actual_publish, actual_result = cli.run_publish, cli.write_etl_result
+    actual_collect, actual_discover = cli.collect, cli.discover
     actual_record = EtlState.record_publication
+    actual_membership = EtlState._record_membership
+    from sec_edgar_ingest.state import AcquisitionState
+    actual_finish_discovery = AcquisitionState.finish_discovery
+    actual_begin_discovery = AcquisitionState.begin_discovery
     def dispatch(*args, **kwargs):
         kwargs['child_runner'] = CheckedRunner(fault=value['fault'],
-            pid_log=value['pid_log'], sentinel=value['sentinel'])
+            pid_log=value['pid_log'], sentinel=value['sentinel'], clock=value['clock'])
         return Dispatcher(*args, **kwargs)
     def publish(*args, **kwargs):
         kwargs['observer'] = lambda name: boundary(value, name)
@@ -87,14 +101,43 @@ def run(value):
     def record(state, manifest):
         boundary(value, 'publication.record_failure')
         return actual_record(state, manifest)
+    def collect(*args, **kwargs):
+        boundary(value, 'collection.entry_failure')
+        return actual_collect(*args, **kwargs)
+    def discover(*args, **kwargs):
+        boundary(value, 'discovery.entry_ownership_lost')
+        return actual_discover(*args, **kwargs)
+    def begin_discovery(state, *args, **kwargs):
+        result = actual_begin_discovery(state, *args, **kwargs)
+        boundary(value, 'discovery.after_begin_failure')
+        return result
+    def membership(state, *args, **kwargs):
+        boundary(value, 'publication.membership_failure')
+        return actual_membership(state, *args, **kwargs)
+    def finish_discovery(state, *args, **kwargs):
+        boundary(value, 'discovery.finish_failure')
+        return actual_finish_discovery(state, *args, **kwargs)
     if value['pid_log']:
         with Path(value['pid_log']).open('a') as stream:
             stream.write(json.dumps({'pid': os.getpid(), 'python': sys.executable,
                 'origin': cli.__file__, 'argv': sys.argv[2:]}) + '\n')
-    with patch.object(cli, 'WorkflowDispatcher', dispatch), \
+    if value['clock'] is not None:
+        from datetime import datetime
+        instant = datetime.fromisoformat(value['clock'])
+        clock_patch = contextlib.ExitStack()
+        clock_patch.enter_context(patch.object(cli.Clock, 'now', return_value=instant))
+        checked_clock = clock_patch.enter_context(patch('sec_edgar_ingest.workflows.checked.datetime', wraps=datetime))
+        checked_clock.now.return_value = instant
+    else:
+        clock_patch = contextlib.nullcontext()
+    with clock_patch, patch.object(cli, 'WorkflowDispatcher', dispatch), \
          patch.object(cli, 'run_publish', publish), patch.object(cli, 'write_etl_result', result), \
          patch.object(cli._NoFaults, 'hit', lambda self, name: boundary(value, 'collection.' + name)), \
-         patch.object(EtlState, 'record_publication', record):
+         patch.object(EtlState, 'record_publication', record), \
+         patch.object(EtlState, '_record_membership', membership), \
+         patch.object(AcquisitionState, 'finish_discovery', finish_discovery), \
+         patch.object(AcquisitionState, 'begin_discovery', begin_discovery), \
+         patch.object(cli, 'collect', collect), patch.object(cli, 'discover', discover):
         return cli.main(sys.argv[2:])
 
 

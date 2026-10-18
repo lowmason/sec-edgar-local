@@ -55,125 +55,12 @@ class JournalContractTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 replace(permit, next_allowed_at=invalid)
 
-    def azure_leases(self, responses, clock=None):
-        from azure.storage.blob import BlobServiceClient
-        from sec_edgar_ingest.storage.azure import AzureLeaseStore
-        from test_azure_contracts import BLOB_ENDPOINT, RETRY, ScriptedTransport
-        transport = ScriptedTransport(responses)
-        service = BlobServiceClient(BLOB_ENDPOINT, api_version="2026-04-06", transport=transport, **RETRY)
-        self.addCleanup(service.close)
-        return AzureLeaseStore(service, clock=clock or FixtureClock()), transport
 
-    def test_upper_bounds_include_server_date_precision_and_rtt(self):
-        from test_azure_contracts import response
-        clock = FixtureClock()
-        leases, transport = self.azure_leases([response(201), response(201, headers={"x-ms-lease-id": "real"})], clock)
-        send = transport.send
-        def measured_send(request, **kwargs):
-            if request.headers.get("x-ms-lease-action") == "acquire":
-                clock.advance(0.5)
-            return send(request, **kwargs)
-        transport.send = measured_send
-        handle = leases.acquire("one", 60)
-        self.assertEqual(handle.observed_until, FixtureClock().now()+timedelta(seconds=58))
-        self.assertEqual(getattr(handle, "acquired_upper", None), FixtureClock().now()+timedelta(seconds=1.5),
-                         "Expiry/takeover need the server upper bound, never the lower observed_until")
-        self.assertEqual(handle.ownership_until_upper, FixtureClock().now()+timedelta(seconds=61.5))
 
-    def test_azure_receive_sample_must_anchor_the_interval_without_unmeasured_delay(self):
-        clock = FixtureClock()
-        origin = clock.now()
-        clock.advance(0.95)
-        leases, _ = self.azure_leases([], clock)
-        original_monotonic = clock.monotonic
-        samples = 0
-        def receive_sample():
-            nonlocal samples
-            samples += 1
-            if samples == 2:
-                clock.advance(0.25)
-            return original_monotonic()
-        clock.monotonic = receive_sample
-        bounds = leases._observation(origin+timedelta(seconds=0.9), 0.9, {"server_date": origin})
-        current = bounds.at(clock.monotonic())
-        self.assertLessEqual(current.lower, clock.now())
-        self.assertGreaterEqual(current.upper, clock.now(),
-                                "A later monotonic anchor must not omit elapsed time from the accepted server interval")
 
-    def test_date_precision_plus_rtt_must_fit_two_second_bound(self):
-        from sec_edgar_ingest.storage.contracts import ClockUncertain
-        from test_azure_contracts import response
-        clock = FixtureClock()
-        leases, transport = self.azure_leases([response(201), response(201, headers={"x-ms-lease-id": "real"})], clock)
-        send = transport.send
-        def measured_send(request, **kwargs):
-            if request.headers.get("x-ms-lease-action") == "acquire":
-                clock.advance(1.01)
-            return send(request, **kwargs)
-        transport.send = measured_send
-        with self.assertRaises(ClockUncertain):
-            leases.acquire("one", 60)
 
-    def test_azure_journal_fences_read_and_write_with_lease_and_actual_etag(self):
-        from sec_edgar_ingest.storage.contracts import LeaseHandle
-        from test_azure_contracts import response
-        clock = FixtureClock()
-        leases, transport = self.azure_leases([response(etag='"first"'), response(etag='"first"', body=b'{"epoch":4}'),
-                                               response(201, etag='"read-fenced"'), response(201, etag='"written"')], clock)
-        handle = LeaseHandle("one", "real", clock.now()+timedelta(seconds=58))
-        self.assertTrue(hasattr(leases, "read_journal"), "Azure sentinel journal must use actual leased Blob operations")
-        read = leases.read_journal(handle)
-        self.assertEqual(read.version, '"read-fenced"')
-        written = leases.write_journal(handle, {"epoch": 5}, read.version)
-        self.assertEqual(written.version, '"written"')
-        for request in transport.requests:
-            self.assertEqual(request.headers["x-ms-lease-id"], "real")
-        self.assertEqual(transport.requests[1].headers["If-Match"], '"first"')
-        self.assertEqual(transport.requests[2].headers["If-Match"], '"first"')
-        self.assertEqual(transport.requests[3].headers["If-Match"], '"read-fenced"')
-        self.assertFalse(transport.responses)
 
-    def test_actual_azure_release_never_writes_a_shortened_guard(self):
-        from azure.core.exceptions import HttpResponseError
-        from sec_edgar_ingest.storage.contracts import LeaseHandle
-        from test_azure_contracts import response, blob_error
-        for unknown in (False, True):
-            with self.subTest(unknown=unknown):
-                clock = FixtureClock()
-                body = b'{"clean_release":false,"unsafe_until":"2026-10-06T00:02:32+00:00"}'
-                final = blob_error(500, "InternalError") if unknown else response()
-                leases, transport = self.azure_leases([response(etag='"old"'), response(etag='"old"', body=body),
-                                                       response(201, etag='"fenced"'), final], clock)
-                handle = LeaseHandle("one", "actual-id", clock.now()+timedelta(seconds=58))
-                row = leases.read_journal(handle)
-                if unknown:
-                    with self.assertRaises(HttpResponseError):
-                        leases.release(handle)
-                else:
-                    leases.release(handle)
-                writes = [request for request in transport.requests if request.method == "PUT" and "comp=lease" not in request.url]
-                self.assertEqual([request.body for request in writes], [body])
-                self.assertEqual(row.value["unsafe_until"], "2026-10-06T00:02:32+00:00")
-                self.assertFalse(row.value["clean_release"])
-                self.assertFalse(callable(getattr(leases, "release_clean", None)))
-                self.assertEqual(transport.requests[-1].headers["x-ms-lease-action"], "release")
-                self.assertEqual(transport.requests[-1].headers["x-ms-lease-id"], "actual-id")
-                self.assertFalse(transport.responses)
 
-    def test_azure_journal_id_etag_and_outage_fail_closed(self):
-        from sec_edgar_ingest.storage.contracts import LeaseHandle
-        from azure.core.exceptions import HttpResponseError
-        from test_azure_contracts import blob_error
-        for code, status in (("LeaseIdMismatchWithBlobOperation", 412), ("ConditionNotMet", 412), ("InternalError", 500)):
-            for method in ("read", "write"):
-                with self.subTest(code=code, method=method):
-                    clock = FixtureClock()
-                    leases, transport = self.azure_leases([blob_error(status, code)], clock)
-                    handle = LeaseHandle("one", "stale", clock.now()+timedelta(seconds=58))
-                    operation = (lambda: leases.read_journal(handle)) if method == "read" else (lambda: leases.write_journal(handle, {}, '"old"'))
-                    with self.assertRaises(HttpResponseError if status == 500 else OwnershipLost):
-                        operation()
-                    self.assertEqual(len(transport.requests), 1)
 
     def test_local_acquisition_upper_is_observed_after_conditional_confirmation(self):
         from support import Faults

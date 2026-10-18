@@ -970,14 +970,30 @@ class DurableRequestAuditTests(unittest.TestCase):
                 for store in stores:
                     store.close()
 
-    def test_scripted_azure_routes_transport_to_attempts_and_run_halt_to_source_state(self):
-        from test_azure_contracts import AzureContractTests, response
-        fixture = AzureContractTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
-        store, transport = fixture.tables([response(204), response(204)])
-        store.insert("TransportAttempt", "ordinal", {"outcome": "uncertain"})
-        store.insert("RunHalt", "run", {"outcome": "halted"})
-        self.assertIn("/Attempts", transport.requests[0].url)
-        self.assertIn("/SourceState", transport.requests[1].url)
-        self.assertTrue(all(request.method == "POST" for request in transport.requests))
+    def test_transport_and_run_halt_persist_in_their_local_tables(self):
+        import sqlite3
+        from contextlib import closing
+        with tempfile.TemporaryDirectory() as directory:
+            store, _, leases = store_bundle(Path(directory))
+            self.addCleanup(store.close)
+            self.addCleanup(leases.close)
+            first = store.insert('TransportAttempt', 'ordinal', {'outcome': 'uncertain'})
+            second = store.insert('RunHalt', 'run', {'outcome': 'halted'})
+            self.assertEqual(store.get('TransportAttempt', 'ordinal'), first)
+            self.assertEqual(store.get('RunHalt', 'run'), second)
+            with closing(sqlite3.connect(store.database)) as connection:
+                rows = connection.execute('SELECT table_name,key FROM records ORDER BY key').fetchall()
+            self.assertIn(('Attempts', 'ordinal'), rows)
+            self.assertIn(('SourceState', 'run'), rows)
+
+    def test_live_acquisition_refuses_fixture_transport_before_state_or_dispatch(self):
+        from support import local_config_mapping
+        from sec_edgar_ingest.config import Settings
+        from sec_edgar_ingest.cli import _fixture_pack
+        value = local_config_mapping()
+        value['acquisition'] = {'mode': 'live'}
+        value['etl']['parser_version'] = 'sec-index-parser-v1'
+        value['runtime'] = {'kind': 'native', 'release_manifest': '/missing/releases/sha256=' + 'a' * 64 + '/release.json'}
+        settings = Settings.from_mapping(value)
+        with self.assertRaises(ValueError):
+            _fixture_pack(settings, object(), None, required=True)

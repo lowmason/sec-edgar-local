@@ -39,6 +39,7 @@ class LocalWorkflowContractTests(unittest.TestCase):
 from copy import deepcopy
 from dataclasses import replace
 from unittest.mock import patch
+from support_process import checked_dispatcher, checked_fault
 import hashlib
 import json
 import sqlite3
@@ -211,7 +212,7 @@ class EnvelopeFamilyTests(unittest.TestCase):
         case = self.fixture()
         f, context = case.f, case.context
         store, objects = f.store, f.objects
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('repair matrix')):
+        with checked_fault(f.root):
             code, call, child = f.invoke('publish', case.transformed_ref)
         self.assertEqual(code, 9)
         pending = completion.evaluate_member(f.value, context.parser_version, context.schema_version, store, objects)
@@ -322,8 +323,8 @@ class EnvelopeFamilyTests(unittest.TestCase):
         case = self.fixture()
         f, store, objects = case.f, case.f.store, case.f.objects
         context = replace(case.context, attempt_id='terminal-family')
-        dispatcher = checked.Dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
-        with patch('sec_edgar_ingest.cli.collect', side_effect=RuntimeError('terminal matrix')):
+        dispatcher = checked_dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
+        with checked_fault(f.root, point='collection.entry_failure'):
             processed = processing.process_member(f.value, context, dispatcher, store, objects)
         evidence = to_mapping_value(processed.evidence)
         terminal = evidence['terminal_error']
@@ -360,14 +361,14 @@ class EnvelopeFamilyTests(unittest.TestCase):
         results.freeze_workflow(context, case.invocation, store, objects)
         f.revised_member()
         old = deepcopy(f.value)
-        old_dispatcher = checked.Dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
+        old_dispatcher = checked_dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
         old_processed = processing.process_member(old, context, old_dispatcher, store, objects)
         WorkflowMembers(store, objects).record(old_processed.result, context, old_processed.evidence)
         f.revised_member()
         current = deepcopy(f.value)
         (f.pack.parent / 'bodies').mkdir(exist_ok=True)
         replace_pack_body(f.pack, f.source.canonical_url, quarterly_bytes('2026-07-01', 'Newer'))
-        dispatcher = checked.Dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
+        dispatcher = checked_dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
         processed = processing.process_member(current, context, dispatcher, store, objects)
         WorkflowMembers(store, objects).record(processed.result, context, processed.evidence)
         proof = SourceDownloads((old, current), (current,), {f.source.source_id: old['source']}, store).supersession(old)
@@ -501,8 +502,8 @@ class ReviewRegressionTests(unittest.TestCase):
         case = self.fixture()
         f, store, objects = case.f, case.f.store, case.f.objects
         context = replace(case.context, attempt_id='coherent-terminal')
-        dispatcher = checked.Dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
-        with patch('sec_edgar_ingest.cli.collect', side_effect=RuntimeError('coherent terminal')):
+        dispatcher = checked_dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
+        with checked_fault(f.root, point='collection.entry_failure'):
             processed = processing.process_member(f.value, context, dispatcher, store, objects)
         registry = WorkflowMembers(store, objects)
         descriptor = registry.record(processed.result, context, processed.evidence)

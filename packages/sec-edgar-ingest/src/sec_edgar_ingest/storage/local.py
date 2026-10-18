@@ -191,6 +191,36 @@ class LocalObjectStore:
         return reference
 
 
+def _validate_database(database: Path, *, require_records: bool) -> None:
+    """Inspect committed schema read-only, including active WAL, before any DDL."""
+    if not database.exists():
+        return
+    try:
+        connection = sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)
+        try:
+            if connection.execute('PRAGMA user_version').fetchone()[0] != 0:
+                raise Conflict('local state database has an unsupported version')
+            tables = {row[0] for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            if tables - {'records', 'sentinel_journal'} or (require_records and 'records' not in tables):
+                raise Conflict('local state database schema differs')
+            expected = {
+                'records': [('table_name', 'TEXT', 1, 1), ('partition', 'TEXT', 1, 2),
+                            ('key', 'TEXT', 1, 3), ('value', 'TEXT', 1, 0), ('version', 'TEXT', 1, 0)],
+                'sentinel_journal': [('identity', 'TEXT', 0, 1), ('value', 'TEXT', 1, 0),
+                                     ('version', 'TEXT', 1, 0)],
+            }
+            for table in tables:
+                actual = [(row[1], row[2], row[3], row[5]) for row in connection.execute(
+                    'PRAGMA table_info(' + table + ')')]
+                if actual != expected[table]:
+                    raise Conflict('local state database table contract differs')
+        finally:
+            connection.close()
+    except sqlite3.DatabaseError as error:
+        raise Conflict('local state database is unreadable') from error
+
+
 class LocalStateStore:
     def __init__(self, root: Path, *, page_size: int = 128, observer: BoundaryObserver | None = None, binding=None,
                  create: bool = True):
@@ -203,6 +233,7 @@ class LocalStateStore:
         self.page_size = page_size
         self.observer = observer
         self._closed = False
+        _validate_database(self.database, require_records=not create)
         if not create:
             if not self.database.is_file():
                 raise StoreMissing(f"local store at {self.root} has no state database")

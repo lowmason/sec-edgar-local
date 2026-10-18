@@ -17,8 +17,13 @@ KEYS = {'outcome', 'quarter', 'lineage', 'rollbacks', 'activations', 'error'}
 
 class HistoryCliTests(GateFixture):
     def history(self, quarter='2026Q4', state_dir=None):
-        return operator_cli('history', '--config', str(self.write_config()),
-                            '--state-dir', str(state_dir or self.root), '--quarter', quarter)
+        config = self.write_config()
+        if state_dir is not None:
+            value = self.settings.to_mapping()
+            value['storage']['root'] = str(state_dir.absolute())
+            config = self.root / 'history-missing-root.json'
+            config.write_bytes(canonical_json(to_mapping_value(value)))
+        return operator_cli('history', '--config', str(config), '--quarter', quarter)
 
     def test_a_quarter_without_a_pointer_has_empty_history(self):
         self.gated()
@@ -65,8 +70,7 @@ class HistoryCliTests(GateFixture):
         self.write_config()
         before = tree_snapshot(self.root)
         self.assertEqual(self.history()[0], 0)
-        self.assertEqual(operator_cli('candidates', '--config', str(self.write_config()),
-                                      '--state-dir', str(self.root))[0], 0)
+        self.assertEqual(operator_cli('candidates', '--config', str(self.write_config()))[0], 0)
         self.assertEqual(tree_snapshot(self.root), before)
 
 

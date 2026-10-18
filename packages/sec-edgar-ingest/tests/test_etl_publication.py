@@ -303,44 +303,23 @@ class PublicationIntegrationTests(unittest.TestCase):
         path.write_bytes(original)
         manifest_path.write_bytes(manifest_bytes)
 
-    def test_mocked_sdk_actual_etags_412_and_large_candidate_descriptor(self):
-        import json
-        from azure.core.credentials import AzureSasCredential
-        from azure.data.tables import TableServiceClient
-        from azure.storage.blob import BlobServiceClient
+    def test_local_revisions_stale_cas_and_large_candidate_persistence(self):
         from sec_edgar_ingest.etl.publication import pointer_value
         from sec_edgar_ingest.models import canonical_json
-        from sec_edgar_ingest.storage.azure import AzureStateStore, AzureObjectStore
         from sec_edgar_ingest.storage.contracts import AlreadyExists
-        from test_azure_contracts import TABLE_ENDPOINT, BLOB_ENDPOINT, RETRY
-        from test_azure_state_payloads import LimitedStorageTransport
         refs = tuple(self.observation(period=(date(2026, 8, 1) + timedelta(days=i)).isoformat(), kind='daily') for i in range(50))
         candidate = build_candidate('2026Q4', None, refs, self.context, self.settings, self.objects, self.state)
-        self.assertGreater(len(canonical_json(candidate.to_mapping())), 64*1024)
-        transport = LimitedStorageTransport()
-        blobs = BlobServiceClient(BLOB_ENDPOINT, api_version='2026-04-06', transport=transport, **RETRY)
-        tables = TableServiceClient(TABLE_ENDPOINT, credential=AzureSasCredential('sv=offline&sig=synthetic'),
-                                    api_version='2020-12-06', transport=transport, **RETRY)
-        self.addCleanup(blobs.close)
-        self.addCleanup(tables.close)
-        objects = AzureObjectStore(blobs)
-        store = AzureStateStore(tables.get_table_client('SourceState'), tables.get_table_client('Attempts'),
-                                active_client=tables.get_table_client('ActivePointers'), objects=objects)
-        state = EtlState(store)
-        state.record_candidate(candidate)
-        self.assertEqual(store.get('Candidate', candidate.manifest.generation_id).to_mapping()['value'], candidate.to_mapping())
-        first = state.commit_pointer('2026Q4', pointer_value(candidate), None)
+        self.assertGreater(len(canonical_json(candidate.to_mapping())), 64 * 1024)
+        self.state.record_candidate(candidate)
+        self.assertEqual(self.store.get('Candidate', candidate.manifest.generation_id).to_mapping()['value'], candidate.to_mapping())
+        first = self.state.commit_pointer('2026Q4', pointer_value(candidate), None)
         with self.assertRaises(AlreadyExists):
-            state.commit_pointer('2026Q4', pointer_value(candidate), None)
-        winner = state.commit_pointer('2026Q4', pointer_value(candidate), first)
+            self.state.commit_pointer('2026Q4', pointer_value(candidate), None)
+        winner = self.state.commit_pointer('2026Q4', pointer_value(candidate), first)
         with self.assertRaises(Conflict):
-            state.commit_pointer('2026Q4', pointer_value(candidate), first)
-        self.assertEqual(state.pointer('2026Q4'), winner)
-        writes = [request for request in transport.requests if request.method == 'PUT' and '/ActivePointers' in request.url]
-        self.assertEqual([r.headers['If-Match'] for r in writes], [first.version, first.version])
-        descriptor = next(json.loads(r.body) for r in transport.requests if r.method == 'POST' and '/SourceState' in r.url)
-        self.assertEqual(descriptor['PayloadFormat'], 'sec-state-blob-v1')
-        self.assertGreater(descriptor['PayloadByteCount'], 64*1024)
+            self.state.commit_pointer('2026Q4', pointer_value(candidate), first)
+        self.assertEqual(self.state.pointer('2026Q4'), winner)
+        self.assertNotEqual(first.version, winner.version)
 
     def test_deadline_expiry_inside_candidate_build_returns_conflict(self):
         from sec_edgar_ingest.etl import publication

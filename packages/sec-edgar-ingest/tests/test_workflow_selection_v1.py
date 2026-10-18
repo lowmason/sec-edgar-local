@@ -49,6 +49,10 @@ class ForeignSelectionTests(unittest.TestCase):
             foreign_context.update(image_digest='sha256:' + 'f' * 64, format_version='sec-acquisition-v1')
             for name, changed in [('v1', {**base, 'format_version': 'sec-workflow-selection-v1'}),
                                   ('v2', {**base, 'format_version': 'sec-workflow-selection-v2'}),
+                                  ('future', {**base, 'format_version': 'sec-workflow-selection-v99'}),
+                                  ('non-string format', {**base, 'format_version': ['v1']}),
+                                  ('missing format', {k:v for k,v in base.items() if k != 'format_version'}),
+                                  ('list', []),
                                   ('image', {**base, 'context': foreign_context}),
                                   ('missing superseded', {k: v for k, v in base.items() if k != 'superseded'})]:
                 with self.subTest(name=name):
@@ -56,3 +60,12 @@ class ForeignSelectionTests(unittest.TestCase):
                     with self.assertRaises((ValueError, Conflict)):
                         freeze_selection(context, changed, store, objects)
                     self.assertEqual(snapshot(store, objects), before)
+
+            from sec_edgar_ingest.models import canonical_json
+            from sec_edgar_ingest.workflows.contracts import workflow_path
+            path = workflow_path(context).rsplit('/', 1)[0] + '/selection.json'
+            objects.put_once(path, canonical_json([]))
+            before = snapshot(store, objects)
+            with self.assertRaises((ValueError, Conflict)):
+                freeze_selection(context, base, store, objects)
+            self.assertEqual(snapshot(store, objects), before)

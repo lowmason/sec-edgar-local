@@ -57,7 +57,7 @@ def metadata():
     return {'argv': sys.argv, 'cwd': str(Path.cwd()), 'python': sys.version,
             'platform': platform.platform(), 'executable': sys.executable,
             'dependencies': {name: importlib.metadata.version(name) for name in
-                 ('sec-edgar-ingest', 'pyarrow', 'requests', 'azure-identity', 'azure-storage-blob', 'azure-data-tables')},
+                 ('sec-edgar-ingest', 'pyarrow', 'requests')},
             'all22_stage7_checks': 'reserved', 'network_guard': True}
 
 
@@ -255,7 +255,7 @@ def prove_death(root, boundary):
     before = capture_evidence(objects, state)
     def args(command, ref):
         return [command, '--config', str(config), '--run-id', 'death', '--execution-id', 'fixed', '--attempt-id', command,
-                '--deadline', context.deadline.isoformat(), '--state-dir', str(root), '--workset', ref]
+                '--deadline', context.deadline.isoformat(), '--workset', ref]
     code, transformed = invoke(args('transform', f'worksets/sec/snapshot/sha256={snapshots.workset_id}/workset.json'), root, 'transform')
     assert code == 0
     argv = args('publish', transformed['transformed_workset_ref'])
@@ -384,7 +384,7 @@ def sequence(output):
     raw_before = {p.relative_to(root).as_posix(): digest(p) for p in root.rglob('master.idx')}
     def argv(command, ref, attempt):
         return [command, '--config', str(config), '--run-id', 'sequence', '--execution-id', 'fixed', '--attempt-id', attempt,
-                '--deadline', context.deadline.isoformat(), '--state-dir', str(root), '--workset', ref]
+                '--deadline', context.deadline.isoformat(), '--workset', ref]
     code, transformed = invoke(argv('transform', snapshot_ref, 'transform-v1'), root, 'transform-v1')
     assert code == 0
     old = decode_transformed(objects.read(transformed['transformed_workset_ref']))
@@ -471,74 +471,8 @@ def run_logged(argv, cwd, output, label, env=None, *, timeout=300):
 
 
 def installed(output):
-    import zipfile
-    wheels = list((ROOT / 'dist').glob('sec_edgar_ingest-*.whl'))
-    assert len(wheels) == 1, wheels
-    wheel = wheels[0]
-    shutil.copy2(wheel, output / wheel.name)
-    expected = {p.relative_to(ROOT / 'packages/sec-edgar-ingest/src').as_posix(): digest(p)
-                for p in (ROOT / 'packages/sec-edgar-ingest/src/sec_edgar_ingest').rglob('*.py')}
-    with zipfile.ZipFile(wheel) as archive:
-        for path, value in expected.items():
-            body = archive.read(path)
-            assert value == {'bytes': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
-    env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
-    env['UV_PYTHON_DOWNLOADS'] = 'never'
-    with tempfile.TemporaryDirectory(prefix='sec-edgar-installed-') as directory:
-        outside = Path(directory)
-        venv = outside / 'venv'
-        run_logged(['uv', 'venv', '--offline', '--python', sys.executable, str(venv)], outside, output, 'venv', env)
-        lock = run_logged(['uv', 'export', '--offline', '--frozen', '--package', 'sec-edgar-ingest', '--no-emit-workspace', '--format', 'requirements-txt'], ROOT, output, 'lock', env)
-        requirements = outside / 'requirements.txt'
-        requirements.write_text(lock['stdout'])
-        shutil.copy2(requirements, output / 'requirements.txt')
-        python = venv / 'bin/python'
-        cached_wheels = ROOT / 'specs/evidence/sec-filing-index-ingestion/stage-2/verification/sdd-history/task1-evidence/wheels'
-        # Stage 2 retained wheel files and the Stage 3 PyArrow registry cache are
-        # distinct offline sources; split only the exact exported lock entry.
-        import re
-        blocks = re.split(r'(?=^[a-zA-Z][a-zA-Z0-9_-]*==)', lock['stdout'], flags=re.MULTILINE)
-        arrow = outside / 'arrow.txt'
-        others = outside / 'others.txt'
-        arrow.write_text(''.join(block for block in blocks if block.startswith('pyarrow==')))
-        others.write_text(''.join(block for block in blocks if not block.startswith('pyarrow==')))
-        assert arrow.read_text().startswith('pyarrow==25.0.1')
-        shutil.copy2(arrow, output / 'arrow-requirements.txt')
-        shutil.copy2(others, output / 'other-requirements.txt')
-        run_logged(['uv', 'pip', 'install', '--offline', '--no-deps', '--require-hashes',
-                    '--python', str(python), '-r', str(arrow)], outside, output, 'install-arrow', env)
-        run_logged(['uv', 'pip', 'install', '--offline', '--no-index', '--find-links', str(cached_wheels),
-                    '--require-hashes', '--python', str(python), '-r', str(others)], outside, output, 'install-dependencies', env)
-        run_logged(['uv', 'pip', 'install', '--offline', '--no-index', '--no-deps', '--python', str(python), str(wheel)], outside, output, 'install-wheel', env)
-        harness = outside / 'harness'
-        harness.mkdir()
-        for name in ('etl_proof.py', 'network_guard.py', 'support.py', 'support_etl.py'):
-            shutil.copy2(Path(__file__).parent / name, harness / name)
-        shutil.copytree(Path(__file__).parent / 'fixtures/config', harness / 'fixtures/config')
-        save(harness / 'expected.json', expected)
-        script = '''from network_guard import install
-install()
-import json, pathlib, hashlib, sys
-import sec_edgar_ingest
-base = pathlib.Path(sec_edgar_ingest.__file__).parent.parent
-assert 'site-packages' in base.parts, base
-expected=json.loads(pathlib.Path(__file__).with_name('expected.json').read_text())
-for path, value in expected.items():
-    body=(base/path).read_bytes()
-    assert value=={'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest()}
-from etl_proof import metadata, sequence, save, inventory
-if __name__ == '__main__':
-    output=pathlib.Path(sys.argv[1]); output.mkdir()
-    report=sequence(output)
-    save(output/'report.json',dict(metadata(),**report,import_root=str(base),source_equality=expected))
-    save(output/'sha256.json',inventory(output))
-    print(json.dumps({'import_root':str(base),'sources':len(expected),'exit':0}))
-'''
-        (harness / 'installed_runner.py').write_text(script)
-        run_logged([str(python), str(harness / 'installed_runner.py'), str(output / 'installed-sequence')], outside, output, 'proof', env)
-        run_logged([str(python), '-c', 'import sys; sys.path.insert(0, '+repr(str(harness))+'); import network_guard; network_guard.install(); from sec_edgar_ingest.cli import main; raise SystemExit(main(["--help"]))'], outside, output, 'help', env)
-    return {'exit': 0, 'wheel': digest(wheel), 'wheel_name': wheel.name, 'source_equality': expected,
-            'scope': 'native isolated installed wheel; Linux worker capacity remains reserved'}
+    from workflow_proof import installed as native_installed
+    return native_installed(output)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

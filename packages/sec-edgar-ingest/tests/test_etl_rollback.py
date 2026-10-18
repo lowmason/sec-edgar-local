@@ -157,7 +157,7 @@ class RollbackTests(GateFixture):
 
     def test_rollback_cli_maps_named_outcomes_to_exit_codes(self):
         older, newer, _ = self.lineage_of_two()
-        command = ('rollback', '--config', str(self.write_config()), '--state-dir', str(self.root),
+        command = ('rollback', '--config', str(self.write_config()),
                    '--quarter', '2026Q4', '--operator', 'Lowell Mason', '--reason', 'bad correction')
         code, message, _ = operator_cli(*command, '--from-generation', 'e' * 64,
                                         '--to-generation', older.generation_id)

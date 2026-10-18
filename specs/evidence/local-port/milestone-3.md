@@ -51,3 +51,48 @@ TDD sensitivity evidence includes parent in-process invocation, duplicate finish
 Environment: CPython 3.14.0, macOS 26.6.2 arm64, uv 0.13.1, pinned Requests 2.34.2/PyArrow 25.0.1, offline build backend uv_build 0.12.24 within `uv_build>=0.12.15,<0.13.0`. No lock/dependency changes, source-repository writes, raw fixture edits or cleanup/migration operations.
 
 `git diff --check` passed with no output before staging. Self-review checked all changed production and support boundaries, exact replay/refusal behavior, scope and preserved constraints. Independent controller task review remains pending.
+
+## Task 10: complete local recovery, operator and upgrade checkpoint
+
+Task 10 extends the reviewed Task 9 baseline to the complete default native-local suite. The final frozen guarded discovery passed **874 tests in 2908.251 seconds**, exit 0, with no skips, errors or failures. Its exact discovered method IDs were checked against all 58 current default modules in `test-disposition.json`. That inventory accounts for all 56 pinned source test modules: 46 retained/ported and 10 explicitly excluded cloud/image modules, plus 12 added local modules. This is the Task 10 milestone; Task 14 fresh acceptance and L12 genuine SEC acquisition remain separate gates. L12 is `not_run`.
+
+The independent class/method retention audit maps all 217 original mixed/recovery methods: 175 local methods retained, 7 local extractions from SDK-backed tests, 15 replaced contracts and 20 genuinely cloud-only removals. Every retained/extracted/replaced method has an explicit current destination. The status breakdown is 146 unchanged, 24 adapted, 5 renamed/moved, 7 extracted and 15 replaced, with zero missing or partial mappings. The whole-source inventory includes actual current class/method names and file/body hashes. No default test is broadly skipped, and the complete runtime/test/support AST has zero Azure/MSAL imports.
+
+The mixed-module ports preserve local journal durability/fencing, constructor contention, process-level request ordinals, finite lease uncertainty, original HTTP child drain/fatal timers, publication races and repair, validation before first-row exposure, exact approval/activation/rollback audit and operator no-mutation behavior. The >64 KiB candidate oracle still checks complete persistence, duplicate insert refusal, replacement with the actual revision and stale-CAS refusal. A separate large general pointer row and partial-stream/exclusive-target materialization cases remain. All 51 retained conflicting observations across 2010Q1, 2015Q1 and 2026Q3 still quarantine their whole sources; no parser, zero-row, duplicate-winner or force exception was added.
+
+### Actual installed upgrade evidence
+
+Task 7's proof factory built clean independently committed A/B wheel environments from the frozen current implementation snapshot. B differs through a benign committed package resource; parser/schema versions are unchanged. Actual proof release IDs:
+
+- A: `f93f60e56e13374eccc7d5c68bf8de87bd66ed65ed3227e624c39e3f7eb14c2b`
+- B: `05e1cdb2f69f501a20e612441b3669c817f8ce0c0444f1bb96d34e4993261bad`
+
+The actual installed B workflow parent completes A-origin pending backlog and repairs a saved A publication by launching the installed A executable. New transform/publication execute under B. Evidence records parent PID/executable/import origin, A/B child PIDs and runtime IDs, exact checked call/result authority, read captures/counts and unchanged original results/pointers. B performs history/capture, exact-candidate approval and immutable rollback over A history. Cached and forced reuse preserve A's exact original observation/producer bytes and canonical `(cik, archive_path)` identity.
+
+Removing the A environment still permits B historical reads through retained canonical A manifests; executing an A-origin call refuses before call/store mutation. Missing/corrupt saved A manifests refuse before exposing a row. Real native imports run from installed site-packages with `-I -B -X pycache_prefix=/dev/null`, scrubbed environment and fixed copied offline harness. No A/B installed payload was mutated to manufacture release identity. All installation, build and proof dependency access remains explicitly offline through the fork lock and prepared artifact cache; missing artifacts fail rather than skip or fetch.
+
+`scripts/verify-native-release.py --release PATH --harness PATH --evidence PATH` is now implemented. The shared verifier copies fixed fixtures/guard/support outside checkouts, executes the selected installed Python and checks native preflight, complete lock/inventory, full package payload, workflow, audit and read behavior. The default installed cases and ETL/workflow installed adapters use this implementation or the same underlying support. Old Stage 2/3 wheelhouse/export and fixed dependency-count prerequisites are removed; wrong-transitive-version refusal remains.
+
+### Failures and recovery
+
+New local failure cases cover object/config-archive/event-stderr ENOSPC, foreign/corrupt SQLite structure/version, binding refusal, missing exact approval evidence and immutable rollback-record retention across index failure. Existing suites cover SQLite busy bounds, constructor races, stale CAS, corrupt/missing raw/manifest/Parquet, clock uncertainty, lost ownership and uncertain HTTP/workflow child drain. Refused old binding/selection/contracts preserve object-tree and SQLite logical contents. Two reproduced production gaps were fixed: read-only native schema validation before worker WAL/DDL or operator reads, and explicit non-Mapping workflow-contract refusal. Valid SQLite `user_version=0` remains; there is no migration or cleanup. Read-only SQLite verification may create internal transient WAL/SHM files as allowed by the storage contract.
+
+Named fault/ack instructions now cross exec through the copied guard bootstrap; parent-only monkeypatches are not treated as child fault evidence. Explicit fixture clocks propagate only when requested. A positively observed/drained ordinary publication failure can use its saved repair path. Ambiguous child death refuses original exact replay and continues under a NEW workflow attempt, preserving original Attempt/call/execution evidence and committed pointers. No new child ID is silently substituted inside a frozen workflow.
+
+The range/parser settings helper now preserves the actual temporary storage/log roots. A regression caught an untracked generated fixture store from the old rootless helper; the run artifact was inventoried before authorized removal. Tracked raw fixture bytes are unchanged. Task 10's logging boundary is the existing event stderr sink; launcher log mkdir/open/post-dispatch failure behavior belongs to Tasks 11/12 and later final acceptance.
+
+### Timing and exact gate
+
+Production 3-request/second dispatch/start measurement retains the original 1/3-second start window and no fixture timing allowance: 3 successes, 0 safe `permit_expired`, 0 progress failures, 0 invariant violations; start latency min 0.068945, median 0.070860, max 0.077270 seconds. Deliberately stale fixture cases still assert deferred/no-wire `permit_expired` separately. Production pacing, start/deadline, drain and HTTP limits were not widened.
+
+```sh
+export UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never
+export UV_CACHE_DIR=/private/tmp/sec-edgar-local-uv-cache
+export SEC_EDGAR_TASK10_UPGRADE_EVIDENCE=/private/tmp/task10-full-final2-upgrade
+export SEC_EDGAR_TASK10_LATENCY_EVIDENCE=/private/tmp/task10-full-final2-latency.json
+uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p 'test_*.py' -v
+```
+
+The exact four-file focused gate passed 22 tests before the final full gate. Additional targeted storage/config/operator/acquisition/download/ETL/workflow checks and their meaningful RED/GREEN diagnoses are recorded in `.sdd/1-sec-edgar-local-spec/task-10-report.md`; the completion migration subreport preserves all 23 original completion methods. An initial full diagnostic was interrupted on obsolete history flags and is explicitly not counted as gate success. The first complete discovery ran all 874 tests with one obsolete positive selection-format assertion failure; that exact expected marker was migrated to the local format, its full 218.094-second supersession case passed with every later semantic assertion retained, and the final complete frozen gate passed. The final full gate used one frozen 257-file source/test/harness/script snapshot, verified unchanged after completion, with authorized selected-loopback sandbox access and the network guard retained. No genuine SEC HTTP occurred.
+
+Environment: CPython 3.14.0, macOS 26.6.2 arm64, uv 0.13.1, uv_build 0.12.24 within the unchanged build requirement, Requests 2.34.2 and PyArrow 25.0.1. Fork lock SHA-256 `e3d3dac9971ed75bdc5864ebd8c422c2e34bd24236a9a77bbadb6a87cddf1bbb`. No dependency upgrades, source-repository writes, old-store migration, store relocation or automatic production cleanup. Independent controller task review remains the next checkpoint; this record makes no whole-release readiness claim.

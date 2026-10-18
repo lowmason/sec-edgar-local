@@ -52,6 +52,8 @@ import contextlib, io, json
 from datetime import datetime, timedelta, timezone
 from support import fixture_settings
 from sec_edgar_ingest.cli import main
+from unittest.mock import patch
+from support_process import checked_dispatcher
 from sec_edgar_ingest.storage import open_stores
 from sec_edgar_ingest.etl.reader import capture_quarter, read_quarter
 from sec_edgar_ingest.etl.state import EtlState
@@ -82,7 +84,8 @@ class CommandHarness:
         if command in ('discover', 'collect', 'backfill', 'daily', 'reconcile'):
             argv += ['--fixture-pack', str(self.pack)]
         stdout, stderr = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr), \
+                patch('sec_edgar_ingest.cli.WorkflowDispatcher', side_effect=checked_dispatcher):
             code = main(argv)
         message = json.loads(stdout.getvalue())
         self.calls.append({'argv': argv, 'exit': code, 'stdout': message, 'stderr': stderr.getvalue()})
@@ -161,8 +164,12 @@ def quarter_pack(root, periods, *, empty_daily=False, failed_daily=(), moved=Non
 
 
 def set_harness_settings(harness, settings):
-    harness.settings = settings
-    harness.config.write_bytes(canonical_json(to_mapping_value(settings.to_mapping())))
+    from sec_edgar_ingest.config import Settings
+    value = settings.to_mapping()
+    value['storage']['root'] = harness.settings.storage.root
+    value['logging']['root'] = harness.settings.logging.root
+    harness.settings = Settings.from_mapping(value)
+    harness.config.write_bytes(canonical_json(to_mapping_value(harness.settings.to_mapping())))
 
 
 def prefix_response(pack, url, body=b'retained truncated retry prefix'):

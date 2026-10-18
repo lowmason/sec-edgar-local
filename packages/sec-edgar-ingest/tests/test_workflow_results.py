@@ -1,3 +1,4 @@
+from support_process import checked_fault, checked_clock
 from sec_edgar_ingest.runtime import configured_descriptor
 from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 # tests/test_workflow_results.py
@@ -20,7 +21,8 @@ from sec_edgar_ingest.models import Error, Source, canonical_json, parse_json, t
 from sec_edgar_ingest.state import AcquisitionState
 from sec_edgar_ingest.storage.contracts import Conflict, OwnershipLost, identity, table_for
 from sec_edgar_ingest.worksets import decode_source_workset
-from sec_edgar_ingest.workflows.checked import Dispatcher, ChildUnfinished
+from sec_edgar_ingest.workflows.checked import ChildUnfinished
+from support_process import checked_dispatcher as Dispatcher
 from sec_edgar_ingest.workflows.completion import (
     capture_member_provenance, capture_parent_provenance, validate_parent_provenance, evaluate_member,
 )
@@ -267,7 +269,7 @@ class WorkflowResultTests(unittest.TestCase):
     def test_fatal_discovery_without_result_preserves_frozen_prior_jobs(self):
         dispatcher = Dispatcher(self.context, self.f.settings, self.f.pack,
                                 self.f.root.parent, self.f.store, self.f.objects)
-        with patch('sec_edgar_ingest.cli.discover', side_effect=OwnershipLost('fatal discovery ownership')):
+        with checked_fault(self.f.root, point='discovery.entry_ownership_lost'):
             with self.assertRaises(ChildUnfinished) as failed:
                 dispatcher.execute('discover', 'fatal-discovery', self.f.settings,
                                    ('--mode', 'quarterly', '--discovery-id', 'fatal-discovery-session'))
@@ -304,7 +306,7 @@ class WorkflowResultTests(unittest.TestCase):
 
     def test_parent_capture_retains_full_empty_discovery_authority(self):
         from support_workflows import simple_pack, CommandHarness
-        from sec_edgar_ingest.workflows.checked import Dispatcher
+        from support_process import checked_dispatcher as Dispatcher
         from sec_edgar_ingest.workflows.completion import capture_parent_provenance, validate_parent_provenance
         from sec_edgar_ingest.config import pin_context
         from datetime import date, datetime, timedelta, timezone
@@ -394,7 +396,7 @@ class WorkflowResultTests(unittest.TestCase):
         def stop_after_begin(state, *args, **kwargs):
             result = original(state, *args, **kwargs)
             raise OwnershipLost('ownership lost after required-unit registration')
-        with patch.object(AcquisitionState, 'begin_discovery', stop_after_begin):
+        with checked_fault(self.f.root, point='discovery.after_begin_failure'):
             with self.assertRaises(ChildUnfinished) as failed:
                 dispatcher.execute('discover', 'begun-fatal-discovery', self.f.settings,
                     ('--mode', 'quarterly', '--discovery-id', 'begun-fatal-session'))
@@ -520,7 +522,7 @@ class WorkflowResultTests(unittest.TestCase):
         selection['gaps'].append(selection['discovery_error'])
         frozen = freeze_selection(context, selection, self.f.store, self.f.objects)
         dispatcher = Dispatcher(context, self.f.settings, self.f.pack, self.f.root.parent, self.f.store, self.f.objects)
-        with patch('sec_edgar_ingest.cli.collect', side_effect=RuntimeError('retained original collection failure')):
+        with checked_fault(self.f.root, point='collection.entry_failure'):
             processed = process_member(self.f.value, context, dispatcher, self.f.store, self.f.objects)
         receipt = WorkflowMembers(self.f.store, self.f.objects).record(processed.result, context, processed.evidence)
         path = workflow_path(context).rsplit('/', 1)[0] + '/selection.json'
@@ -549,7 +551,7 @@ class WorkflowResultTests(unittest.TestCase):
     def test_repaired_report_retains_original_immutable_repair_anchor(self):
         from sec_edgar_ingest.workflows.processing import process_member
         from sec_edgar_ingest.workflows.members import WorkflowMembers
-        with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary repair')):
+        with checked_fault(self.f.root):
             code, original_call, child = self.f.invoke('publish', self.transformed_ref)
         self.assertEqual(code, 9)
         self.assertIsNone(child)

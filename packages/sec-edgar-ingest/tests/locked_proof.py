@@ -198,3 +198,65 @@ def assert_release_inventory(verified):
     declared = {item['name']: item['version'] for item in identity['dependencies']}
     if declared != expected:
         raise ValueError('release artifact inventory differs from full transitive lock graph')
+
+
+def verify_native_release(verified, harness, evidence):
+    """Run the selected installed application with independently copied offline support."""
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+    from workflow_proof import harness_files
+    from sec_edgar_ingest.runtime import isolated_environment, native_python_argv
+    harness, evidence = Path(harness).absolute(), Path(evidence).absolute()
+    if harness != Path(__file__).absolute().parent:
+        raise ValueError('native verifier requires the explicit test-only harness directory')
+    evidence.mkdir(parents=True, exist_ok=False)
+    environment = isolated_environment()
+    with tempfile.TemporaryDirectory(prefix='sec-native-verifier-') as directory:
+        outside = Path(directory)
+        copied = outside / 'harness'
+        copied.mkdir()
+        for source in harness_files():
+            destination = copied / source.relative_to(harness)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+        for source, name in ((verified.directory / 'uv.lock', 'accepted-uv.lock'),
+                             (verified.directory / 'runtime-requirements.txt', 'requirements.txt')):
+            shutil.copy2(source, copied / name)
+        script = copied / 'verify_installed.py'
+        script.write_text('''from network_guard import install
+install()
+import hashlib,json,os,pathlib,sys
+from locked_proof import locked_requirements,marker_environment,installed_inventory,assert_inventory,package_inventory
+from sec_edgar_ingest.runtime import preflight_current
+import sec_edgar_ingest
+from workflow_proof import sequence
+root=pathlib.Path(__file__).parent
+release=preflight_current(pathlib.Path(sys.argv[1]))
+expected=locked_requirements((root/'accepted-uv.lock').read_bytes(),(root/'requirements.txt').read_text(),marker_environment())
+actual=installed_inventory()
+assert_inventory(expected,actual,release.manifest['identity']['application']['version'])
+base=pathlib.Path(sec_edgar_ingest.__file__).resolve().parent.parent
+payload=package_inventory(base)
+if {name:item['sha256'] for name,item in payload.items()} != {item['path']:item['sha256'] for item in release.manifest['identity']['package_files']}:
+    raise ValueError('installed package payload differs from verified release')
+if 'site-packages' not in base.parts: raise ValueError('application import outside installed release')
+sequence_output=pathlib.Path(sys.argv[2])/'sequence'
+sequence_output.mkdir()
+report=sequence(sequence_output, release_manifest=release.directory/'release.json')
+print(json.dumps({'exit':0,'pid':os.getpid(),'python':sys.executable,'import_root':str(base),'pythonpath_present':'PYTHONPATH' in os.environ,'release_id':release.release_id,'dependencies':actual,'payload':payload,'sequence':report},sort_keys=True))
+''')
+        bootstrap = ('import runpy,sys;sys.path.insert(0,' + repr(str(copied)) + ');'
+                     'sys.argv=[' + repr(str(script)) + ',*sys.argv[1:]];'
+                     'runpy.run_path(' + repr(str(script)) + ',run_name="__main__")')
+        argv = [*native_python_argv(verified.python), '-c', bootstrap,
+                str(verified.directory / 'release.json'), str(evidence)]
+        done = subprocess.run(argv, cwd=outside, env=environment, capture_output=True, text=True, timeout=600)
+        (evidence / 'command.json').write_text(json.dumps({'argv': argv, 'cwd': str(outside),
+            'exit': done.returncode, 'stdout': done.stdout, 'stderr': done.stderr}, indent=2) + '\n')
+        if done.returncode:
+            raise RuntimeError('native installed verifier failed: ' + done.stderr)
+        report = json.loads(done.stdout)
+        (evidence / 'report.json').write_text(json.dumps(report, sort_keys=True, indent=2) + '\n')
+        return report

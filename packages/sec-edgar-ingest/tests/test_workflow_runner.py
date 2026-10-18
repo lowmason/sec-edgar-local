@@ -1,3 +1,6 @@
+from sec_edgar_ingest.runtime import configured_descriptor
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
+from support_process import checked_fault, checked_clock
 from network_guard import install
 install()
 from sec_edgar_ingest.models import to_mapping_value
@@ -9,7 +12,7 @@ from sec_edgar_ingest.config import pin_context
 from sec_edgar_ingest.models import RunContext, canonical_json
 from sec_edgar_ingest.etl.reader import capture_quarter
 from sec_edgar_ingest.etl.state import EtlState
-from sec_edgar_ingest.workflows.checked import Dispatcher
+from support_process import checked_dispatcher as Dispatcher
 from sec_edgar_ingest.workflows.runner import run_workflow
 from sec_edgar_ingest.workflows.results import freeze_workflow, write_workflow_result, read_workflow_result
 from sec_edgar_ingest.workflows.contracts import workflow_path
@@ -17,11 +20,9 @@ from sec_edgar_ingest.workflows.contracts import workflow_path
 class RunnerTests(unittest.TestCase):
     def run_parent(self, h, *, run='runner', command='backfill'):
         now = datetime.now(timezone.utc)
-        context = RunContext(run, 'manual', command, 'a', h.settings.worker.image_digest,
-            h.settings.etl.parser_version, h.settings.etl.schema_version, h.settings.config_sha256,
-            now, now + timedelta(seconds=1800), 'daily' if command == 'daily' else 'backfill')
+        context = RunContext(run, 'manual', command, 'a', h.settings.etl.parser_version, h.settings.etl.schema_version, h.settings.config_sha256, now, now + timedelta(seconds=1800), 'daily' if command == 'daily' else 'backfill', runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
         context = pin_context(h.settings, context, date(2026, 10, 7))[0]
-        intent = {'command': command, 'today': '2026-10-07',
+        intent = {'contract_version': LOCAL_CONTRACT, 'command': command, 'today': '2026-10-07',
                   'fixture_sha256': hashlib.sha256(h.pack.read_bytes()).hexdigest(),
                   'pinned_end_quarter': '2026Q4'}
         context = freeze_workflow(context, intent, h.store, h.objects)
@@ -40,12 +41,9 @@ class RunnerTests(unittest.TestCase):
             h = CommandHarness(root, simple_pack(root / 'pack'))
             try:
                 now = datetime.now(timezone.utc)
-                context = RunContext('midrun-deadline', 'manual', 'backfill', 'a',
-                    h.settings.worker.image_digest, h.settings.etl.parser_version,
-                    h.settings.etl.schema_version, h.settings.config_sha256,
-                    now, now + timedelta(seconds=1800), 'backfill')
+                context = RunContext('midrun-deadline', 'manual', 'backfill', 'a', h.settings.etl.parser_version, h.settings.etl.schema_version, h.settings.config_sha256, now, now + timedelta(seconds=1800), 'backfill', runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
                 context = pin_context(h.settings, context, date(2026, 10, 7))[0]
-                intent = {'command': 'backfill', 'today': '2026-10-07',
+                intent = {'contract_version': LOCAL_CONTRACT, 'command': 'backfill', 'today': '2026-10-07',
                     'fixture_sha256': hashlib.sha256(h.pack.read_bytes()).hexdigest(),
                     'pinned_end_quarter': '2026Q4'}
                 context = freeze_workflow(context, intent, h.store, h.objects)
@@ -204,11 +202,9 @@ class RunnerTests(unittest.TestCase):
 
     def prepared(self, h, run='prepared', command='backfill', attempt='a'):
         now = datetime.now(timezone.utc)
-        context = RunContext(run, 'manual', command, attempt, h.settings.worker.image_digest,
-            h.settings.etl.parser_version, h.settings.etl.schema_version, h.settings.config_sha256,
-            now, now + timedelta(seconds=1800), command)
+        context = RunContext(run, 'manual', command, attempt, h.settings.etl.parser_version, h.settings.etl.schema_version, h.settings.config_sha256, now, now + timedelta(seconds=1800), command, runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
         context = pin_context(h.settings, context, date(2026, 10, 7))[0]
-        intent = {'command': command, 'today': '2026-10-07',
+        intent = {'contract_version': LOCAL_CONTRACT, 'command': command, 'today': '2026-10-07',
                   'fixture_sha256': hashlib.sha256(h.pack.read_bytes()).hexdigest(),
                   'pinned_end_quarter': '2026Q4'}
         context = freeze_workflow(context, intent, h.store, h.objects)
@@ -372,17 +368,33 @@ class RunnerTests(unittest.TestCase):
                 root = Path(tmp); h = CommandHarness(root, simple_pack(root / 'pack'))
                 try:
                     context, intent, dispatcher = self.prepared(h, run='repair')
-                    with patch.object(EtlState, '_record_membership', side_effect=failure):
-                        with self.assertRaises((ChildUnfinished, KeyboardInterrupt)):
+                    with checked_fault(h.root, action='crash' if isinstance(failure, KeyboardInterrupt) else 'raise') as fault:
+                        with self.assertRaises((ChildUnfinished, Conflict)):
                             run_workflow(context, h.settings, intent, dispatcher, h.store, h.objects)
+                    self.assertTrue(Path(fault['marker']).is_file())
+                    self.assertTrue(Path(fault['ack']).is_file())
                     prior = EtlState(h.store).pointer('2026Q3')
                     self.assertIsNotNone(prior)
                     with self.assertRaises(FileNotFoundError):
                         h.objects.read(workflow_path(context))
+                    original_rows = None
+                    if isinstance(failure, KeyboardInterrupt):
+                        original_rows = {kind: tuple(row.to_mapping() for row in h.store.scan(kind, {}))
+                            for kind in ('Attempt', 'WorkflowChildCall', 'WorkflowChildExecution')}
+                        from dataclasses import replace
+                        with self.assertRaises(Conflict):
+                            run_workflow(context, h.settings, intent, dispatcher, h.store, h.objects)
+                        context = freeze_workflow(replace(context, attempt_id='continuation'), intent, h.store, h.objects)
+                        dispatcher = Dispatcher(context, h.settings, h.pack, h.root, h.store, h.objects)
                     report = run_workflow(context, h.settings, intent, dispatcher, h.store, h.objects)
                     self.assertEqual(report.outcome, 'success')
                     self.assertEqual(report.counts['complete_sources'], 2)
-                    self.assertTrue(report.intent['repair_resolutions'])
+                    if original_rows is None:
+                        self.assertTrue(report.intent['repair_resolutions'])
+                    else:
+                        for kind, rows in original_rows.items():
+                            after = tuple(row.to_mapping() for row in h.store.scan(kind, {}))
+                            self.assertTrue(all(row in after for row in rows), kind)
                     self.assertEqual(EtlState(h.store).pointer('2026Q3'), prior)
                     path = write_workflow_result(report, h.store, h.objects)
                     self.assertEqual(read_workflow_result(path, h.store, h.objects), report)
@@ -400,7 +412,7 @@ class RunnerTests(unittest.TestCase):
             h = CommandHarness(root, simple_pack(root / 'pack', empty=True))
             try:
                 context, intent, dispatcher = self.prepared(h, run='missing-empty-discovery', command='daily')
-                with patch.object(AcquisitionState, 'finish_discovery', side_effect=RuntimeError('original discovery failure')):
+                with checked_fault(h.root, point='discovery.finish_failure'):
                     selected = select_work(context, h.settings, intent, dispatcher, h.store, h.objects)
                 self.assertIsNone(selected['parent_ref'])
                 self.assertEqual(selected['members'], [])
@@ -428,7 +440,14 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(report.outcome, 'internal_error')
                 result_path = write_workflow_result(report, h.store, h.objects)
                 before = h.objects.read(result_path)
-                repaired = dispatcher.execute('discover', 'discover', h.settings,
+                from dataclasses import replace
+                from sec_edgar_ingest.workflows.checked import ChildUnfinished
+                with self.assertRaises((ChildUnfinished, Conflict)):
+                    dispatcher.execute('discover', 'discover', h.settings,
+                        ('--mode', 'daily', '--discovery-id', 'workflow-daily-' + context.run_id))
+                fresh = freeze_workflow(replace(context, attempt_id='rediscovery'), intent, h.store, h.objects)
+                current = Dispatcher(fresh, h.settings, h.pack, h.root, h.store, h.objects)
+                repaired = current.execute('discover', 'discover', h.settings,
                     ('--mode', 'daily', '--discovery-id', 'workflow-daily-' + context.run_id))
                 self.assertIsNotNone(repaired.result.source_workset_ref)
                 self.assertEqual(read_workflow_result(result_path, h.store, h.objects), report)
@@ -473,7 +492,7 @@ class RunnerTests(unittest.TestCase):
                     freeze_selection(context, {**selected, 'gaps': []}, h.store, h.objects)
                 with self.assertRaisesRegex(Conflict, 'failure classification'):
                     freeze_selection(context, {**selected, 'halted': True}, h.store, h.objects)
-                with self.assertRaises(Conflict):
+                with self.assertRaises((Conflict, ValueError)):
                     freeze_selection(context, {**selected, 'discovery_error': selected['gaps'][0]}, h.store, h.objects)
                 freeze_selection(context, selected, h.store, h.objects)
                 report = run_workflow(context, h.settings, intent, dispatcher, h.store, h.objects)
@@ -491,7 +510,7 @@ class RunnerTests(unittest.TestCase):
             try:
                 self.run_parent(h, run='older')
                 context, intent, dispatcher = self.prepared(h, run='no-discovery-result', command='daily')
-                with patch.object(AcquisitionState, 'finish_discovery', side_effect=RuntimeError('discovery process failure')):
+                with checked_fault(h.root, point='discovery.finish_failure'):
                     report = run_workflow(context, h.settings, intent, dispatcher, h.store, h.objects)
                 selection = json.loads(h.objects.read(report.intent['selection']['ref']))
                 self.assertIsNone(report.source_workset_ref)
@@ -514,7 +533,7 @@ class RunnerTests(unittest.TestCase):
             root = Path(tmp); h = CommandHarness(root, simple_pack(root / 'pack'))
             try:
                 original, intent, dispatcher = self.prepared(h, run='expired-repair')
-                with patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary failure')):
+                with checked_fault(h.root):
                     with self.assertRaises(ChildUnfinished):
                         run_workflow(original, h.settings, intent, dispatcher, h.store, h.objects)
                 prior = EtlState(h.store).pointer('2026Q3')
@@ -523,7 +542,7 @@ class RunnerTests(unittest.TestCase):
                 clock = original.deadline + timedelta(seconds=1)
                 fresh = replace(original, attempt_id='fresh', started_at=clock,
                                 deadline=clock + timedelta(seconds=3600))
-                with patch('sec_edgar_ingest.cli.Clock.now', return_value=clock), \
+                with checked_clock(h.root, clock), patch('sec_edgar_ingest.cli.Clock.now', return_value=clock), \
                      patch('sec_edgar_ingest.workflows.runner.datetime') as runner_clock:
                     runner_clock.now.return_value = clock
                     fresh = freeze_workflow(fresh, intent, h.store, h.objects)
@@ -555,7 +574,7 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(report.counts['complete_sources'], 2)
                 self.assertEqual(len(tuple(h.store.scan('WorkflowMemberResult', {}))), 2)
                 member = report.members[0]
-                key = hashlib.sha256(canonical_json(to_mapping_value([context.run_id, context.command,
+                key = hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, context.run_id, context.command,
                     context.attempt_id, member.member_id, member.parser_version, member.schema_version]))).hexdigest()
                 row = h.store.get('WorkflowMemberResult', key)
                 divergent = row.to_mapping()['value']

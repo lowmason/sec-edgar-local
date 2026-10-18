@@ -224,7 +224,7 @@ class SupersessionWorkflowTests(ReconcileFixture):
                          h.calls[-1])
         self.assertEqual(report.intent['unresolved_before'], 0)
         selection = parse_json(h.objects.read(report.intent['selection']['ref']))
-        self.assertEqual(selection['format_version'], 'sec-workflow-selection-v2')
+        self.assertEqual(selection['format_version'], 'sec-local-workflow-selection-v1')
         held = sorted({member.member_id for member in (*gated.members, *plain.members)
                        if member.outcome == 'awaiting_approval'})
         self.assertEqual(len(held), 2)  # the gated download and the reuse-bound backfill member

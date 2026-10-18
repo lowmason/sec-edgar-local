@@ -3,6 +3,9 @@ from network_guard import install, current_origins
 install()
 
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
+import uuid
 import os
 import shutil
 import tempfile
@@ -12,21 +15,62 @@ from pathlib import Path
 from sec_edgar_ingest import runtime
 
 
+_CURRENT_FAULT = ContextVar('checked_process_fault', default=None)
+_CURRENT_CLOCK = ContextVar('checked_process_clock', default=None)
+
+
+@contextmanager
+def checked_fault(root, *, point='publication.membership_failure', action='raise'):
+    """Inject one acknowledged fault across exec; marker/ack remain in the test root.
+
+    The context applies at launch, including runners constructed before entry.
+    Each context has its own immutable fault identity. Its marker is one-shot,
+    so later launches in the same context pass that boundary after the failure.
+    A nested context overrides and then restores its outer fault.
+    """
+    root = Path(root).absolute()
+    root.mkdir(parents=True, exist_ok=True)
+    marker = root / ('checked-fault-' + uuid.uuid4().hex + '.json')
+    fault = {'point': point, 'action': action, 'marker': str(marker), 'ack': str(marker.with_suffix('.ack'))}
+    token = _CURRENT_FAULT.set(fault)
+    try:
+        yield fault
+    finally:
+        _CURRENT_FAULT.reset(token)
+
+
+
+@contextmanager
+def checked_clock(root, instant):
+    """Propagate an explicitly selected fixture clock across the test exec boundary."""
+    from datetime import datetime
+    from unittest.mock import patch
+    token = _CURRENT_CLOCK.set(instant.isoformat())
+    try:
+        with patch('sec_edgar_ingest.workflows.checked.datetime', wraps=datetime) as clock:
+            clock.now.return_value = instant
+            yield
+    finally:
+        _CURRENT_CLOCK.reset(token)
+
+
 class CheckedRunner:
-    def __init__(self, *, fault=None, pid_log=None, sentinel=None, die_with_child=False):
+    def __init__(self, *, fault=None, pid_log=None, sentinel=None, die_with_child=False, clock=None):
         self.fault = fault
         self.pid_log = pid_log
         self.sentinel = sentinel
         self.die_with_child = die_with_child
+        self.clock = clock
 
     def __call__(self, python, argv, *, deadline, environ):
+        fault = self.fault if self.fault is not None else _CURRENT_FAULT.get()
         with tempfile.TemporaryDirectory(prefix='sec-checked-harness-') as temporary:
             root = Path(temporary)
             tests = Path(__file__).absolute().parent
             for name in ('checked_child_bootstrap.py', 'network_guard.py', 'support_process.py'):
                 shutil.copyfile(tests / name, root / name)
             value = {'version': 'sec-checked-harness-v1', 'origins': list(current_origins()),
-                'fault': self.fault, 'pid_log': str(self.pid_log) if self.pid_log else None,
+                'fault': fault, 'clock': self.clock if self.clock is not None else _CURRENT_CLOCK.get(), 'pid_log': str(self.pid_log) if self.pid_log else None,
                 'sentinel': str(self.sentinel) if self.sentinel else None}
             path = root / 'payload.json'
             path.write_text(json.dumps(value, sort_keys=True))
@@ -36,8 +80,8 @@ class CheckedRunner:
             stopped = threading.Event()
             def acknowledge():
                 while not stopped.wait(0.01):
-                    if self.fault and Path(self.fault['marker']).is_file():
-                        Path(self.fault['ack']).touch(exist_ok=True)
+                    if fault and Path(fault['marker']).is_file():
+                        Path(fault['ack']).touch(exist_ok=True)
                         return
             monitor = threading.Thread(target=acknowledge)
             monitor.start()

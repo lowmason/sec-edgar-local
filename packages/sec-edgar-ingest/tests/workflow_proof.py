@@ -101,7 +101,7 @@ def durable_report(harness, message):
     return result
 
 
-def sequence(output: Path) -> Mapping[str, object]:
+def sequence(output: Path, *, release_manifest=None) -> Mapping[str, object]:
     output = Path(output)
     if not output.is_dir() or any(output.iterdir()):
         raise ValueError('sequence requires an existing empty create-only output directory')
@@ -112,7 +112,16 @@ def sequence(output: Path) -> Mapping[str, object]:
     shutil.copytree(FIXTURE_ROOT, fixture)
     work = output / 'work'
     work.mkdir()
-    h = CommandHarness(work, fixture / 'manifest.json')
+    native_settings = None if release_manifest is None else fixture_settings(
+        backfill={'start_quarter': '2026Q3', 'end_quarter': 'open'},
+        etl={'parser_version': 'fixture-index-parser-v1'},
+        fixture={'allow_clock_override': True, 'allow_deadline_override': False})
+    if native_settings is not None:
+        from sec_edgar_ingest.config import Settings
+        value = native_settings.to_mapping()
+        value['runtime'] = {'kind': 'native', 'release_manifest': str(release_manifest)}
+        native_settings = Settings.from_mapping(value)
+    h = CommandHarness(work, fixture / 'manifest.json', native_settings)
     settings = h.settings
     guards = {'parser_version': settings.etl.parser_version, 'schema_version': settings.etl.schema_version,
               'exchange_deadline_seconds': settings.http.exchange_deadline_seconds,
@@ -155,7 +164,7 @@ def sequence(output: Path) -> Mapping[str, object]:
         h.close()
     legacy = output / 'legacy'
     legacy.mkdir()
-    old = CommandHarness(legacy, fixture / 'manifest.json')
+    old = CommandHarness(legacy, fixture / 'manifest.json', native_settings)
     try:
         code, found = old.invoke('discover', ('--mode', 'daily', '--discovery-id', 'old-child-only'), run='legacy-discover')
         if code != 0: raise AssertionError(old.calls[-1])
@@ -404,178 +413,18 @@ def _isolated_script(python, harness, script_name, *arguments):
     return [str(python), '-I', '-c', bootstrap, *map(str, arguments)]
 
 
-def installed(output, wheel, reviewed_source):
-    tests_root = Path(__file__).resolve().parent
-    repo = tests_root.parents[2]
-    wheel, reviewed_source = wheel.resolve(), reviewed_source.resolve()
-    if not wheel.is_file() or not (reviewed_source / 'sec_edgar_ingest').is_dir():
-        raise ValueError('installed proof requires explicit reviewed wheel/source artifacts')
-    lock_body = (repo / 'uv.lock').read_bytes()
-    expected_sources = package_inventory(reviewed_source)
-    with zipfile.ZipFile(wheel) as archive:
-        wheel_sources = {name for name in archive.namelist()
-                         if name.startswith('sec_edgar_ingest/') and not name.endswith('/')}
-        if wheel_sources != set(expected_sources):
-            raise ValueError('wheel source inventory differs from reviewed source')
-        for name, expected in expected_sources.items():
-            body = archive.read(name)
-            if {'bytes': len(body), 'sha256': hashlib.sha256(body).hexdigest()} != expected:
-                raise ValueError('wheel source bytes differ from reviewed source')
-        metadata_files = [name for name in archive.namelist() if name.endswith('.dist-info/METADATA')]
-        if len(metadata_files) != 1:
-            raise ValueError('wheel must contain one distribution metadata file')
-        from email.parser import Parser
-        metadata = Parser().parsestr(archive.read(metadata_files[0]).decode('utf-8'))
-        if metadata['Name'] != 'sec-edgar-ingest':
-            raise ValueError('wheel distribution identity differs')
-        distribution_version = metadata['Version']
-        locked_distribution = next(package for package in tomllib.loads(lock_body.decode())['package']
-                                   if package['name'] == 'sec-edgar-ingest')
-        if distribution_version != locked_distribution['version']:
-            raise ValueError('reviewed wheel version differs from accepted workspace lock')
-    wheel_copy = output / wheel.name
-    shutil.copy2(wheel, wheel_copy)
-    (output / 'accepted-uv.lock').write_bytes(lock_body)
-    _json_once(output / 'reviewed-sources.json', expected_sources)
-    environment = {name: value for name, value in os.environ.items() if name != 'PYTHONPATH'}
-    environment.update(UV_PYTHON_DOWNLOADS='never', PYTHONDONTWRITEBYTECODE='1')
-    with tempfile.TemporaryDirectory(prefix='sec-workflow-installed-') as directory:
-        outside = Path(directory)
-        venv = outside / 'venv'
-        _logged(['uv', 'venv', '--offline', '--python', sys.executable, str(venv)],
-                outside, output, 'venv', environment)
-        python = venv / 'bin/python'
-        exported = _logged(['uv', 'export', '--offline', '--frozen', '--package', 'sec-edgar-ingest',
-            '--no-emit-workspace', '--format', 'requirements-txt'], repo, output, 'lock-export', environment)
-        requirements = outside / 'requirements.txt'
-        requirements.write_text(exported['stdout'])
-        shutil.copy2(requirements, output / 'requirements.txt')
-        harness = outside / 'harness'
-        harness.mkdir()
-        files = tuple(harness_files()) + (tests_root / 'locked_proof.py',)
-        seen = set()
-        for source in files:
-            source = Path(source).resolve()
-            if not source.is_relative_to(tests_root) or not source.is_file():
-                raise ValueError('installed harness must be explicit test-only files')
-            relative = source.relative_to(tests_root)
-            if relative in seen:
-                continue
-            seen.add(relative)
-            destination = harness / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
-        shutil.copy2(requirements, harness / 'requirements.txt')
-        (harness / 'accepted-uv.lock').write_bytes(lock_body)
-        _json_once(harness / 'expected-sources.json', expected_sources)
-        _json_once(harness / 'expected-distribution.json', {'version': distribution_version})
-        verifier = '''import json, pathlib, sys
-from locked_proof import marker_environment, locked_requirements
-root=pathlib.Path(__file__).parent
-environment=marker_environment()
-expected=locked_requirements((root/'accepted-uv.lock').read_bytes(),
-    (root/'requirements.txt').read_text(), environment)
-print(json.dumps({'environment':environment,'dependencies':expected},sort_keys=True))
-'''
-        (harness / 'verify_export.py').write_text(verifier)
-        lock_report = _logged(_isolated_script(python, harness, 'verify_export.py'), outside,
-                             output, 'verify-export', environment)
-        expected_lock = json.loads(lock_report['stdout'])
-        _json_once(output / 'applicable-lock.json', expected_lock)
-        blocks = requirement_blocks(exported['stdout'])
-        arrow, others = outside / 'arrow.txt', outside / 'others.txt'
-        arrow.write_text(''.join(block for name, block in blocks if name == 'pyarrow'))
-        others.write_text(''.join(block for name, block in blocks if name != 'pyarrow'))
-        if not arrow.read_text().startswith('pyarrow==25.0.1'):
-            raise ValueError('export must preserve accepted PyArrow pin')
-        shutil.copy2(arrow, output / 'arrow-requirements.txt')
-        shutil.copy2(others, output / 'other-requirements.txt')
-        cached_wheels = repo / 'specs/evidence/sec-filing-index-ingestion/stage-2/' \
-            'verification/sdd-history/task1-evidence/wheels'
-        _logged(['uv', 'pip', 'install', '--offline', '--no-deps', '--require-hashes', '--link-mode', 'copy',
-                 '--python', str(python), '-r', str(arrow)], outside, output, 'install-arrow', environment)
-        _logged(['uv', 'pip', 'install', '--offline', '--no-index', '--link-mode', 'copy', '--find-links', str(cached_wheels),
-                 '--require-hashes', '--python', str(python), '-r', str(others)],
-                outside, output, 'install-dependencies', environment)
-        _logged(['uv', 'pip', 'install', '--offline', '--no-index', '--no-deps', '--link-mode', 'copy', '--python',
-                 str(python), str(wheel_copy)], outside, output, 'install-reviewed-wheel', environment)
-        runner = '''from network_guard import install
-install()
-import json,pathlib,hashlib,sys
-from locked_proof import marker_environment,locked_requirements,installed_inventory,assert_inventory,inventory,package_inventory
-root=pathlib.Path(__file__).parent
-expected=locked_requirements((root/'accepted-uv.lock').read_bytes(),
-    (root/'requirements.txt').read_text(), marker_environment())
-version=json.loads((root/'expected-distribution.json').read_text())['version']
-actual=installed_inventory()
-assert_inventory(expected,actual,version)
-import sec_edgar_ingest
-if sec_edgar_ingest.__version__ != version: raise ValueError('installed module version differs from reviewed distribution')
-base=pathlib.Path(sec_edgar_ingest.__file__).resolve().parent.parent
-if 'site-packages' not in base.parts: raise ValueError('production import escaped isolated site-packages')
-sources=json.loads((root/'expected-sources.json').read_text())
-actual_sources=package_inventory(base)
-if set(actual_sources)!=set(sources): raise ValueError('installed source inventory differs')
-if actual_sources!=sources: raise ValueError('installed source bytes differ')
-from workflow_proof import sequence
-output=pathlib.Path(sys.argv[1]); output.mkdir(exist_ok=False)
-report=sequence(output)
-print(json.dumps({'import_root':str(base),'dependencies':actual,
-    'applicable_lock':expected,'source_equality':sources,'sequence':report},sort_keys=True))
-'''
-        (harness / 'installed_runner.py').write_text(runner)
-        retained_harness = output / 'installed-harness'
-        shutil.copytree(harness, retained_harness)
-        proof = _logged(_isolated_script(python, harness, 'installed_runner.py', output / 'installed-sequence'),
-                        outside, output, 'installed-proof', environment, timeout=600)
-        details = json.loads(proof['stdout'])
-        _json_once(output / 'installed-dependencies.json', details['dependencies'])
-        # Perform a live isolated-interpreter rejection after successful installation.
-        # Copy installation isolates this disposable venv from cached wheel artifacts.
-        negative = '''import json,pathlib
-import importlib.metadata
-from locked_proof import marker_environment,locked_requirements,installed_inventory,assert_inventory
-root=pathlib.Path(__file__).parent
-expected=locked_requirements((root/'accepted-uv.lock').read_bytes(),
-    (root/'requirements.txt').read_text(),marker_environment())
-distribution=importlib.metadata.distribution('urllib3')
-metadata_files=[path for path in distribution.files if str(path).endswith('.dist-info/METADATA')]
-if len(metadata_files)!=1: raise ValueError('urllib3 metadata file not unique')
-metadata=pathlib.Path(distribution.locate_file(metadata_files[0]))
-body=metadata.read_text()
-old='Version: '+expected['urllib3']+'\\n'
-if body.count(old)!=1: raise ValueError('urllib3 metadata does not have exact original version')
-metadata.write_text(body.replace(old,'Version: 2.7.0\\n'))
-actual=installed_inventory()
-for name in ('pyarrow','requests','azure-identity','azure-storage-blob','azure-data-tables'):
-    if actual[name]!=expected[name]: raise ValueError('negative test changed a direct pin')
-version=json.loads((root/'expected-distribution.json').read_text())['version']
-try: assert_inventory(expected,actual,version)
-except ValueError as error: print(json.dumps({'transitive_mismatch_refused':True,'error':str(error)}))
-else: raise AssertionError('wrong transitive version accepted')
-'''
-        (harness / 'transitive_refusal.py').write_text(negative)
-        refusal = _logged(_isolated_script(python, harness, 'transitive_refusal.py'), outside,
-                          output, 'transitive-mismatch-refusal', environment)
-        # Retain the final negative script too; exact inventory must include it.
-        shutil.copy2(harness / 'transitive_refusal.py', retained_harness / 'transitive_refusal.py')
-        for command in ('backfill', 'daily'):
-            help_script = ('from network_guard import install; install(); '
-                           'from sec_edgar_ingest.cli import main; '
-                           f'raise SystemExit(main(["{command}","--help"]))')
-            _logged([str(python), '-I', '-c', 'import sys; sys.path.insert(0,' + repr(str(harness)) + '); ' + help_script],
-                    outside, output, command + '-help', environment)
-        _logged([str(python), '-I', '-c', 'import sys; sys.path.insert(0,' + repr(str(harness)) + '); '
-            'from network_guard import install; install(); from sec_edgar_ingest.cli import main; '
-            'raise SystemExit(main(["--version"]))'], outside, output, 'version', environment)
-    if (repo / 'uv.lock').read_bytes() != lock_body:
-        raise ValueError('accepted lock changed during proof')
-    return {'exit': 0, 'wheel_name': wheel.name, 'wheel': digest(wheel_copy),
-        'accepted_lock': digest(output / 'accepted-uv.lock'),
-        'requirements': digest(output / 'requirements.txt'),
-        'applicable_lock': expected_lock, 'installed': details,
-        'transitive_mismatch_refusal': json.loads(refusal['stdout']),
-        'source_equality': expected_sources, 'all22_stage7_checks': 'reserved/not_run'}
+def installed(output, wheel=None, reviewed_source=None):
+    """Use current committed proof releases and the shared native verifier."""
+    from support_release import proof_releases
+    from locked_proof import verify_native_release
+    project = Path(__file__).resolve().parents[3]
+    a, b = proof_releases(project, project / 'releases/artifact-cache')
+    if wheel is not None and not wheel.is_file():
+        raise FileNotFoundError(wheel)
+    if reviewed_source is not None and not reviewed_source.is_dir():
+        raise FileNotFoundError(reviewed_source)
+    return {'exit': 0, 'releases': [verify_native_release(release, Path(__file__).parent,
+        output / release.release_id) for release in (a, b)]}
 
 
 def main(argv=None):
@@ -613,3 +462,252 @@ def main(argv=None):
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
+
+def upgrade_sequence(output, a_manifest, b_manifest):
+    """Run upgrade assertions inside installed B, with copied test support only."""
+    import tempfile
+    from sec_edgar_ingest.runtime import preflight, native_python_argv, isolated_environment
+    b = preflight(Path(b_manifest))
+    output = Path(output).absolute()
+    with tempfile.TemporaryDirectory(prefix='sec-upgrade-harness-') as directory:
+        outside = Path(directory)
+        harness = outside / 'harness'
+        harness.mkdir()
+        source_root = Path(__file__).absolute().parent
+        for source in harness_files():
+            target = harness / source.relative_to(source_root)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+        code = ('import sys,json;sys.path.insert(0,' + repr(str(harness)) + ');'
+                'from network_guard import install;install();'
+                'from workflow_proof import installed_upgrade_cases;'
+                'print(json.dumps(installed_upgrade_cases(*sys.argv[1:]),sort_keys=True))')
+        argv = [*native_python_argv(b.python), '-c', code, str(output), str(a_manifest), str(b_manifest)]
+        done = subprocess.run(argv, cwd=outside, env=isolated_environment(),
+                              capture_output=True, text=True, timeout=600)
+        (output / 'upgrade-command.json').write_text(json.dumps({'argv': argv, 'exit': done.returncode,
+            'stdout': done.stdout, 'stderr': done.stderr, 'cwd': str(outside)}, indent=2) + '\n')
+        if done.returncode:
+            raise RuntimeError('installed B upgrade proof failed: ' + done.stderr)
+        return json.loads(done.stdout)
+
+
+def installed_upgrade_cases(output, a_manifest, b_manifest):
+    """Actual B application checks A-origin backlog/repair and retained read authority."""
+    import sys
+    from datetime import date, timedelta, timezone
+    from sec_edgar_ingest.config import Settings
+    from sec_edgar_ingest.runtime import preflight, preflight_current, native_python_argv, isolated_environment
+    from sec_edgar_ingest.workflows.checked import read_child_capture
+    from sec_edgar_ingest.etl.reader import capture_quarter, read_quarter
+    from sec_edgar_ingest.etl.state import EtlState
+    import sec_edgar_ingest
+    output = Path(output)
+    a, b = preflight(Path(a_manifest)), preflight_current(Path(b_manifest))
+    cases = []
+    for scenario in ('pending', 'repair'):
+        root = output / scenario
+        root.mkdir()
+        pack = simple_pack(root / 'pack')
+        if scenario == 'repair':
+            from support_workflows import replace_pack_body
+            original_rows = [('123456', 'Example', '10-K', '2026-09-30',
+                'edgar/data/123456/0000123456-26-000003.txt'),
+                ('123456', 'Second', '10-K', '2026-09-30',
+                 'edgar/data/123456/0000123456-26-000099.txt')]
+            replace_pack_body(pack, BASE + 'full-index/2026/QTR3/master.zip', idx(original_rows, 'quarterly'))
+        if scenario == 'pending':
+            value = json.loads(pack.read_text())
+            url = BASE + 'full-index/2026/QTR3/master.zip'
+            body = b'pending retained source'
+            digest = hashlib.sha256(body).hexdigest()
+            (pack.parent / 'bodies' / (digest + '.body')).write_bytes(body)
+            value['responses'][url].insert(0, {'status': 404, 'headers': {},
+                'body_path': 'bodies/' + digest + '.body', 'body_sha256': digest})
+            pack.write_bytes(canonical_json(to_mapping_value(value)))
+        base = fixture_settings(root=root / 'data',
+            backfill={'start_quarter': '2026Q3', 'end_quarter': 'open'},
+            etl={'parser_version': 'fixture-index-parser-v1'},
+            fixture={'allow_clock_override': True, 'allow_deadline_override': False})
+        def settings(release):
+            value = base.to_mapping()
+            value['runtime'] = {'kind': 'native', 'release_manifest': str(release.directory / 'release.json')}
+            return Settings.from_mapping(value)
+        selected_a, selected_b = settings(a), settings(b)
+        deadline = datetime.now(timezone.utc) + timedelta(seconds=1800)
+        log = root / 'pids.jsonl'
+        sentinel = root / 'sentinel.py'
+        write_sentinel = __import__('support_process').write_import_sentinel
+        write_sentinel(sentinel, root / 'sentinel.jsonl')
+        def invoke(release, selected, run, fault=None, command='backfill', flags=()):
+            config = root / (run + '-config.json')
+            config.write_bytes(canonical_json(to_mapping_value(selected.to_mapping())))
+            argv = [*native_python_argv(release.python), '-m', 'sec_edgar_ingest', command,
+                '--config', str(config), *flags]
+            if command == 'backfill':
+                argv += ['--run-id', run, '--execution-id', 'manual', '--attempt-id', 'a',
+                    '--deadline', deadline.isoformat(), '--fixture-pack', str(pack), '--today', '2026-10-07']
+            result = CheckedRunner(fault=fault, pid_log=log, sentinel=sentinel)(release.python, argv,
+                deadline=deadline, environ=isolated_environment())
+            if not result.drained:
+                raise AssertionError('upgrade command did not positively drain')
+            return result.returncode, json.loads(result.stdout), result.stderr.decode()
+        fault = None
+        if scenario == 'repair':
+            marker = root / 'fault.json'
+            fault = {'point': 'publication.record_failure', 'action': 'raise',
+                'marker': str(marker), 'ack': str(marker.with_suffix('.ack'))}
+        a_exit, first, a_stderr = invoke(a, selected_a, 'origin-a', fault)
+        if a_exit != (3 if scenario == 'pending' else 9):
+            raise AssertionError({'scenario': scenario, 'a_exit': a_exit, 'message': first, 'stderr': a_stderr})
+        records_before = len(log.read_text().splitlines())
+        opened = open_stores(selected_b)
+        store, objects, leases = opened
+        try:
+            original_results = {str(path.relative_to(objects.directory)): path.read_bytes()
+                for path in (objects.directory / 'runs').rglob('result.json')}
+            original_pointers = tuple(row.to_mapping() for row in store.scan('QuarterPublication', {}))
+        finally:
+            for resource in reversed(opened):
+                if hasattr(resource, 'close'): resource.close()
+        b_exit, message, b_stderr = invoke(b, selected_b, 'continue-b')
+        if b_exit:
+            raise AssertionError({'scenario': scenario, 'b_exit': b_exit, 'message': message, 'stderr': b_stderr})
+        records = [json.loads(line) for line in log.read_text().splitlines()]
+        continued = records[records_before:]
+        if not continued or continued[0]['python'] != str(b.python):
+            raise AssertionError('B workflow parent must execute installed B')
+        a_children = [record for record in continued[1:] if record['python'] == str(a.python)]
+        if not a_children or not all('site-packages' in Path(record['origin']).parts for record in continued):
+            raise AssertionError('B workflow did not use installed A origin/repair children')
+        if scenario == 'repair' and not any(record['argv'][0] == 'publish' for record in a_children):
+            raise AssertionError('saved A publication was not repaired by installed A')
+        opened = open_stores(selected_b, access='operator')
+        store, objects, _ = opened
+        try:
+            result = read_workflow_result(message['result_ref'], store, objects)
+            calls = [row.to_mapping()['value'] for row in store.scan('WorkflowChildCall', {})]
+            checked = []
+            for call in calls:
+                if call['context']['run_id'] == 'continue-b':
+                    child = read_child_capture(call, objects)
+                    checked.append({'call': call, 'result': child.to_mapping()})
+            capture = capture_quarter('2026Q3', objects, EtlState(store))
+            rows = list(read_quarter(capture, objects))
+            if not rows or len({(row.cik, row.archive_path) for row in rows}) != len(rows):
+                raise AssertionError('upgrade rows changed canonical uniqueness/count')
+            for path, body in original_results.items():
+                if objects.read(path) != body:
+                    raise AssertionError('upgrade rewrote historical result authority')
+            from sec_edgar_ingest.etl.history import quarter_history
+            history_result = quarter_history('2026Q3', objects, EtlState(store))
+            manifest_body = objects.read(capture.manifest_ref)
+            from sec_edgar_ingest.etl.manifest import read_manifest
+            manifest = read_manifest(capture, objects)
+            observation = manifest.sources[0]
+            before_observation = objects.read(observation.manifest_ref)
+            current = capture_quarter('2026Q3', objects, EtlState(store))
+            current_rows = list(read_quarter(current, objects))
+            if len(current_rows) != len(rows) or objects.read(observation.manifest_ref) != before_observation:
+                raise AssertionError('cached upgrade changed source bytes or current reader count')
+            moved = a.directory.with_name(a.directory.name + '-missing')
+            a.directory.rename(moved)
+            try:
+                if quarter_history('2026Q3', objects, EtlState(store)) != history_result:
+                    raise AssertionError('historical read depends on the unavailable A interpreter')
+                if list(read_quarter(capture, objects)) != rows:
+                    raise AssertionError('historical capture changed with unavailable A interpreter')
+                from sec_edgar_ingest.workflows.checked import Dispatcher
+                before_calls = tuple(row.to_mapping() for row in store.scan('WorkflowChildCall', {}))
+                dispatcher = Dispatcher(result.context, selected_b, pack, root, store, objects,
+                                        child_runner=CheckedRunner())
+                try:
+                    dispatcher.execute('collect', 'missing-a-execution', selected_a,
+                        ('--workset', next(item['call']['input_ref'] for item in checked
+                            if item['call']['context']['command'] == 'collect'
+                            and item['call']['context']['runtime']['release_sha256'] == a.release_id)))
+                except FileNotFoundError:
+                    pass
+                else:
+                    raise AssertionError('missing A executable did not refuse execution')
+                if tuple(row.to_mapping() for row in store.scan('WorkflowChildCall', {})) != before_calls:
+                    raise AssertionError('missing old executable mutated child call authority')
+            finally:
+                moved.rename(a.directory)
+            if scenario == 'repair':
+                if json.loads(before_observation)['runtime']['release_sha256'] != a.release_id:
+                    raise AssertionError('B cached transform must retain the original A producer')
+                saved_manifest = objects.directory / f'runtime/native/sha256={a.release_id}/release.json'
+                saved_body = saved_manifest.read_bytes()
+                try:
+                    saved_manifest.write_bytes(b'corrupt retained manifest')
+                    try:
+                        next(read_quarter(capture, objects))
+                    except (ValueError, OSError):
+                        pass
+                    else:
+                        raise AssertionError('corrupt saved A manifest exposed a historical row')
+                    saved_manifest.unlink()
+                    try:
+                        next(read_quarter(capture, objects))
+                    except (ValueError, OSError):
+                        pass
+                    else:
+                        raise AssertionError('missing saved A manifest exposed a historical row')
+                finally:
+                    saved_manifest.write_bytes(saved_body)
+            if objects.read(capture.manifest_ref) != manifest_body:
+                raise AssertionError('historical reads rewrote generation manifest')
+            operator_evidence = None
+            if scenario == 'repair':
+                from dataclasses import replace
+                from support_etl import seed_observation
+                from sec_edgar_ingest.etl.publication import publish_quarter
+                from sec_edgar_ingest.etl.approval import approve
+                from sec_edgar_ingest.etl.rollback import rollback
+                state = EtlState(store)
+                from sec_edgar_ingest.etl.transform import transform_member
+                for force in (False, True):
+                    reused = transform_member(observation.source, observation.snapshot,
+                        result.context, selected_b, objects, state, force=force)
+                    if reused != observation or objects.read(observation.manifest_ref) != before_observation:
+                        raise AssertionError('B cached/forced reuse changed original A producer bytes')
+                publishing = replace(result.context, command='publish', run_id='operator-b', attempt_id='withdraw')
+                revised = seed_observation(objects, state, publishing, selected_b, period='2026Q3',
+                    rows=b'123456|Example|10-K|2026-09-30|edgar/data/123456/0000123456-26-000003.txt\n',
+                    seconds=(observation.snapshot.received_at - datetime(2026, 10, 6, tzinfo=timezone.utc)).total_seconds() + 10)
+                candidate_result = publish_quarter('2026Q3', (revised,), publishing, selected_b, objects, state)
+                if candidate_result.outcome != 'awaiting_approval':
+                    raise AssertionError('closed A generation withdrawal did not preserve approval gate')
+                from sec_edgar_ingest.etl.contracts import Candidate
+                candidate_id = candidate_result.candidate_ref.split('sha256=')[1].split('/')[0]
+                candidate = Candidate.from_mapping(store.get('Candidate', candidate_id).to_mapping()['value'])
+                approval = approve('2026Q3', candidate_id, revised.snapshot.sha256, 'Local B approver', objects, state)
+                if approval.outcome != 'success':
+                    raise AssertionError('installed B could not approve exact candidate over A history')
+                changed = capture_quarter('2026Q3', objects, state)
+                if len(list(read_quarter(changed, objects))) != 1:
+                    raise AssertionError('approved B capture count differs')
+                rolled = rollback('2026Q3', changed.generation_id, capture.generation_id,
+                    'Local B operator', 'restore original A generation', objects, state)
+                if rolled.outcome != 'success' or list(read_quarter(capture_quarter('2026Q3', objects, state), objects)) != rows:
+                    raise AssertionError('installed B could not roll back to original A capture')
+                operator_evidence = {'approval': approval.to_mapping(), 'rollback': rolled.to_mapping(),
+                    'approved_rows': 1, 'restored_rows': len(rows)}
+
+
+            cases.append({'scenario': scenario, 'a_exit': a_exit, 'b_exit': b_exit,
+                'a_child_under_b_parent': True, 'rows': len(rows), 'reader': capture.to_mapping(),
+                'parent': continued[0], 'children': continued[1:], 'calls': checked,
+                'workflow': result.to_mapping(), 'original_pointers': original_pointers,
+                'history': history_result, 'missing_a_history': True, 'missing_a_execution_refused': True,
+                'observation': observation.to_mapping(), 'observation_bytes_unchanged': True,
+                'operator': operator_evidence})
+        finally:
+            store.close()
+    report = {'exit': 0, 'pid': os.getpid(), 'python': sys.executable,
+        'import_origin': sec_edgar_ingest.__file__, 'a_release_id': a.release_id,
+        'b_release_id': b.release_id, 'cases': cases}
+    put_json(output / 'upgrade-evidence.json', report)
+    return report

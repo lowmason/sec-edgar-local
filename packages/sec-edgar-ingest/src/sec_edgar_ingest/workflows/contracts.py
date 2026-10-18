@@ -22,7 +22,7 @@ LOCAL_CONTRACT = 'sec-local-contract-v1'
 
 
 def require_contract(value: Mapping[str, object]) -> None:
-    if value.get('contract_version') != LOCAL_CONTRACT:
+    if not isinstance(value, Mapping) or value.get('contract_version') != LOCAL_CONTRACT:
         raise ValueError('unsupported local workflow contract')
 
 

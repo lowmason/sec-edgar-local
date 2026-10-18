@@ -1,3 +1,4 @@
+from support_process import checked_fault, checked_clock
 from sec_edgar_ingest.runtime import configured_descriptor
 from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 from network_guard import install
@@ -10,7 +11,7 @@ from support_workflows import BASE, CommandHarness, simple_pack
 from sec_edgar_ingest.config import pin_context
 from sec_edgar_ingest.models import RunContext, canonical_json
 from sec_edgar_ingest.worksets import decode_source_workset
-from sec_edgar_ingest.workflows.checked import Dispatcher
+from support_process import checked_dispatcher as Dispatcher
 from sec_edgar_ingest.workflows.provenance import project_member
 from sec_edgar_ingest.workflows.processing import process_member
 
@@ -364,8 +365,7 @@ class ProcessingTests(unittest.TestCase):
             f = EvidenceFixture(Path(tmp) / '.fixture-state')
             try:
                 _, _, transformed = f.invoke('transform', f.snapshot_input(quarterly_bytes('2026-07-01')))
-                with patch.object(EtlState, '_record_membership', side_effect=__import__(
-                        'sec_edgar_ingest.storage.contracts', fromlist=['Conflict']).Conflict('ancillary')):
+                with checked_fault(f.root):
                     code, original_call, result = f.invoke('publish', transformed.transformed_workset_ref)
                 self.assertEqual(code, 9)
                 self.assertIsNone(result)
@@ -380,7 +380,7 @@ class ProcessingTests(unittest.TestCase):
                 fresh = replace(f.workflow, attempt_id='fresh-repair', started_at=clock,
                                 deadline=clock + timedelta(seconds=3600))
                 dispatcher = Dispatcher(fresh, f.settings, f.pack, f.root.parent, f.store, f.objects)
-                with patch('sec_edgar_ingest.cli.Clock.now', return_value=clock):
+                with checked_clock(f.root, clock), patch('sec_edgar_ingest.cli.Clock.now', return_value=clock):
                     processed = process_member(f.value, fresh, dispatcher, f.store, f.objects)
                 self.assertIn(processed.result.outcome, ('success', 'unchanged'))
                 self.assertEqual(len(processed.evidence['resolutions']), 1)
@@ -402,7 +402,7 @@ class ProcessingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             h, context, dispatcher, value = self.prepare(Path(tmp))
             try:
-                with patch('sec_edgar_ingest.cli.collect', side_effect=RuntimeError('retained execution failure')):
+                with checked_fault(h.root, point='collection.entry_failure'):
                     processed = process_member(value, context, dispatcher, h.store, h.objects)
                 self.assertEqual(processed.result.outcome, 'internal_error')
                 self.assertFalse(processed.result.downloaded)

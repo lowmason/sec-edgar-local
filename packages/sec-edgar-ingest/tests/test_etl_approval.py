@@ -12,8 +12,8 @@ from support_approval import GateFixture, operator_cli, row
 from sec_edgar_ingest.etl.contracts import Candidate, WithdrawalApproval
 from sec_edgar_ingest.etl.manifest import approval_for, approval_ref, read_approval, read_manifest
 from sec_edgar_ingest.etl.publication import pointer_value, repair_publication
-from sec_edgar_ingest.models import canonical_json
-from sec_edgar_ingest.storage.contracts import Conflict, blob_address, table_for
+from sec_edgar_ingest.models import canonical_json, safe_relative_path
+from sec_edgar_ingest.storage.contracts import Conflict, table_for
 from support import Faults
 from sec_edgar_ingest.etl.approval import approve
 
@@ -36,7 +36,7 @@ class ApprovalEvidenceTests(GateFixture):
         ref = approval_ref('2026Q4', manifest.generation_id)
         self.assertEqual(ref, 'approvals/sec/filing_index/year=2026/quarter=4/generation='
                          + manifest.generation_id + '/approval.json')
-        self.assertEqual(blob_address(ref), ('approvals', ref.removeprefix('approvals/')))
+        self.assertEqual(safe_relative_path(ref, 'approval key'), ref)
         for approver in ('', '   ', 'two\nlines', 'tab\there', 'x' * 257, 'zero\u200bwidth'):
             with self.subTest(approver=approver), self.assertRaises(ValueError):
                 approval_for(candidate, approver, APPROVED_AT)
@@ -194,7 +194,7 @@ class ApproveTests(GateFixture):
     def test_approve_cli_maps_named_outcomes_to_exit_codes(self):
         _, revised, candidate = self.gated()
         generation = candidate.manifest.generation_id
-        command = ('approve', '--config', str(self.write_config()), '--state-dir', str(self.root),
+        command = ('approve', '--config', str(self.write_config()),
                    '--quarter', '2026Q4', '--generation', generation, '--approver', 'Lowell Mason')
         code, message, _ = operator_cli(*command, '--quarterly-sha256', '0' * 64)
         self.assertEqual((code, message['outcome'], message['approval_ref']), (2, 'approval_refused', None))
@@ -213,7 +213,7 @@ class ApproveTests(GateFixture):
     def test_a_corrupt_approval_object_reports_state_conflict_through_the_cli(self):
         _, revised, candidate = self.gated()
         generation = candidate.manifest.generation_id
-        command = ('approve', '--config', str(self.write_config()), '--state-dir', str(self.root),
+        command = ('approve', '--config', str(self.write_config()),
                    '--quarter', '2026Q4', '--generation', generation, '--approver', 'Lowell Mason',
                    '--quarterly-sha256', revised.snapshot.sha256)
         code, message, _ = operator_cli(*command)
@@ -230,7 +230,7 @@ class ApproveTests(GateFixture):
         _, revised, candidate = self.gated()
         self.assertEqual(self.publish(self.moved_base()).outcome, 'published')
         code, message, _ = operator_cli(
-            'approve', '--config', str(self.write_config()), '--state-dir', str(self.root),
+            'approve', '--config', str(self.write_config()),
             '--quarter', '2026Q4', '--generation', candidate.manifest.generation_id,
             '--quarterly-sha256', revised.snapshot.sha256, '--approver', 'Lowell Mason')
         self.assertEqual((code, message['outcome']), (11, 'approval_stale'))
