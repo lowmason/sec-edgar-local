@@ -1142,7 +1142,7 @@ def derive_source_proof(selection, launches, admissions, store, objects):
             # A failed command may have no result; its context is still bound to
             # the frozen call by the complete command inventory below.
             continue
-        if (context != item['result'].context or context.runtime != native_descriptor(selection['release_id']) or
+        if (context != item['result'].context or context.to_mapping()['runtime'] != native_descriptor(selection['release_id']) or
                 context.to_mapping()['effective_config']['acquisition']['mode'] != 'live'):
             continue
         if admission['socket_started'] and admission['complete']:

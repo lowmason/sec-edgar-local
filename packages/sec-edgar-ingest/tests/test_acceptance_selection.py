@@ -284,6 +284,16 @@ class AcceptanceTests(unittest.TestCase):
         self.assertIn('call must have exactly', result.stderr.decode())
         self.assertFalse((self.root / 'budget.sqlite3').exists())
         self.assertFalse((self.root / 'data').exists())
+        selected['harness']['driver']['sha256'] = '0' * 64
+        self.path.write_bytes(self.api['canonical'](selected))
+        (self.root / 'prepared.json').write_bytes(self.api['canonical']({'format_version': 'sec-local-sec-prepared-v1',
+            'selection_path': str(self.path), 'selection_sha256': self.api['digest'](self.path.read_bytes())}))
+        refused = subprocess.run(self.api['child_argv'](selected, self.path, call),
+                                 capture_output=True, env=self.api['scrub_environment']())
+        self.assertEqual(refused.returncode, 2, refused.stderr.decode())
+        self.assertIn('harness bytes changed', refused.stderr.decode())
+        self.assertFalse((self.root / 'budget.sqlite3').exists())
+        self.assertFalse((self.root / 'data').exists())
 
     def test_local_process_supervisor_preserves_exit_and_positive_drain(self):
         import sys
@@ -445,6 +455,59 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(len(proof['selected_replayed']), 3)
         self.assertEqual(len(proof['selected_publications']), 3)
         self.assertFalse(proof['genuine_native'], 'explicit fixtures cannot establish genuine native acquisition')
+        # Exercise the real FrozenMapping/native descriptor boundary with fake
+        # transport receipts; the underlying publication fixture stays explicit.
+        from dataclasses import replace
+        from sec_edgar_ingest.models import RunContext
+        from sec_edgar_ingest.runtime import native_descriptor
+        from sec_edgar_ingest.state import attempt_key
+        native_selection = copy.deepcopy(selected)
+        native_selection['release_id'] = 'fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec'
+        native_launches = []
+        for item in launches:
+            context = item['result'].context
+            effective = context.to_mapping()['effective_config']
+            effective.pop('fixture', None)
+            effective['acquisition'] = {'mode': 'live'}
+            effective['runtime'] = {'kind': 'native', 'release_manifest': str(PROJECT / 'releases' / ('sha256=' + native_selection['release_id']) / 'release.json')}
+            native = replace(context, runtime=native_descriptor(native_selection['release_id']),
+                effective_config=effective, config_sha256=api['digest'](api['canonical'](effective)))
+            self.assertIsInstance(native, RunContext)
+            self.assertEqual(type(native.runtime).__name__, 'FrozenMapping')
+            native_launches.append({**item, 'result': replace(item['result'], context=native)})
+        def admissions_for(items):
+            admissions = []
+            for source in selected['sources']:
+                original = next(item for item in items if item['record']['label'] == source['period'] + '-collect')
+                snapshot = api['read_json'](self.root / 'snapshots' / (source['source_id'] + '.json'))
+                context = original['result'].context
+                admissions.append({'production': {'context': context.to_mapping(), 'attempt_key': attempt_key(context)},
+                    'request': {'url': source['url']}, 'sha256': snapshot['sha256'], 'socket_started': True, 'complete': True})
+            return admissions
+        admissions = admissions_for(native_launches)
+        classified = api['derive_source_proof'](native_selection, native_launches, admissions,
+            command_harnesses['daily'].store, command_harnesses['daily'].objects)
+        self.assertEqual(classified['selected_native'], sorted(source['source_id'] for source in selected['sources']))
+        self.assertEqual(len(classified['published_reads']), len(proof['selected_publications']))
+        for variant in ('wrong-release', 'wrong-mode', 'context-mismatch'):
+            changed = []
+            for item in native_launches:
+                context = item['result'].context
+                if variant == 'wrong-release': context = replace(context, runtime=native_descriptor('f' * 64))
+                if variant == 'wrong-mode':
+                    effective = context.to_mapping()['effective_config']
+                    effective['acquisition']['mode'] = 'fixture'
+                    context = replace(context, effective_config=effective)
+                changed.append({**item, 'result': replace(item['result'], context=context)})
+            receipts = admissions_for(changed)
+            if variant == 'context-mismatch':
+                for admission in receipts:
+                    context = RunContext.from_mapping(admission['production']['context'])
+                    context = replace(context, started_at=context.started_at - timedelta(microseconds=1))
+                    admission['production']['context'] = context.to_mapping()
+            rejected = api['derive_source_proof'](native_selection, changed, receipts,
+                command_harnesses['daily'].store, command_harnesses['daily'].objects)
+            self.assertEqual(rejected['selected_native'], [], variant)
         no_replay = [item for item in launches if sum(other['record']['call_path'] == item['record']['call_path'] for other in launches[:launches.index(item)]) == 0]
         absent = api['derive_source_proof'](selected, no_replay, [], command_harnesses['daily'].store, command_harnesses['daily'].objects)
         self.assertEqual(absent['selected_replayed'], [])
@@ -467,12 +530,14 @@ class AcceptanceTests(unittest.TestCase):
         (worker / 'started.json').write_bytes(api['canonical']({'pid': 2345}))
         (worker / 'stdout').write_bytes(b'explicit offline worker boundary\n')
         (worker / 'stderr').write_bytes(b'')
-        report = {'selection_sha256': api['digest'](self.path.read_bytes()), 'release_id': selected['release_id'],
+        report = {'format_version': 'sec-local-sec-acceptance-v1', 'selection_sha256': api['digest'](self.path.read_bytes()), 'release_id': selected['release_id'],
             'commands': commands, 'proof': derived, 'status': api['evaluate_l12'](derived), 'reason': None,
             'budget': ledger, 'ended_utc': datetime.now(timezone.utc).isoformat(),
             'worker_request': str(worker / 'request.json')}
         report_path = self.root / 'run-offline.json'
         report_path.write_bytes(api['canonical'](report))
+        (worker / 'stdout').write_bytes(api['canonical']({'status': report['status'],
+            'report': str(report_path), 'budget': report['budget']['totals']}) + b'\n')
         watch = {'selection_sha256': request['selection_sha256'], 'argv': api['worker_argv'](self.path, selected),
             'pid': 2345, 'drained': True, 'returncode': 12, 'outcome': 'completed',
             'started_utc': started.isoformat(), 'ended_utc': datetime.now(timezone.utc).isoformat(),
@@ -500,6 +565,30 @@ class AcceptanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unrelated'):
             api['verify_acceptance'](self.path, selected, engine.settings)
         unrelated.unlink()
+        # Supplemental analysis also accepts a fully consistent synthetic
+        # original archive only as incomplete; runtime verification is an
+        # explicit fake boundary here, never an acquisition path.
+        from unittest.mock import patch
+        analyzer = runpy.run_path(str(PROJECT / 'scripts/verify-sec-native-adjudication.py'))
+        historical_directory = self.root / 'harness-original'
+        historical_directory.mkdir()
+        for record in selected['harness'].values():
+            (historical_directory / Path(record['path']).name).write_bytes(Path(record['path']).read_bytes())
+        historical = analyzer['historical_selection'](selected)
+        verification_path = next(self.root.glob('verification-*.json'))
+        output = self.root / 'adjudications/offline-synthetic.json'
+        args = SimpleNamespace(selection=self.path, report=report_path,
+            original_verification=verification_path, output=output)
+        original_hash = api['digest'](report_path.read_bytes())
+        with patch.dict(api, {'verify_runtime': lambda value: engine.settings}):
+            code = analyzer['adjudicate'](api, args, selected, engine.settings, historical)
+        self.assertEqual(code, api['LIMIT_EXIT'])
+        supplement = api['read_json'](output)
+        self.assertEqual(supplement['original']['driver_exit'], 12)
+        self.assertEqual(supplement['original']['status']['status'], 'incomplete')
+        self.assertEqual(supplement['independent_status']['status'], 'incomplete')
+        self.assertFalse(supplement['acquisition_repeated'])
+        self.assertEqual(api['digest'](report_path.read_bytes()), original_hash)
 
 
     def test_preparation_receipt_refuses_canonical_selection_edit_before_first_run(self):
@@ -757,6 +846,42 @@ class AcceptanceTests(unittest.TestCase):
         shutil.rmtree(launch)
         with self.assertRaisesRegex(ValueError, 'including failed launches'):
             self.api['inspect_commands'](self.path, self.selection, SimpleNamespace(read=absent))
+
+
+    def test_adjudication_validates_exact_archived_historical_harness(self):
+        path = PROJECT / 'scripts/verify-sec-native-adjudication.py'
+        self.assertTrue(path.exists(), 'missing separately versioned offline-only adjudicator')
+        api = runpy.run_path(str(path))
+        archive = self.root / 'harness-original'
+        archive.mkdir()
+        for record in self.selection['harness'].values():
+            (archive / Path(record['path']).name).write_bytes(Path(record['path']).read_bytes())
+        original = copy.deepcopy(self.selection)
+        historical = api['historical_selection'](self.selection)
+        self.assertEqual(self.selection, original)
+        for role, record in historical['harness'].items():
+            self.assertEqual(Path(record['path']).parent, archive)
+            self.assertEqual(record['sha256'], original['harness'][role]['sha256'])
+        driver = archive / 'accept-sec-native.py'
+        driver.write_bytes(driver.read_bytes() + b'\n')
+        with self.assertRaisesRegex(ValueError, 'archived original harness'):
+            api['historical_selection'](self.selection)
+
+    def test_adjudication_keeps_original_incomplete_separate_from_corrected_status(self):
+        path = PROJECT / 'scripts/verify-sec-native-adjudication.py'
+        self.assertTrue(path.exists(), 'missing separately versioned offline-only adjudicator')
+        api = runpy.run_path(str(path))
+        original = {'genuine_native': False, 'persistence': False, 'restart_reuse': False,
+            'exact_replay': False, 'bounded': True, 'published_reads': [], 'selected_native': [],
+            'selected_acquired': ['a'], 'selected_reused': ['a'], 'selected_replayed': ['a']}
+        corrected = {**original, 'genuine_native': True, 'persistence': True, 'restart_reuse': True,
+            'exact_replay': True, 'selected_native': ['a'], 'published_reads': [{'rows': 1, 'validated': True}]}
+        result = api['proof_delta'](original, corrected)
+        self.assertEqual(result['original_status'], 'incomplete')
+        self.assertEqual(result['corrected_status'], 'pass')
+        self.assertEqual(original['selected_native'], [])
+        with self.assertRaisesRegex(ValueError, 'outside runtime representation'):
+            api['proof_delta'](original, {**corrected, 'bounded': False})
 
 
 if __name__ == '__main__':

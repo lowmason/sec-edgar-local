@@ -1,5 +1,7 @@
 # Task16 offline harness implementation report
 
+Current checkpoint: the original bounded genuine run and original offline verification both ended **incomplete, exit 12**. A native-runtime representation false negative is isolated and corrected offline; the separately versioned supplemental analyzer is implemented but **has not been executed against the actual run**. Scoped review is required before that adjudication. Earlier sections below retain their original checkpoint context.
+
 Status: **offline implementation ready for independent controller review; L12 not_run**. No real preparation, real run, SEC HTTP, accepted-root mutation, scheduling, or production code changes occurred. This report does not close the Task16 live acceptance gate.
 
 ## Scope and baseline
@@ -97,3 +99,35 @@ The exact guarded command remains the command quoted above. New retained streams
 Self-review focused on full-boundary cancellation and every evidence relationship from frozen call through transport admission, raw snapshot, reuse/replay, transform, publication and capture. Additional focused tests prove failed/limited launch inventory, conservative crash charges, rejected unconfirmed refunds and tampered transport hashes. The full verifier's positive offline case remains incomplete because its explicit fixture transports cannot establish genuine native acquisition. No new live features, provider integration, production flags, parser allowances or timing relaxation were introduced. The driver grew to hold the required external supervision and evidence readers; no production/module split was introduced during this correction.
 
 L12 remains **not_run**, and the harness remains pending scoped independent re-review. The selected release/payload, original window policy, preserved default config and absent approved data root remain unchanged. No full default suite was repeated because only external harness/test/evidence files changed. Fresh AST/JSON checks, `git diff --check`, default-config hash and absent-root checks accompany the final focused gate.
+
+
+## Offline native-runtime false-negative correction and supplemental analyzer
+
+The original bounded genuine attempt used immutable selection SHA256 `38bf7c024e0fd5ac3bd9724e7c05a7f8876308ae90b79e42d4391d592f36b6cc` and UTC window `2026-10-18T23:23:15.020920+00:00` through `23:38:15.020920+00:00`. Its original report `/private/tmp/sec-local-task16-acceptance-20261018/run-b0bfc28dcc7d48e686b12b5253d8a414.json` remains incomplete, exit 12, SHA256 `8f9db79396e792f70b4d1435c272213a46023619ef27510a4b17b11b059677b1`. The original offline verification completed exit 12 at `/private/tmp/sec-local-task16-acceptance-20261018/verification-7fee6a8a509a482d949f9cd78cec9a79.json`, SHA256 `6842f951917b98876b0630279dbdcf9383b2d2c1a14a89c426ecffbb53ca9d8a`. Neither record nor the original watchdog is rewritten or relabeled as an original success.
+
+Read-only diagnosis found all ten native admissions had matching typed command contexts, complete positively drained receipts and one socket start. All three selected entity hashes matched retained snapshots. The false negative was exactly `context.runtime != native_descriptor(...)`: runtime is the real production `FrozenMapping` dataclass, whose dataclass equality rejects a plain `dict` even with identical values. All ten direct comparisons were false while `context.to_mapping()['runtime']` comparisons were true. The driver correction is exactly that one comparison expression; release/mode/context/drain/budget/publication criteria are unchanged.
+
+Before any driver edit, both original scripts were archived under `/private/tmp/sec-local-task16-acceptance-20261018/harness-original/` and verified against the original selection:
+
+- `accept-sec-native.py`: `ba05e8c53ba83bb80987d16d499915d358958faa74215a008b3008033f3a5f9e`.
+- `sec-acceptance-child.py`: `ff8e89012d04a0bb0811f90c0260d11eeb3e4797544e150fa97594f5e7c68bb4`.
+
+The controller confirmed original verification session 53307 had completed before authorizing the driver edit. Original selection bytes, original report bytes, archived script bytes and default config hash were freshly checked after the correction. No new HTTP, selection, acceptance window, attempt, retry or genuine workflow was executed.
+
+The new external `scripts/verify-sec-native-adjudication.py` is a narrow offline analyzer. It requires explicit selection, original report, original verification and a new output beneath the evidence directory's `adjudications/` subdirectory. It establishes native isolated/cache policy and verifies the same installed release/config/root/issuer, while checking historical script bytes at their exact archived paths against their original selected hashes. The temporary historical read-verification map is never serialized as a replacement selection and is never passed to a run/CLI acquisition path. Standard run/child verification continues checking the original selected current-script paths and refuses the changed harness. A native child regression proves that refusal occurs before budget or root creation.
+
+The supplemental analyzer reuses the same independent frozen-call/launch, production-admission, conservative ledger, source snapshot/replay/reuse and selected transform/publication/capture readers. It requires exact original command/budget snapshots, original verification/report hash linkage, unchanged positively drained UTC/monotonic watchdogs and original driver exit 12. Only the six fields affected by native classification may differ: the four native/persistence/reuse/replay booleans, `selected_native`, and qualified `published_reads`. Every other proof field must remain identical. The separate output records original report/verification/status/exit, selected and archived original script hashes, corrected driver and analyzer hashes, unchanged budgets and the independently derived status. The analyzer never silently equates the original exit 12 with exit 0.
+
+TDD used the same exact guarded focused command quoted earlier:
+
+| Log | Result |
+| --- | --- |
+| `23-native-adjudication-red.log` | **36 tests, three intended failures.** The public `derive_source_proof` returned `selected_native=[]` for actual native `RunContext`/`FrozenMapping` instances and fake complete transport boundaries; two supplemental analyzer contracts were missing. This reproduced the native false negative through the public proof function, not merely a helper equality assertion. |
+| `24-native-adjudication-green.log` | 36 tests passed in 14.764 seconds after the one-expression fix and separate analyzer implementation. Native positive classification succeeds; wrong-release, fixture-mode and mismatched-context negatives remain excluded. |
+| `25-native-adjudication-integration.log` | **36 tests passed in 15.719 seconds, zero failures/errors/skips/warnings.** Also proves changed-harness refusal in an actual selected native child and a full supplemental analysis over a synthetic original fixture archive. That synthetic supplement retains original exit/status 12/incomplete and derives incomplete, without modifying its original report. |
+
+The original explicit fixture classifier remains false and cannot satisfy L12. The new native positive tests use real production native descriptor/context types with explicitly fake transport boundaries over synthetic fixture publications. They are offline proof of the correction and are not genuine acquisition evidence.
+
+Fresh static checks parse both harness scripts, the new analyzer and the test module; `git diff --check` passes. Corrected driver SHA256 is `6700ea7470ad1ee3b1e774fd03014ddd23d3b458e6c19450bfc43a7a7a37101e`; supplemental analyzer SHA256 is `0a1d6b5b5aa218fc4d8ac09084c54e78fa05d8776ab79891aac306bf025649ab`. The default config remains byte-identical. No production file, dependency, lock or installed release was changed; no full default suite was repeated.
+
+**Review gate remains closed for actual adjudication.** The actual evidence directory still has no `adjudications/` output. After scoped review accepts the corrected reader and analyzer, the controller can run the separately versioned offline command against the original selection/report/verification and save a supplemental record. The original run and original verification remain incomplete regardless of any later supplemental analysis status. Observed 17 launches, 21 publications/captured reads and 73 unselected pending sources describe this bounded attempt; they do not establish historical coverage.
