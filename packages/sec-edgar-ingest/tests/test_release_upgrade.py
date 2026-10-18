@@ -28,6 +28,73 @@ class ReleaseUpgradeTests(unittest.TestCase):
             self.assertEqual(report['release_id'], self.b.release_id)
             self.assertFalse(report['pythonpath_present'])
             self.assertEqual(report['sequence']['exit'], 0)
+            self.assertIn('checkout_guard', report)
+            guard = report['checkout_guard']
+            self.assertEqual(guard['policy']['releases'], [str(self.b.directory)])
+            self.assertFalse(guard['application_imported'])
+            self.assertEqual(guard['denied'], [True] * 6)
+
+    def test_installed_http_spawn_guards_main_before_transport_class_unpickle(self):
+        import subprocess
+        from workflow_proof import harness_files
+        from network_guard import write_checkout_policy
+        from sec_edgar_ingest.runtime import native_python_argv, isolated_environment
+        with tempfile.TemporaryDirectory(prefix='sec-installed-http-audit-') as directory:
+            root = Path(directory)
+            harness = root / 'harness'
+            for source in harness_files():
+                target = harness / source.relative_to(Path(__file__).parent)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+            write_checkout_policy(harness, {'version': 'sec-checkout-policy-v1',
+                                           'releases': [str(self.b.directory)]})
+            script = root / 'http_probe.py'
+            script.write_text('import sys;sys.path.insert(0,' + repr(str(harness)) + ')\n' + '''
+from network_guard import install,checkout_evidence,checkout_policy
+install()
+import json,os,pathlib
+root=pathlib.Path(__file__).parent
+def record(value):
+    with (root/'order.jsonl').open('a') as stream:stream.write(json.dumps(value)+'\\n')
+record({'event':'main-before-application',**checkout_evidence()})
+def exchange(transport,cancellation,channel):
+    import sec_edgar_ingest.download as download
+    record({'event':'http-target','pid':os.getpid(),'policy':checkout_policy(),'origin':download.__file__})
+    return download._child_exchange(transport,cancellation,channel)
+if __name__=='__main__':
+    import multiprocessing
+    from sec_edgar_ingest.coordination import Clock
+    from support import LoopbackServer,fixture_settings,loopback_sender,real_context,real_permit,SPAWN_ALLOWANCE_SECONDS
+    settings=fixture_settings();clock=Clock();server=LoopbackServer(b'audited installed HTTP')
+    try:
+        sender=loopback_sender(settings,clock,server.origin,target=exchange,spool=root/'spool')
+        receipt=sender.send(server.url,real_context(clock,settings),
+            real_permit(clock,SPAWN_ALLOWANCE_SECONDS+1,start_seconds=SPAWN_ALLOWANCE_SECONDS),
+            cancellation=multiprocessing.get_context('spawn').Event())
+        print(json.dumps({'complete':receipt.complete,'body':receipt.temporary_path.read_text(),
+            'requests':len(server.requests),'records':[json.loads(line) for line in (root/'order.jsonl').read_text().splitlines()]}))
+    finally:server.close()
+''')
+            done = subprocess.run([*native_python_argv(self.b.python), str(script)], cwd=root,
+                                  env=isolated_environment(), capture_output=True, text=True, timeout=30)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            proof = json.loads(done.stdout)
+            self.assertTrue(proof['complete'], proof)
+            self.assertEqual(proof['body'], 'audited installed HTTP')
+            self.assertEqual(proof['requests'], 1)
+            main, child, target = proof['records']
+            self.assertEqual([item['event'] for item in proof['records']],
+                             ['main-before-application', 'main-before-application', 'http-target'])
+            self.assertNotEqual(main['pid'], child['pid'])
+            self.assertEqual(child['pid'], target['pid'])
+            self.assertFalse(main['application_imported'])
+            self.assertFalse(child['application_imported'])
+            self.assertEqual(child['denied'], [True] * 6)
+            self.assertEqual(target['policy']['releases'], [str(self.b.directory)])
+            self.assertTrue(Path(target['origin']).is_relative_to(self.b.directory))
+            destination = os.environ.get('SEC_EDGAR_TASK14_HTTP_EVIDENCE')
+            if destination:
+                shutil.copytree(root, destination)
 
     def test_installed_adapter_rejects_real_wrong_transitive_with_direct_pins_intact(self):
         import locked_proof
@@ -74,3 +141,12 @@ class ReleaseUpgradeTests(unittest.TestCase):
                 self.assertEqual(case['b_exit'], 0)
                 self.assertGreater(case['rows'], 0)
                 self.assertTrue(case['a_child_under_b_parent'])
+                records = [case['parent'], *case['children']]
+                selected = sorted({str(Path(item['python']).parents[2]) for item in records})
+                self.assertEqual(len(selected), 2, 'upgrade must exercise actual A-origin and B processes')
+                for record in records:
+                    guard = record['checkout_guard']
+                    self.assertEqual(guard['pid'], record['pid'])
+                    self.assertFalse(guard['application_imported'])
+                    self.assertEqual(guard['denied'], [True] * 6)
+                    self.assertEqual(guard['policy']['releases'], selected)

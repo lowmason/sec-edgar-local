@@ -3,6 +3,7 @@ from network_guard import install
 install()
 
 import os
+import contextlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -242,12 +243,18 @@ class PinnedNativeDispatchTests(unittest.TestCase):
                 log = root / 'native-pids.jsonl'
                 sentinel_log = root / 'native-sentinel.jsonl'
                 sentinel = write_import_sentinel(root / 'network_import_sentinel.py', sentinel_log)
-                runner = CheckedRunner(pid_log=log, sentinel=sentinel)
+                audit_log = root / 'checkout-sentinel.jsonl'
+                with sentinel.open('a') as stream:
+                    stream.write("from network_guard import checkout_evidence\n"
+                        + "with Path(" + repr(str(audit_log)) + ").open('a') as stream: stream.write(json.dumps(checkout_evidence())+'\\n')\n")
+                runner = CheckedRunner(pid_log=log, sentinel=sentinel,
+                    policy={'version': 'sec-checkout-policy-v1', 'releases': [str(release.directory)]})
                 argv = [*native_python_argv(release.python), '-m', 'sec_edgar_ingest', 'backfill',
                     '--config', str(config), '--run-id', 'installed-parent', '--execution-id', 'manual',
                     '--attempt-id', 'a', '--deadline', context.deadline.isoformat(),
                     '--fixture-pack', str(pack), '--today', context.pinned_on.isoformat()]
-                result = runner(release.python, argv, deadline=context.deadline, environ=isolated_environment())
+                with contextlib.chdir(root):
+                    result = runner(release.python, argv, deadline=context.deadline, environ=isolated_environment())
                 self.assertEqual(result.returncode, 0, result.stderr.decode())
                 self.assertTrue(result.drained)
                 records = [json.loads(line) for line in log.read_text().splitlines()]
@@ -255,6 +262,15 @@ class PinnedNativeDispatchTests(unittest.TestCase):
                 self.assertTrue(all(record['python'] == str(release.python) for record in records))
                 self.assertEqual(len({record['pid'] for record in records}), len(records))
                 self.assertEqual(len(sentinel_log.read_text().splitlines()), len(records))
+                audits = [json.loads(line) for line in audit_log.read_text().splitlines()]
+                self.assertEqual([item['pid'] for item in audits], [item['pid'] for item in records])
+                self.assertTrue(all(not item['application_imported'] for item in audits), audits)
+                self.assertTrue(all(item['denied'] == [True] * 6 for item in audits), audits)
+                self.assertTrue(all(item['policy']['releases'] == [str(release.directory)] for item in audits))
+                destination = os.environ.get('SEC_EDGAR_TASK14_NATIVE_EVIDENCE')
+                if destination:
+                    import shutil
+                    shutil.copytree(root, Path(destination) / release.release_id)
 
 
 class SupervisedProcessTests(unittest.TestCase):

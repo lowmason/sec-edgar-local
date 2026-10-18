@@ -267,9 +267,13 @@ def verify_native_release(verified, harness, evidence):
         for source, name in ((verified.directory / 'uv.lock', 'accepted-uv.lock'),
                              (verified.directory / 'runtime-requirements.txt', 'requirements.txt')):
             shutil.copy2(source, copied / name)
+        from network_guard import write_checkout_policy
+        write_checkout_policy(copied, {'version': 'sec-checkout-policy-v1',
+                                      'releases': [str(verified.directory)]})
         script = copied / 'verify_installed.py'
-        script.write_text('''from network_guard import install
+        script.write_text('''from network_guard import install,checkout_evidence,checkout_policy
 install()
+guard_evidence=checkout_evidence()
 import hashlib,json,os,pathlib,sys,subprocess
 from locked_proof import locked_requirements,marker_environment,installed_inventory,assert_inventory,package_inventory
 from sec_edgar_ingest.runtime import preflight_current
@@ -290,7 +294,7 @@ command_help={}
 console=release.directory/'venv/bin/sec-edgar-ingest'
 if console.read_bytes()!=native_console_script(release.python): raise ValueError('installed console bootstrap differs')
 for command in ('discover','collect','transform','publish','backfill','daily','reconcile','candidates','approve','history','rollback'):
-    bootstrap='from network_guard import install;install();import runpy,sys;sys.argv=["sec_edgar_ingest",*sys.argv[1:]];runpy.run_module("sec_edgar_ingest",run_name="__main__")'
+    bootstrap='from network_guard import install,checkout_evidence;install();checkout_evidence();import runpy,sys;sys.argv=["sec_edgar_ingest",*sys.argv[1:]];runpy.run_module("sec_edgar_ingest",run_name="__main__")'
     bootstrap='import sys;sys.path.insert(0,'+repr(str(root))+');'+bootstrap
     done=subprocess.run([*native_python_argv(release.python),'-c',bootstrap,command,'--help'],cwd=root.parent,env=isolated_environment(),capture_output=True,text=True,timeout=20)
     if done.returncode or 'usage:' not in done.stdout: raise ValueError('installed command help failed: '+command)
@@ -298,7 +302,7 @@ for command in ('discover','collect','transform','publish','backfill','daily','r
 sequence_output=pathlib.Path(sys.argv[2])/'sequence'
 sequence_output.mkdir()
 report=sequence(sequence_output, release_manifest=release.directory/'release.json')
-print(json.dumps({'exit':0,'pid':os.getpid(),'python':sys.executable,'import_root':str(base),'pythonpath_present':'PYTHONPATH' in os.environ,'release_id':release.release_id,'dependencies':actual,'payload':payload,'sequence':report,'command_help':command_help},sort_keys=True))
+print(json.dumps({'exit':0,'pid':os.getpid(),'python':sys.executable,'import_root':str(base),'pythonpath_present':'PYTHONPATH' in os.environ,'release_id':release.release_id,'dependencies':actual,'payload':payload,'sequence':report,'command_help':command_help,'checkout_guard':guard_evidence},sort_keys=True))
 ''')
         bootstrap = ('import runpy,sys;sys.path.insert(0,' + repr(str(copied)) + ');'
                      'sys.argv=[' + repr(str(script)) + ',*sys.argv[1:]];'
@@ -344,6 +348,9 @@ def verify_wrong_transitive(verified, harness, evidence):
         copied.mkdir()
         for name in ('network_guard.py', 'locked_proof.py'):
             shutil.copy2(harness / name, copied / name)
+        from network_guard import write_checkout_policy
+        write_checkout_policy(copied, {'version': 'sec-checkout-policy-v1',
+                                      'releases': [str(disposable.directory)]})
         code = ('import sys;sys.path.insert(0,' + repr(str(copied)) + ');'
                 'from network_guard import install;install();'
                 'import json,pathlib;from locked_proof import installed_inventory,assert_inventory;'

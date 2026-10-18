@@ -229,3 +229,190 @@ class CloudImportInventoryTests(unittest.TestCase):
                         if name.split('.')[0] in ('azure', 'msal'):
                             forbidden.append((str(path), node.lineno, name))
         self.assertEqual(forbidden, [])
+
+
+class CheckoutPolicyTests(unittest.TestCase):
+    def isolated_probe(self, body, *, policy=None, files=None):
+        import shutil
+        with tempfile.TemporaryDirectory(prefix='sec-checkout-probe-') as directory:
+            root = Path(directory)
+            shutil.copy2(TESTS / 'network_guard.py', root / 'network_guard.py')
+            if policy is not None:
+                (root / 'checkout-policy.json').write_text(json.dumps(policy))
+            for name, text in (files or {}).items():
+                (root / name).write_text(text)
+            script = root / 'probe.py'
+            script.write_text('import sys;sys.path.insert(0,' + repr(str(root)) + ')\n' + body)
+            done = subprocess.run([sys.executable, '-I', '-B', '-X', 'pycache_prefix=/dev/null', str(script)],
+                                  cwd=root, capture_output=True, text=True, timeout=30)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            return json.loads(done.stdout)
+
+    def test_explicit_policy_denies_both_source_roots_and_code_attributed_execution(self):
+        proof = self.isolated_probe('''
+import importlib.util,importlib.machinery,json,os,pathlib,subprocess,network_guard
+roots = ('/Users/lowell/Projects/sec-edgar', '/Users/lowell/Projects/sec-edgar-local')
+precompiled = [compile('pass', root+'/audit-sentinel.py','exec') for root in roots]
+installer = getattr(network_guard,'install_checkout_policy',None)
+denied=[]
+if installer:
+    installer(())
+    for root,code in zip(roots,precompiled):
+        path = pathlib.Path(root)/'.git/HEAD'
+        loader=importlib.machinery.SourceFileLoader('checkout_import',str(path))
+        spec=importlib.util.spec_from_loader(loader.name,loader)
+        for operation in (lambda:path.read_bytes(), lambda:exec(code,{}),
+                lambda:compile('pass',root+'/sentinel.py','exec'),
+                lambda:loader.exec_module(importlib.util.module_from_spec(spec)),
+                lambda:subprocess.run([root+'/scripts/sec-edgar-local'],check=False)):
+            try: operation()
+            except PermissionError: denied.append(True)
+            else: denied.append(False)
+print(json.dumps({'available':bool(installer),'denied':denied}))
+''')
+        self.assertTrue(proof['available'], 'explicit checkout-denial audit policy is required')
+        self.assertEqual(proof['denied'], [True] * 10)
+
+    def test_path_aliases_cannot_escape_and_only_exact_selected_release_is_allowed(self):
+        project = TESTS.resolve().parents[2]
+        with tempfile.TemporaryDirectory(prefix='audit-selected-', dir=project / 'releases') as directory:
+            selected = Path(directory) / 'releases' / ('sha256=' + 'a' * 64)
+            selected.mkdir(parents=True)
+            (selected / 'allowed.py').write_text('VALUE=1\n')
+            body = '''
+import importlib.util,json,pathlib,network_guard,sys
+selected=pathlib.Path(SELECTED)
+alias=pathlib.Path('alias')
+alias.symlink_to('/Users/lowell/Projects/sec-edgar-local')
+(selected/'escape').symlink_to('/Users/lowell/Projects/sec-edgar/.git')
+installer=getattr(network_guard,'install_checkout_policy',None)
+denied=[]; allowed=[]
+if installer:
+    installer((str(selected),))
+    for path in (alias/'.git/HEAD',selected/'..'/'..'/'pyproject.toml',
+            selected.parent/'artifact-cache'/'artifacts.json',
+            selected.with_name(selected.name+'-sibling')/'other.py',
+            selected/'escape'/'HEAD',
+            selected/'escape'/'..'/'pyproject.toml',
+            pathlib.Path('/Users/lowell/Projects/sec-edgar/.git/HEAD')):
+        try:path.read_bytes()
+        except PermissionError:denied.append(True)
+        else:denied.append(False)
+    for path in (selected/'allowed.py',pathlib.Path('outside.py')):
+        if path.name=='outside.py':path.write_text('VALUE=2')
+        spec=importlib.util.spec_from_file_location(path.stem,path)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        allowed.append(module.VALUE)
+print(json.dumps({'available':bool(installer),'denied':denied,'allowed':allowed}))
+'''.replace('SELECTED', repr(str(selected)))
+            proof = self.isolated_probe(body)
+        self.assertTrue(proof['available'], 'exact selected-release exception is required')
+        self.assertEqual(proof['denied'], [True] * 7)
+        self.assertEqual(proof['allowed'], [1, 2])
+
+    def test_copied_spawn_main_has_policy_before_application_class_unpickle(self):
+        policy = {'version': 'sec-checkout-policy-v1', 'releases': []}
+        app_module = '''
+import json,os,sys,pathlib
+denied=[]
+for root in ('/Users/lowell/Projects/sec-edgar','/Users/lowell/Projects/sec-edgar-local'):
+    try:(pathlib.Path(root)/'.git/HEAD').read_bytes()
+    except PermissionError:denied.append(True)
+    else:denied.append(False)
+with pathlib.Path(__file__).with_name('order.jsonl').open('a') as stream:
+    stream.write(json.dumps({'event':'application-class-import','pid':os.getpid(),'denied':denied})+'\\n')
+class Transport: pass
+def exchange(transport,cancellation,channel):
+    channel.put({'pid':os.getpid(),'denied':denied})
+'''
+        body = '''
+import json,os,pathlib,network_guard,multiprocessing,functools
+denied=[]
+for root in ('/Users/lowell/Projects/sec-edgar','/Users/lowell/Projects/sec-edgar-local'):
+    try:(pathlib.Path(root)/'.git/HEAD').read_bytes()
+    except PermissionError:denied.append(True)
+    else:denied.append(False)
+with pathlib.Path('order.jsonl').open('a') as stream:
+    stream.write(json.dumps({'event':'main-before-application','pid':os.getpid(),'denied':denied})+'\\n')
+if __name__=='__main__':
+    from application_sentinel import Transport,exchange
+    spawn=multiprocessing.get_context('spawn'); channel=spawn.Queue()
+    target=functools.partial(network_guard.guarded_transport_child,target=exchange,origin='http://127.0.0.1:42421')
+    process=spawn.Process(target=target,args=(Transport(),None,channel))
+    process.start();proof=channel.get(timeout=15);process.join(10)
+    records=[json.loads(line) for line in pathlib.Path('order.jsonl').read_text().splitlines()]
+    print(json.dumps({'child':proof,'pid':os.getpid(),'exit':process.exitcode,'records':records}))
+    channel.close();channel.join_thread()
+'''
+        proof = self.isolated_probe(body, policy=policy, files={'application_sentinel.py': app_module})
+        self.assertEqual(proof['exit'], 0)
+        self.assertNotEqual(proof['pid'], proof['child']['pid'])
+        child = [item for item in proof['records'] if item['pid'] == proof['child']['pid']]
+        self.assertEqual([item['event'] for item in child],
+                         ['main-before-application', 'application-class-import'])
+        self.assertTrue(all(item['denied'] == [True, True] for item in proof['records']), proof)
+
+    def test_default_source_harness_has_no_checkout_policy(self):
+        proof = self.isolated_probe('''
+import json,pathlib,network_guard
+print(json.dumps({'readable':bool(pathlib.Path('/Users/lowell/Projects/sec-edgar-local/.git/HEAD').read_bytes())}))
+''')
+        self.assertTrue(proof['readable'])
+
+    def test_policy_refuses_root_alias_exception_and_scope_replacement(self):
+        proof = self.isolated_probe('''
+import json,pathlib,network_guard
+alias=pathlib.Path('releases')/('sha256='+'a'*64)
+alias.parent.mkdir()
+alias.symlink_to('/Users/lowell/Projects/sec-edgar-local')
+refused=[]
+for releases in ((str(alias.absolute()),),('/Users/lowell/Projects/sec-edgar',)):
+    try:network_guard.install_checkout_policy(releases)
+    except ValueError:refused.append(True)
+    else:refused.append(False)
+if all(refused):
+    network_guard.install_checkout_policy(())
+    network_guard.install_checkout_policy(())
+    try:network_guard.install_checkout_policy(('/tmp/releases/sha256='+'b'*64,))
+    except ValueError:refused.append(True)
+    else:refused.append(False)
+print(json.dumps({'refused':refused}))
+''')
+        self.assertEqual(proof['refused'], [True, True, True])
+
+    def test_policy_refuses_blanket_releases_or_cache_exception(self):
+        proof = self.isolated_probe('''
+import json,network_guard
+refused=[]
+for path in ('/Users/lowell/Projects/sec-edgar-local/releases',
+             '/Users/lowell/Projects/sec-edgar-local/releases/artifact-cache'):
+    try:network_guard.install_checkout_policy((path,))
+    except ValueError:refused.append(True)
+    else:refused.append(False)
+print(json.dumps({'refused':refused}))
+''')
+        self.assertEqual(proof['refused'], [True, True])
+
+    def test_directory_fd_opens_use_actual_directory_without_changing_storage_operations(self):
+        proof = self.isolated_probe('''
+import json,os,pathlib,network_guard
+outside=pathlib.Path.cwd()
+(outside/'locks').write_text('outside fixture')
+allowed_fd=os.open(outside,os.O_RDONLY)
+denied_fd=os.open('/Users/lowell/Projects/sec-edgar-local',os.O_RDONLY)
+network_guard.install_checkout_policy(())
+os.chdir('/Users/lowell/Projects/sec-edgar-local')
+try:
+    try:
+        fd=os.open('locks',os.O_RDONLY,dir_fd=allowed_fd)
+    except PermissionError:allowed=False
+    else:allowed=os.read(fd,100)==b'outside fixture';os.close(fd)
+    os.chdir(outside)
+    try:
+        fd=os.open('.git/HEAD',os.O_RDONLY,dir_fd=denied_fd)
+    except PermissionError:denied=True
+    else:denied=False;os.close(fd)
+    print(json.dumps({'allowed':allowed,'denied':denied}))
+finally:os.close(allowed_fd);os.close(denied_fd)
+''')
+        self.assertEqual(proof, {'allowed': True, 'denied': True})

@@ -7,15 +7,173 @@ from __future__ import annotations
 
 import socket
 import sys
+import json
+import os
+import re
+from contextvars import ContextVar
 from collections import Counter
 from contextlib import contextmanager
 from functools import wraps
 from threading import RLock
 from urllib.parse import urlsplit
+from pathlib import Path
 
 _INSTALLED = False
 _ORIGINS: Counter[tuple[str, int]] = Counter()
 _LOCK = RLock()
+_CHECKOUT_POLICY = None
+_CHECKOUT_ROOTS = tuple(Path(value) for value in
+    ('/Users/lowell/Projects/sec-edgar', '/Users/lowell/Projects/sec-edgar-local'))
+_POLICY_FILE = 'checkout-policy.json'
+
+
+def checkout_policy():
+    """Snapshot only an explicitly installed proof scope; source tests have none."""
+    if _CHECKOUT_POLICY is None:
+        return None
+    return {'version': 'sec-checkout-policy-v1', 'releases': list(_CHECKOUT_POLICY)}
+
+
+def _policy_releases(value):
+    if (not isinstance(value, dict) or set(value) != {'version', 'releases'}
+            or value['version'] != 'sec-checkout-policy-v1'
+            or not isinstance(value['releases'], list)
+            or any(not isinstance(path, str) or not Path(path).is_absolute()
+                   or Path(path).parent.name != 'releases'
+                   or re.fullmatch(r'sha256=[0-9a-f]{64}', Path(path).name) is None
+                   for path in value['releases'])):
+        raise ValueError('invalid copied checkout policy')
+    return tuple(sorted(set(value['releases'])))
+
+
+def write_checkout_policy(harness, value):
+    """Seal a selected proof's scope into its copied, stdlib-only bootstrap."""
+    if value is not None:
+        _policy_releases(value)
+        path = Path(harness) / _POLICY_FILE
+        with path.open('x') as stream:
+            json.dump(value, stream, sort_keys=True)
+        path.chmod(0o444)
+
+
+def install_checkout_policy(releases):
+    """Deny checkout code/data except exact release dirs preverified by the caller.
+
+    This is test instrumentation, not release validation. Runtime preflight is
+    still the sole release authority; callers pass only its selected directories.
+    """
+    global _CHECKOUT_POLICY
+    selected = _policy_releases({'version': 'sec-checkout-policy-v1', 'releases': list(releases)})
+    if _CHECKOUT_POLICY is not None:
+        if selected != _CHECKOUT_POLICY:
+            raise ValueError('checkout policy is immutable within a proof process')
+        return
+    exceptions = tuple((Path(os.path.abspath(path)), Path(path).resolve()) for path in selected)
+    roots = tuple((root, root.resolve()) for root in _CHECKOUT_ROOTS)
+    original, real_original = roots[0]
+    if any(path.is_relative_to(original) or resolved.is_relative_to(real_original)
+           or any(root.is_relative_to(path) or real.is_relative_to(resolved) for root, real in roots)
+           for path, resolved in exceptions):
+        raise ValueError('checkout policy cannot exempt a source root')
+
+    def require_path(raw):
+        if isinstance(raw, int) or raw is None:
+            return
+        value = os.fsdecode(raw)
+        if value.startswith('<') and value.endswith('>'):
+            return
+        lexical = Path(os.path.abspath(value))
+        # Resolve the original spelling: collapsing '..' first would hide a
+        # preceding symlink's real parent and could misattribute a source open.
+        resolved = Path(value).resolve()
+        for root, real_root in roots:
+            lexical_denied = lexical.is_relative_to(root) and not any(
+                lexical.is_relative_to(path) for path, _ in exceptions)
+            resolved_denied = resolved.is_relative_to(real_root) and not any(
+                resolved.is_relative_to(real) for _, real in exceptions)
+            if lexical_denied or resolved_denied:
+                raise PermissionError('installed proof refuses checkout access: ' + value)
+
+    def audit(event, args):
+        if event == 'open':
+            require_path(directory_open_path.get() or args[0])
+        elif event == 'compile':
+            require_path(args[1])
+        elif event == 'exec':
+            require_path(args[0].co_filename)
+        elif event == 'import' and args[1] is not None:
+            require_path(args[1])
+        elif event in ('subprocess.Popen', 'os.exec', 'os.posix_spawn'):
+            require_path(args[0])
+            # Python script execution is distinct from data/provenance arguments.
+            argv = args[1]
+            if isinstance(argv, (list, tuple)) and Path(os.fsdecode(args[0])).name.startswith('python'):
+                arguments = iter(argv[1:])
+                for argument in arguments:
+                    if argument in ('-c', '-m'):
+                        break
+                    if argument in ('-X', '-W', '--check-hash-based-pycs'):
+                        next(arguments, None)
+                        continue
+                    if not os.fsdecode(argument).startswith('-'):
+                        require_path(argument)
+                        break
+
+    # CPython's open audit event omits dir_fd. Attribute that event to the real
+    # directory while preserving the exact descriptor-relative storage call.
+    directory_open_path = ContextVar('checkout_directory_open_path', default=None)
+    actual_open = os.open
+
+    @wraps(actual_open)
+    def open_at(path, flags, mode=0o777, *, dir_fd=None):
+        if dir_fd is None or os.path.isabs(path):
+            return actual_open(path, flags, mode, dir_fd=dir_fd)
+        if sys.platform == 'darwin':
+            import fcntl
+            base = os.fsdecode(fcntl.fcntl(dir_fd, fcntl.F_GETPATH, b'\0' * 1024).split(b'\0')[0])
+        else:
+            base = os.readlink('/proc/self/fd/' + str(dir_fd))
+        token = directory_open_path.set(os.path.join(base, os.fsdecode(path)))
+        try:
+            return actual_open(path, flags, mode, dir_fd=dir_fd)
+        finally:
+            directory_open_path.reset(token)
+
+    _CHECKOUT_POLICY = selected
+    sys.addaudithook(audit)
+    os.open = open_at
+
+
+def restore_checkout_policy(value):
+    if value is not None:
+        install_checkout_policy(_policy_releases(value))
+
+
+def checkout_evidence():
+    """Observe denial before a copied proof imports any application module."""
+    import importlib.machinery
+    import importlib.util
+    application_imported = any(name == 'sec_edgar_ingest' or name.startswith('sec_edgar_ingest.')
+                               for name in sys.modules)
+    if application_imported:
+        raise AssertionError('checkout audit sentinel ran after an application import')
+    denied = []
+    for root in _CHECKOUT_ROOTS:
+        path = root / '.git/HEAD'
+        loader = importlib.machinery.SourceFileLoader('checkout_import_sentinel', str(path))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        code = (lambda: None).__code__.replace(co_filename=str(root / 'checkout-exec-sentinel.py'))
+        for operation in (path.read_bytes,
+                          lambda: loader.exec_module(importlib.util.module_from_spec(spec)),
+                          lambda: exec(code, {})):
+            try:
+                operation()
+            except PermissionError:
+                denied.append(True)
+            else:
+                raise AssertionError('installed proof escaped checkout audit policy')
+    return {'pid': os.getpid(), 'policy': checkout_policy(), 'denied': denied,
+            'application_imported': application_imported}
 
 
 def _require_address(address) -> None:
@@ -120,9 +278,10 @@ def selected_origin(origin: str):
                 del _ORIGINS[address]
 
 
-def guarded_transport_child(transport, cancellation, channel, *, target, origin):
+def guarded_transport_child(transport, cancellation, channel, *, target, origin, policy=None):
     """Spawn carries only this selected fixture origin and its original target."""
     install()
+    restore_checkout_policy(policy)
     with selected_origin(origin):
         return target(transport, cancellation, channel)
 
@@ -143,5 +302,10 @@ def current_origins() -> tuple[str, ...]:
 if __name__ in ('__main__', '__mp_main__'):
     # Support and spawn targets share one guard instance when run as a file.
     sys.modules.setdefault('network_guard', sys.modules[__name__])
+# Spawn imports this module before unpickling its partial target/application args.
+# The sidecar exists only in an explicitly copied installed-proof harness.
+_copied_policy = Path(__file__).absolute().with_name(_POLICY_FILE)
+if _copied_policy.is_file():
+    restore_checkout_policy(json.loads(_copied_policy.read_text()))
 if __name__ == '__main__':
     main()

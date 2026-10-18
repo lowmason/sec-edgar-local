@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 def payload(path):
     value = json.loads(Path(path).read_bytes())
-    if not isinstance(value, dict) or set(value) != {'version', 'origins', 'fault', 'clock', 'pid_log', 'sentinel'}:
+    if not isinstance(value, dict) or set(value) != {'version', 'origins', 'fault', 'clock', 'pid_log', 'sentinel', 'checkout_policy'}:
         raise ValueError('checked harness payload requires exact fields')
     if value['version'] != 'sec-checked-harness-v1':
         raise ValueError('unsupported checked harness payload')
@@ -73,6 +73,7 @@ def boundary(value, name):
 
 
 def run(value):
+    early_guard = guard.checkout_evidence() if guard.checkout_policy() is not None else None
     if value['sentinel']:
         sentinel_spec = importlib.util.spec_from_file_location('network_import_sentinel', value['sentinel'])
         sentinel_spec.loader.exec_module(importlib.util.module_from_spec(sentinel_spec))
@@ -120,7 +121,7 @@ def run(value):
     if value['pid_log']:
         with Path(value['pid_log']).open('a') as stream:
             stream.write(json.dumps({'pid': os.getpid(), 'python': sys.executable,
-                'origin': cli.__file__, 'argv': sys.argv[2:]}) + '\n')
+                'origin': cli.__file__, 'argv': sys.argv[2:], 'checkout_guard': early_guard}) + '\n')
     if value['clock'] is not None:
         from datetime import datetime
         instant = datetime.fromisoformat(value['clock'])
@@ -143,6 +144,9 @@ def run(value):
 
 if __name__ in ('__main__', '__mp_main__'):
     _payload = payload(sys.argv[1])
+    guard.restore_checkout_policy(_payload['checkout_policy'])
+    if guard.checkout_policy() != _payload['checkout_policy']:
+        raise ValueError('checked payload differs from copied checkout policy')
     _origins = contextlib.ExitStack()
     for _origin in _payload['origins']:
         _origins.enter_context(guard.selected_origin(_origin))

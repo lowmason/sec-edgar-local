@@ -424,9 +424,17 @@ def installed(output):
     reports = []
     for release in (a, b):
         evidence = output / release.release_id
-        argv = [*native_python_argv(release.python), str(project / 'scripts/verify-native-release.py'),
-                '--release', str(release.directory), '--harness', str(harness), '--evidence', str(evidence)]
         with tempfile.TemporaryDirectory(prefix='sec-proof-entry-') as directory:
+            outside = Path(directory)
+            entry = outside / 'verify-native-release.py'
+            shutil.copy2(project / 'scripts/verify-native-release.py', entry)
+            copied = outside / 'harness'
+            for source in harness_files(harness):
+                target = copied / source.relative_to(harness)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+            argv = [*native_python_argv(release.python), str(entry),
+                    '--release', str(release.directory), '--harness', str(copied), '--evidence', str(evidence)]
             done = subprocess.run(argv, cwd=directory, env=isolated_environment(),
                                   capture_output=True, text=True, timeout=660)
         if done.returncode:
@@ -478,7 +486,7 @@ def upgrade_sequence(output, a_manifest, b_manifest):
         # final addresses so catalog artifacts stay available to other proofs.
         a_manifest, b_manifest = (reconstruct_release(Path(manifest), outside / 'releases',
             python=Path(sys.executable)) / 'release.json' for manifest in (a_manifest, b_manifest))
-        b = preflight(b_manifest)
+        a, b = preflight(a_manifest), preflight(b_manifest)
         harness = outside / 'harness'
         harness.mkdir()
         from locked_proof import proof_harness
@@ -487,6 +495,9 @@ def upgrade_sequence(output, a_manifest, b_manifest):
             target = harness / source.relative_to(source_root)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
+        from network_guard import write_checkout_policy
+        write_checkout_policy(harness, {'version': 'sec-checkout-policy-v1',
+                                       'releases': sorted([str(a.directory), str(b.directory)])})
         code = ('import sys,json;sys.path.insert(0,' + repr(str(harness)) + ');'
                 'from network_guard import install;install();'
                 'from workflow_proof import installed_upgrade_cases;'

@@ -814,8 +814,9 @@ def loopback_sender(settings, clock, origin, *, target=None, spool=None):
             return origin
         def _child_target(self):
             from functools import partial
-            from network_guard import guarded_transport_child
-            return partial(guarded_transport_child, target=target or super()._child_target(), origin=origin)
+            from network_guard import guarded_transport_child, checkout_policy
+            return partial(guarded_transport_child, target=target or super()._child_target(),
+                           origin=origin, policy=checkout_policy())
         def _spool_directory(self):
             if spool is None:
                 return super()._spool_directory()

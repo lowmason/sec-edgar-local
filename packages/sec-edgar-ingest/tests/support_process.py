@@ -1,5 +1,5 @@
 """Immutable test-only stage harness, injected at the checked runner boundary."""
-from network_guard import install, current_origins
+from network_guard import install, current_origins, checkout_policy, write_checkout_policy
 install()
 
 import json
@@ -55,12 +55,13 @@ def checked_clock(root, instant):
 
 
 class CheckedRunner:
-    def __init__(self, *, fault=None, pid_log=None, sentinel=None, die_with_child=False, clock=None):
+    def __init__(self, *, fault=None, pid_log=None, sentinel=None, die_with_child=False, clock=None, policy=None):
         self.fault = fault
         self.pid_log = pid_log
         self.sentinel = sentinel
         self.die_with_child = die_with_child
         self.clock = clock
+        self.policy = policy
 
     def __call__(self, python, argv, *, deadline, environ):
         fault = self.fault if self.fault is not None else _CURRENT_FAULT.get()
@@ -69,9 +70,11 @@ class CheckedRunner:
             tests = Path(__file__).absolute().parent
             for name in ('checked_child_bootstrap.py', 'network_guard.py', 'support_process.py'):
                 shutil.copyfile(tests / name, root / name)
+            policy = self.policy if self.policy is not None else checkout_policy()
+            write_checkout_policy(root, policy)
             value = {'version': 'sec-checked-harness-v1', 'origins': list(current_origins()),
                 'fault': fault, 'clock': self.clock if self.clock is not None else _CURRENT_CLOCK.get(), 'pid_log': str(self.pid_log) if self.pid_log else None,
-                'sentinel': str(self.sentinel) if self.sentinel else None}
+                'sentinel': str(self.sentinel) if self.sentinel else None, 'checkout_policy': policy}
             path = root / 'payload.json'
             path.write_text(json.dumps(value, sort_keys=True))
             path.chmod(0o444)
