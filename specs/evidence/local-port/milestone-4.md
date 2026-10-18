@@ -125,3 +125,53 @@ UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never UV_CACHE_DIR=/private/tmp/sec-edgar-local
 Final covering gate and commit are recorded in the appended Task 12 fix report. No genuine SEC HTTP, new dependency/policy surface, or additional self-review breadth was introduced.
 
 T12-I1 full covering loop passed: `test_local_launcher.py` - `Ran 23 tests in 6.919s`, `OK`; `test_launcher_process.py` - `Ran 14 tests in 41.948s`, `OK`; loop exit 0. The full loop uses the two-file command already recorded above, retaining offline settings, guard, scoped native-ps escalation, and installed path/source-SHA assertions. `git diff --check` exited 0 before the fix commit.
+
+## Task 13: complete offline check and native runbooks
+
+The complete entry point is `sh scripts/check-sec-edgar-ingest.sh` from any cwd. It changes to the project root, sets uv offline/no interpreter downloads, then discovers every `test_*.py` through `network_guard.py` before discovery imports. It freshness-checks the lock with `--locked`; builds wheel and sdist with the retained uv_build 0.12.24 artifact's SHA-256 constraints, force-PEP517/no-index and build-hash enforcement; runs actual console help for the top level and all eleven commands; checks module version/help, compileall and whitespace. No genuine driver, provider/image tooling or old Stage-2/3 cache is required. Artifact setup remains explicit and separate; missing artifacts fail rather than skip/fetch.
+
+Shared test inputs are absolute `SEC_LOCAL_PROOF_CACHE` (default project releases/artifact-cache) and optional absolute `SEC_LOCAL_PROOF_CATALOG`. The latter has exactly `{format_version:"sec-local-proof-catalog-v1",a_manifest,b_manifest,harness}` with absolute paths, distinct real preflighted releases and exact installed runtime inventories. The factory honors these inputs across the suite, and catalog selection controls the copied test-only harness actually executed by installed proof. No production configuration field was introduced. Without a catalog the existing offline factory builds independent committed A/B snapshots. The native setup runbook gives an executed reconstruction command that preserves those environments beyond factory process exit, always installing venvs at final addresses.
+
+The installed adapter still accepts only output, refuses obsolete wheel/reviewed-source flags, and calls the same standalone `scripts/verify-native-release.py --release PATH --harness PATH --evidence PATH` under each selected isolated installed Python. Native policy remains `-I -B -X pycache_prefix=/dev/null`; equivalent stdlib bootstrap sets policy before its first app import. Harness imports never add an application source path/PYTHONPATH. Evidence is create-only and commands run in unrelated temporary cwd. The installed verifier executes all eleven guarded installed *module* helps and verifies exact native shell console bootstrap bytes; direct guarded shell execution is not claimed. The checker separately executes actual console helps. Real disposable urllib3 metadata tamper and exact installed inventory refusal remain, including unchanged required Requests/PyArrow pins.
+
+New runbooks cover native setup/config after release identity exists; manual launcher and low-level/operator commands; stopped-writer SQLite/object backups with WAL/SHM caveats; completed replay versus expired unfinished attempt/new-ID continuation; pending/gated/quarantined work and post-pointer repair; uncertainty/disk-full/corruption; immutable upgrades/original-runtime retention; and capture-once validated reader counts. Sole issuer remains an external operating declaration; same-root collector coordination does not extend to different roots. No scheduling, cleanup, migration or store relocation is supplied.
+
+Task 13 RED evidence under the prepared offline cache:
+
+- Workspace contract: missing complete checker assertion, 8 tests in 0.522s, FAILED (failures=2). The other failure was a new guard-oracle exception type corrected before implementation.
+- Installed contract: actual A/B fixture proof completed through the old harness, but lacked selected_harness_probe; 13 tests in 115.018s, FAILED (errors=6). Primary contract RED is ignored selected harness; ignored variable validation also led mocked tests into unrelated old setup errors, which are not counted as the intended RED.
+- Catalog immutability follow-up: running installed proof alongside existing B-upgrade exposed temporary renaming of supplied A by the upgrade's missing-runtime probe. The failed final loop is retained, not counted as green. Timing-independent regression failed with `missing-runtime upgrade proof must not rename catalog release A`, 1 test in 0.918s. Upgrade proof now reconstructs disposable A/B environments before destructive probes; focused regression passed 1 test in 3.658s and checks original content unchanged. Catalog A/B are never moved, copied as venvs or edited.
+
+Guarded/offline commands from project root use:
+
+```sh
+export UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never
+export UV_CACHE_DIR=/private/tmp/sec-edgar-local-uv-cache
+export SEC_LOCAL_PROOF_CACHE=/Users/lowell/Projects/sec-edgar-local/releases/artifact-cache
+export SEC_LOCAL_PROOF_CATALOG=/private/tmp/sec-local-task13-final-proofs/catalog.json
+for test_file in test_workspace.py test_workflow_installed_lock.py test_release_upgrade.py; do
+  uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p "$test_file" -v
+done
+```
+
+The first two files are the required Task 13 focused gate; the third is covering verification for immutable catalog upgrade probes and installed two-release behavior. Complete original release content inventories bracket this sequential loop. Results are recorded below after completion. Existing launcher gate passed `test_local_launcher.py`: 23 tests in 7.472s, OK; `test_launcher_process.py`: 14 tests in 42.640s, OK. The latter kept guard/offline settings under scoped native-ps escalation.
+
+`sh -n scripts/check-sec-edgar-ingest.sh` passed. The check's real source-operation tail (only full default discovery omitted, since Task 14 owns it) passed: constrained wheel/sdist build, all actual console helps, module version 0.2.0/help, compileall and `git -c core.whitespace=cr-at-eol diff --check`. Build output contained successful progress without backend warning. The unmodified checker also ran under command-recording shims: all 19 operations, including first guarded full discovery, were verified. Fourteen local README/runbook links resolve. Actual wheel contains py.typed and no cloud modules. CPython 3.14.0, uv 0.13.1 (Homebrew 2026-10-14 aarch64-apple-darwin), uv_build 0.12.24, Requests 2.34.2/PyArrow 25.0.1 and lock are unchanged.
+
+Full local detail/output is retained in `.sdd/1-sec-edgar-local-spec/task-13-report.md` and its named logs. The final proof catalog preserves independently committed test snapshots A fee7f3c976ec4575fc8136320c091b42bfc5ca9e1b5d6987d7d37e081c273d6d and B 9b8d083759a02130ebbb84e5f8e9ed9d342318680c0c02337ffc421555695bf5 with their copied test-only harness. These are not production release selections.
+
+Fresh complete installed L01–L11/L13 acceptance remains **pending Task 14**. L12 genuine SEC HTTP remains **not_run**; retained genuine fixtures, synthetic/loopback HTTP and these targeted checks cannot satisfy it. No readiness, live activation, historical coverage or later Task 15/16 review/release/harness/config/budget gate is inferred.
+
+Final sequential catalog gate on the final helper code, exit 0:
+
+```text
+Ran 9 tests in 1.151s
+OK
+Ran 14 tests in 131.201s
+OK
+Ran 3 tests in 245.946s
+OK
+catalog A/B complete content inventories unchanged
+```
+
+The full covering upgrade suite includes both native verifiers, actual disposable transitive tamper, B continuation of A pending work, A publication repair under B, captured/history reads, missing-A execution refusal, exact approval/rollback and retained observation authority. The original supplied catalog environments remain present and byte-for-byte content-inventory equal before/after all covering cases. `task-13-catalog-before.json` and `task-13-catalog-after.json` retain the complete matching inventories; `task-13-final-focused.log` retains all case output. Final shell syntax and whitespace checks exited 0. Independent task review is still the controller's next gate.

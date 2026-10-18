@@ -4,9 +4,14 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import os
 
 
 def main():
+    # Establish cache policy before the first application import, including when
+    # invoked through a stdlib-only test bootstrap.
+    sys.dont_write_bytecode = True
+    sys.pycache_prefix = os.devnull
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', required=True, type=Path)
     parser.add_argument('--harness', required=True, type=Path)
@@ -20,9 +25,9 @@ def main():
     from network_guard import install
     install()
     from locked_proof import verify_native_release
-    from sec_edgar_ingest.runtime import preflight
+    from sec_edgar_ingest.runtime import preflight_current
     manifest = args.release / 'release.json' if args.release.is_dir() else args.release
-    report = verify_native_release(preflight(manifest), args.harness, args.evidence)
+    report = verify_native_release(preflight_current(manifest), args.harness, args.evidence)
     print(json.dumps({'exit': report['exit'], 'release_id': report['release_id'],
                       'evidence': str(args.evidence)}))
     return report['exit']

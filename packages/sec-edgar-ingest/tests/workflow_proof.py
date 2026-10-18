@@ -62,13 +62,13 @@ def write_proof_fixtures(destination):
     (destination / 'expected.json').write_bytes(canonical_json(to_mapping_value(EXPECTED)))
 
 
-def harness_files() -> tuple[Path, ...]:
-    root = Path(__file__).resolve().parent
+def harness_files(root=None) -> tuple[Path, ...]:
+    root = Path(__file__).resolve().parent if root is None else Path(root)
     fixed = ('support_workflows.py', 'workflow_proof.py', 'network_guard.py',
              'support.py', 'support_etl.py', 'locked_proof.py', 'support_process.py',
              'checked_child_bootstrap.py', 'fixtures/config/local.json')
     values = tuple(root / name for name in fixed) + tuple(
-        FIXTURE_ROOT / name for name in ('manifest.json', 'expected.json', *BODY_FILES))
+        root / 'fixtures/workflows/proof' / name for name in ('manifest.json', 'expected.json', *BODY_FILES))
     if any(not path.is_file() for path in values):
         raise ValueError('a fixed test-only harness file is missing')
     return values
@@ -416,12 +416,24 @@ def _isolated_script(python, harness, script_name, *arguments):
 def installed(output):
     """Use current committed proof releases and the shared native verifier."""
     from support_release import proof_releases
-    from locked_proof import verify_native_release, verify_wrong_transitive
+    from locked_proof import proof_harness, verify_wrong_transitive
+    from sec_edgar_ingest.runtime import native_python_argv, isolated_environment
     project = Path(__file__).resolve().parents[3]
     a, b = proof_releases(project, project / 'releases/artifact-cache')
-    return {'exit': 0, 'releases': [verify_native_release(release, Path(__file__).parent,
-        output / release.release_id) for release in (a, b)],
-        'wrong_transitive': verify_wrong_transitive(a, Path(__file__).parent,
+    harness = proof_harness(Path(__file__).parent)
+    reports = []
+    for release in (a, b):
+        evidence = output / release.release_id
+        argv = [*native_python_argv(release.python), str(project / 'scripts/verify-native-release.py'),
+                '--release', str(release.directory), '--harness', str(harness), '--evidence', str(evidence)]
+        with tempfile.TemporaryDirectory(prefix='sec-proof-entry-') as directory:
+            done = subprocess.run(argv, cwd=directory, env=isolated_environment(),
+                                  capture_output=True, text=True, timeout=660)
+        if done.returncode:
+            raise RuntimeError('standalone native verifier failed: ' + done.stderr)
+        reports.append(json.loads((evidence / 'report.json').read_text()))
+    return {'exit': 0, 'releases': reports,
+        'wrong_transitive': verify_wrong_transitive(a, harness,
                                                    output / 'wrong-transitive')}
 
 
@@ -457,15 +469,21 @@ if __name__ == '__main__':
 def upgrade_sequence(output, a_manifest, b_manifest):
     """Run upgrade assertions inside installed B, with copied test support only."""
     import tempfile
+    from sec_edgar_ingest.release import reconstruct_release
     from sec_edgar_ingest.runtime import preflight, native_python_argv, isolated_environment
-    b = preflight(Path(b_manifest))
     output = Path(output).absolute()
     with tempfile.TemporaryDirectory(prefix='sec-upgrade-harness-') as directory:
         outside = Path(directory)
+        # Missing-runtime probes rename A. Reconstruct both venvs at disposable
+        # final addresses so catalog artifacts stay available to other proofs.
+        a_manifest, b_manifest = (reconstruct_release(Path(manifest), outside / 'releases',
+            python=Path(sys.executable)) / 'release.json' for manifest in (a_manifest, b_manifest))
+        b = preflight(b_manifest)
         harness = outside / 'harness'
         harness.mkdir()
-        source_root = Path(__file__).absolute().parent
-        for source in harness_files():
+        from locked_proof import proof_harness
+        source_root = proof_harness(Path(__file__).absolute().parent)
+        for source in harness_files(source_root):
             target = harness / source.relative_to(source_root)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)

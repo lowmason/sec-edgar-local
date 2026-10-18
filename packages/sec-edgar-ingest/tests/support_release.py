@@ -13,7 +13,7 @@ from pathlib import Path
 
 from sec_edgar_ingest.release import build_release, prepare_artifact_cache
 from sec_edgar_ingest.runtime import VerifiedRelease, preflight
-from locked_proof import assert_release_inventory
+from locked_proof import assert_release_inventory, proof_catalog, proof_harness
 
 _PROOFS: dict[tuple[str, str, str], tuple[VerifiedRelease, VerifiedRelease]] = {}
 _TEMPORARIES: list[tempfile.TemporaryDirectory] = []
@@ -43,13 +43,16 @@ def proof_releases(project: Path, cache: Path) -> tuple[VerifiedRelease, Verifie
     The source checkout may be dirty. Only its independent committed snapshots
     are built, so this factory cannot admit an uncommitted production release.
     """
-    project, cache = project.absolute(), cache.absolute()
-    catalog_path = os.environ.get('SEC_EDGAR_PROOF_CATALOG')
-    if catalog_path:
-        catalog = json.loads(Path(catalog_path).read_text())
-        if set(catalog) != {'a', 'b'}:
-            raise ValueError('proof catalog requires exactly a and b manifest paths')
-        proofs = tuple(preflight(Path(catalog[name])) for name in ('a', 'b'))
+    project = project.absolute()
+    override = os.environ.get('SEC_LOCAL_PROOF_CACHE')
+    cache = Path(override) if override else cache
+    if not cache.is_absolute():
+        raise ValueError('proof cache path must be absolute')
+    catalog = proof_catalog()
+    if catalog:
+        from workflow_proof import harness_files
+        harness_files(proof_harness(project / 'packages/sec-edgar-ingest/tests'))
+        proofs = tuple(preflight(Path(catalog[name])) for name in ('a_manifest', 'b_manifest'))
         if proofs[0].release_id == proofs[1].release_id:
             raise ValueError('proof catalog must identify distinct real releases')
         for proof in proofs:

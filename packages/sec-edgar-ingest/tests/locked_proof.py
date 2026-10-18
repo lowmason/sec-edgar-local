@@ -12,6 +12,41 @@ from collections.abc import Mapping
 from pathlib import Path
 
 
+def proof_catalog():
+    """Read the closed, test-only catalog before any artifact or build effects."""
+    import os
+    raw = os.environ.get('SEC_LOCAL_PROOF_CATALOG')
+    if not raw:
+        return None
+    def unique(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError('duplicate proof catalog field')
+            value[key] = item
+        return value
+    path = Path(raw)
+    if not path.is_absolute():
+        raise ValueError('proof catalog path must be absolute')
+    value = json.loads(path.read_text(), object_pairs_hook=unique)
+    if (not isinstance(value, dict)
+            or set(value) != {'format_version', 'a_manifest', 'b_manifest', 'harness'}
+            or value['format_version'] != 'sec-local-proof-catalog-v1'):
+        raise ValueError('invalid proof catalog schema/version')
+    for name in ('a_manifest', 'b_manifest', 'harness'):
+        if not isinstance(value[name], str) or not Path(value[name]).is_absolute():
+            raise ValueError('proof catalog paths must be absolute')
+    return value
+
+
+def proof_harness(default):
+    catalog = proof_catalog()
+    harness = Path(catalog['harness']) if catalog else Path(default)
+    if not harness.is_absolute() or not harness.is_dir():
+        raise ValueError('proof harness must be an existing absolute directory')
+    return harness
+
+
 def normalized(name):
     if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', name):
         raise ValueError('invalid distribution name')
@@ -193,7 +228,8 @@ def assert_release_inventory(verified):
     code = ('import importlib.metadata as m,json,re; '
             'print(json.dumps({re.sub(r"[-_.]+","-",d.metadata["Name"]).lower():d.version '
             'for d in m.distributions()}))')
-    result = subprocess.run([str(verified.python), '-I', '-c', code], check=True, capture_output=True, text=True)
+    from sec_edgar_ingest.runtime import native_python_argv
+    result = subprocess.run([*native_python_argv(verified.python), '-c', code], check=True, capture_output=True, text=True)
     assert_inventory(expected, json.loads(result.stdout), identity['application']['version'])
     declared = {item['name']: item['version'] for item in identity['dependencies']}
     if declared != expected:
@@ -208,16 +244,16 @@ def verify_native_release(verified, harness, evidence):
     import tempfile
     from workflow_proof import harness_files
     from sec_edgar_ingest.runtime import isolated_environment, native_python_argv
-    harness, evidence = Path(harness).absolute(), Path(evidence).absolute()
-    if harness != Path(__file__).absolute().parent:
-        raise ValueError('native verifier requires the explicit test-only harness directory')
+    harness, evidence = proof_harness(harness), Path(evidence)
+    if not evidence.is_absolute():
+        raise ValueError('native verifier evidence must be absolute')
     evidence.mkdir(parents=True, exist_ok=False)
     environment = isolated_environment()
     with tempfile.TemporaryDirectory(prefix='sec-native-verifier-') as directory:
         outside = Path(directory)
         copied = outside / 'harness'
         copied.mkdir()
-        for source in harness_files():
+        for source in harness_files(harness):
             destination = copied / source.relative_to(harness)
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
@@ -227,7 +263,7 @@ def verify_native_release(verified, harness, evidence):
         script = copied / 'verify_installed.py'
         script.write_text('''from network_guard import install
 install()
-import hashlib,json,os,pathlib,sys
+import hashlib,json,os,pathlib,sys,subprocess
 from locked_proof import locked_requirements,marker_environment,installed_inventory,assert_inventory,package_inventory
 from sec_edgar_ingest.runtime import preflight_current
 import sec_edgar_ingest
@@ -242,10 +278,20 @@ payload=package_inventory(base)
 if {name:item['sha256'] for name,item in payload.items()} != {item['path']:item['sha256'] for item in release.manifest['identity']['package_files']}:
     raise ValueError('installed package payload differs from verified release')
 if 'site-packages' not in base.parts: raise ValueError('application import outside installed release')
+from sec_edgar_ingest.runtime import native_python_argv,isolated_environment,native_console_script
+command_help={}
+console=release.directory/'venv/bin/sec-edgar-ingest'
+if console.read_bytes()!=native_console_script(release.python): raise ValueError('installed console bootstrap differs')
+for command in ('discover','collect','transform','publish','backfill','daily','reconcile','candidates','approve','history','rollback'):
+    bootstrap='from network_guard import install;install();import runpy,sys;sys.argv=["sec_edgar_ingest",*sys.argv[1:]];runpy.run_module("sec_edgar_ingest",run_name="__main__")'
+    bootstrap='import sys;sys.path.insert(0,'+repr(str(root))+');'+bootstrap
+    done=subprocess.run([*native_python_argv(release.python),'-c',bootstrap,command,'--help'],cwd=root.parent,env=isolated_environment(),capture_output=True,text=True,timeout=20)
+    if done.returncode or 'usage:' not in done.stdout: raise ValueError('installed command help failed: '+command)
+    command_help[command]={'exit':done.returncode,'stdout':done.stdout,'stderr':done.stderr,'entrypoint':'guarded installed module; exact console bootstrap verified'}
 sequence_output=pathlib.Path(sys.argv[2])/'sequence'
 sequence_output.mkdir()
 report=sequence(sequence_output, release_manifest=release.directory/'release.json')
-print(json.dumps({'exit':0,'pid':os.getpid(),'python':sys.executable,'import_root':str(base),'pythonpath_present':'PYTHONPATH' in os.environ,'release_id':release.release_id,'dependencies':actual,'payload':payload,'sequence':report},sort_keys=True))
+print(json.dumps({'exit':0,'pid':os.getpid(),'python':sys.executable,'import_root':str(base),'pythonpath_present':'PYTHONPATH' in os.environ,'release_id':release.release_id,'dependencies':actual,'payload':payload,'sequence':report,'command_help':command_help},sort_keys=True))
 ''')
         bootstrap = ('import runpy,sys;sys.path.insert(0,' + repr(str(copied)) + ');'
                      'sys.argv=[' + repr(str(script)) + ',*sys.argv[1:]];'
@@ -269,9 +315,9 @@ def verify_wrong_transitive(verified, harness, evidence):
     import tempfile
     from sec_edgar_ingest.release import reconstruct_release
     from sec_edgar_ingest.runtime import isolated_environment, native_python_argv, preflight
-    harness, evidence = Path(harness).absolute(), Path(evidence).absolute()
-    if harness != Path(__file__).absolute().parent:
-        raise ValueError('transitive probe requires the explicit test-only harness directory')
+    harness, evidence = proof_harness(harness), Path(evidence)
+    if not evidence.is_absolute():
+        raise ValueError('transitive probe evidence must be absolute')
     evidence.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix='sec-wrong-transitive-') as directory:
         outside = Path(directory)

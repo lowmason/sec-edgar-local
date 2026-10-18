@@ -20,6 +20,11 @@ class WorkspaceTests(unittest.TestCase):
         package = tomllib.loads(
             (ROOT / "packages/sec-edgar-ingest/pyproject.toml").read_text())
         self.assertEqual(package["project"]["name"], "sec-edgar-ingest")
+        self.assertEqual(package['project']['version'], '0.2.0')
+        self.assertEqual(package['project']['requires-python'], '>=3.14')
+        self.assertEqual((ROOT / '.python-version').read_text().strip(), '3.14')
+        self.assertEqual(package['project']['dependencies'], ['pyarrow==25.0.1', 'requests==2.34.2'])
+        self.assertEqual(package['build-system'], {'requires': ['uv_build>=0.12.15,<0.13.0'], 'build-backend': 'uv_build'})
         self.assertEqual(package["project"]["scripts"]["sec-edgar-ingest"],
                          "sec_edgar_ingest.cli:main")
 
@@ -98,3 +103,64 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertIn(expected, result.stdout)
                     self.assertEqual(result.stderr, "")
+
+
+class OfflineCheckTests(unittest.TestCase):
+    def test_complete_check_executes_every_declared_local_operation(self):
+        import json
+        import os
+        import tempfile
+        script = ROOT / 'scripts/check-sec-edgar-ingest.sh'
+        self.assertTrue(script.is_file(), 'complete offline check entry point is absent')
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            log = root / 'commands.jsonl'
+            shim = ('#!' + sys.executable + '\nimport json,os,sys\n'
+                    'with open(os.environ["CHECK_LOG"],"a") as stream: '
+                    'stream.write(json.dumps([os.path.basename(sys.argv[0]),*sys.argv[1:]])+"\\n")\n')
+            for name in ('uv', 'git'):
+                path = root / name
+                path.write_text(shim)
+                path.chmod(0o755)
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'],
+                       CHECK_LOG=str(log), SEC_LOCAL_PROOF_CACHE=str(root / 'cache'))
+            done = subprocess.run(['sh', str(script)], cwd=root, env=env,
+                                  capture_output=True, text=True, timeout=20)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            commands = [json.loads(line) for line in log.read_text().splitlines()]
+            self.assertEqual(len(commands), 19)
+            self.assertIn('network_guard.py', ' '.join(commands[0]))
+            self.assertEqual(commands[0][-3:], ['-p', 'test_*.py', '-v'])
+            build = next(argv for argv in commands if argv[:2] == ['uv', 'build'])
+            self.assertIn('--require-build-hashes', build)
+            helps = [argv[-2] for argv in commands if argv[-1] == '--help'
+                     and argv[-3] == 'sec-edgar-ingest' and argv[-2] != 'sec-edgar-ingest']
+            self.assertEqual(helps, ['discover', 'collect', 'transform', 'publish', 'backfill',
+                'daily', 'reconcile', 'candidates', 'approve', 'history', 'rollback'])
+            self.assertEqual(commands[-1], ['git', '-c', 'core.whitespace=cr-at-eol', 'diff', '--check'])
+
+    def test_complete_check_preserves_guard_lock_and_explicit_backend_policy(self):
+        script = ROOT / 'scripts/check-sec-edgar-ingest.sh'
+        self.assertTrue(script.is_file(), 'complete offline check entry point is absent')
+        body = script.read_text()
+        self.assertTrue(body.startswith('#!/bin/sh\nset -eu\n'))
+        self.assertIn("network_guard.py discover -s packages/sec-edgar-ingest/tests -p 'test_*.py' -v", body)
+        self.assertNotIn('--frozen', body)
+        for argument in ('--offline', '--locked', '--wheel --sdist', '--force-pep517',
+                         '--require-build-hashes', '--preview-features build-dependency-hashes',
+                         'compileall -q', 'diff --check'):
+            self.assertIn(argument, body)
+        self.assertIn('discover collect transform publish backfill daily reconcile candidates approve history rollback', body)
+        for forbidden in ('genuine_live_driver', 'docker', 'bicep', 'az ', 'adf', 'stage-2'):
+            self.assertNotIn(forbidden, body)
+
+    def test_guard_is_active_before_discovered_test_import(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            probe = pathlib.Path(directory) / 'test_import_guard.py'
+            probe.write_text("import socket,unittest\n"
+                "with unittest.TestCase().assertRaises(AssertionError): socket.create_connection(('example.com',443))\n"
+                "class GuardTest(unittest.TestCase):\n def test_import_was_guarded(self): pass\n")
+            done = subprocess.run([sys.executable, str(ROOT / 'packages/sec-edgar-ingest/tests/network_guard.py'),
+                'discover', '-s', directory, '-v'], capture_output=True, text=True, timeout=20)
+            self.assertEqual(done.returncode, 0, done.stderr)

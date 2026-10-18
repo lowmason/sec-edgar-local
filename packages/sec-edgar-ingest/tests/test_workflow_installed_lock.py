@@ -160,3 +160,102 @@ class InstalledLockTests(unittest.TestCase):
             self.assertNotEqual(after, before)
             (package / 'schema.bin').unlink()
             self.assertNotEqual(set(package_inventory(root)), set(before))
+
+
+class ProofInputsTests(unittest.TestCase):
+    def test_upgrade_missing_runtime_probe_uses_disposable_release_paths(self):
+        import json
+        import subprocess
+        import workflow_proof
+        from support_release import proof_releases
+        project = Path(__file__).resolve().parents[3]
+        a, b = proof_releases(project, project / 'releases/artifact-cache')
+        accepted_before = {release.release_id: inventory(release.directory) for release in (a, b)}
+        actual_run = subprocess.run
+        commands = []
+        def checked_run(argv, **kwargs):
+            if any('installed_upgrade_cases' in str(item) for item in argv):
+                commands.append(argv)
+                self.assertNotEqual(Path(argv[-2]), a.directory / 'release.json',
+                    'missing-runtime upgrade proof must not rename catalog release A')
+                self.assertNotEqual(Path(argv[-1]), b.directory / 'release.json')
+                self.assertTrue(a.python.is_file())
+                self.assertTrue(b.python.is_file())
+                return subprocess.CompletedProcess(argv, 0, json.dumps({'exit': 0}), '')
+            return actual_run(argv, **kwargs)
+        with tempfile.TemporaryDirectory() as directory, patch.object(workflow_proof.subprocess, 'run', checked_run):
+            report = workflow_proof.upgrade_sequence(Path(directory), a.directory / 'release.json',
+                                                      b.directory / 'release.json')
+        self.assertEqual(report['exit'], 0)
+        self.assertEqual(len(commands), 1)
+        self.assertEqual({release.release_id: inventory(release.directory) for release in (a, b)},
+                         accepted_before, 'upgrade proof mutated supplied catalog release content')
+
+    def test_relative_cache_override_is_refused_before_setup(self):
+        import os
+        from support_release import proof_releases
+        with patch.dict(os.environ, {'SEC_LOCAL_PROOF_CACHE': 'relative/cache', 'SEC_LOCAL_PROOF_CATALOG': ''}), \
+             patch('support_release.prepare_artifact_cache') as prepare:
+            with self.assertRaisesRegex(ValueError, 'absolute'):
+                proof_releases(Path(__file__).resolve().parents[3], Path('/unused'))
+            prepare.assert_not_called()
+
+    def test_missing_override_cache_fails_without_fetching(self):
+        import os
+        from support_release import proof_releases
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory) / 'absent'
+            with patch.dict(os.environ, {'SEC_LOCAL_PROOF_CACHE': str(cache), 'SEC_LOCAL_PROOF_CATALOG': ''}):
+                with self.assertRaisesRegex(ValueError, 'artifact cache absent'):
+                    proof_releases(Path(__file__).resolve().parents[3], Path('/unused'))
+            self.assertFalse(cache.exists())
+
+    def test_catalog_requires_exact_versioned_absolute_inputs(self):
+        import json, os
+        from support_release import proof_releases
+        with tempfile.TemporaryDirectory() as directory:
+            catalog = Path(directory) / 'catalog.json'
+            base = {'format_version': 'sec-local-proof-catalog-v1',
+                    'a_manifest': '/missing/a/release.json', 'b_manifest': '/missing/b/release.json',
+                    'harness': str(Path(__file__).parent.resolve())}
+            invalid = [dict(base, format_version='old'), dict(base, extra='bad'),
+                       dict(base, a_manifest='relative.json'), dict(base, harness='relative')]
+            for value in invalid:
+                catalog.write_text(json.dumps(value))
+                with self.subTest(value=value), patch.dict(os.environ, {'SEC_LOCAL_PROOF_CATALOG': str(catalog)}), \
+                     patch('support_release.prepare_artifact_cache') as prepare:
+                    with self.assertRaises(ValueError):
+                        proof_releases(Path(__file__).resolve().parents[3], Path('/unused'))
+                    prepare.assert_not_called()
+
+    def test_installed_selected_harness_runs_with_real_release_and_transitive_tamper(self):
+        import json, os, shutil
+        from support_release import proof_releases
+        from workflow_proof import installed
+        project = Path(__file__).resolve().parents[3]
+        a, b = proof_releases(project, project / 'releases/artifact-cache')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            harness = root / 'selected-harness'
+            shutil.copytree(Path(__file__).parent, harness, ignore=shutil.ignore_patterns('__pycache__'))
+            # The selected support must execute, not merely pass schema validation.
+            with (harness / 'workflow_proof.py').open('a') as stream:
+                stream.write("\n_original_sequence = sequence\ndef sequence(*args, **kwargs):\n"
+                    "    report = dict(_original_sequence(*args, **kwargs))\n"
+                    "    report['selected_harness_probe'] = 'executed'\n    return report\n")
+            catalog = root / 'catalog.json'
+            catalog.write_text(json.dumps({'format_version': 'sec-local-proof-catalog-v1',
+                'a_manifest': str(a.directory / 'release.json'), 'b_manifest': str(b.directory / 'release.json'),
+                'harness': str(harness)}))
+            with patch.dict(os.environ, {'SEC_LOCAL_PROOF_CATALOG': str(catalog)}):
+                report = installed(root / 'evidence')
+            self.assertEqual(report['exit'], 0)
+            for release in report['releases']:
+                self.assertEqual(release['sequence']['selected_harness_probe'], 'executed')
+                self.assertEqual(len(release['command_help']), 11)
+                self.assertFalse(release['pythonpath_present'])
+                self.assertIn('sec_edgar_ingest/py.typed', release['payload'])
+                self.assertFalse(any('azure' in name.lower() or 'msal' in name.lower()
+                                     for name in release['payload']))
+            self.assertEqual(report['wrong_transitive']['actual_transitive'], '0.0.0')
+            self.assertEqual(report['wrong_transitive']['direct_pins'], {'requests': '2.34.2', 'pyarrow': '25.0.1'})
