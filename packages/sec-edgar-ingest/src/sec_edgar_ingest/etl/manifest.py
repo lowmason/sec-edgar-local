@@ -124,6 +124,8 @@ def read_manifest(capture: GenerationCapture, objects: ObjectStore) -> Generatio
         raise Conflict('captured manifest hash or length differs')
     value = parse_json(body)
     manifest = GenerationManifest.from_mapping(value)
+    from ..runtime import validate_producer
+    validate_producer(manifest.runtime, objects)
     if canonical_json(manifest.to_mapping()) != body:
         raise ValueError('generation manifest must use canonical JSON')
     if (manifest.quarter, manifest.generation_id) != (capture.quarter, capture.generation_id):

@@ -61,44 +61,53 @@ class EtlContractTests(unittest.TestCase):
         from support import fixture_context
         context = fixture_context()
         workset = TransformedWorkset('0'*64, 'worksets/sec/snapshot/sha256='+'a'*64+'/workset.json', context, context, (), (), True)
-        payload = {'format_version': 'sec-transformed-workset-v1', **workset.to_mapping()}
+        payload = {'format_version': 'sec-local-transformed-workset-v1', **workset.to_mapping()}
         payload.pop('workset_id')
         workset = replace(workset, workset_id=sha256(canonical_json(payload)).hexdigest())
         body = encode_transformed(workset)
         self.assertEqual(encode_transformed(decode_transformed(body)), body)
         self.assertEqual(transformed_ref(workset), 'worksets/sec/transformed/sha256='+workset.workset_id+'/workset.json')
-        for malformed in (b' '+body, body.replace(b'"complete":true', b'"complete":true,"complete":true'), body.replace(b'"complete":true', b'"unknown":1,"complete":true'), body.replace(b'sec-transformed-workset-v1', b'sec-transformed-workset-v9')):
+        for malformed in (b' '+body, body.replace(b'"complete":true', b'"complete":true,"complete":true'), body.replace(b'"complete":true', b'"unknown":1,"complete":true'), body.replace(b'sec-local-transformed-workset-v1', b'sec-local-transformed-workset-v9')):
             with self.subTest(body=malformed[:70]), self.assertRaises(ValueError):
                 decode_transformed(malformed)
         with self.assertRaises(ValueError):
             encode_transformed(replace(workset, workset_id='b'*64))
 
-    def test_retained_stage2_worksets_and_registry_remain_byte_identical(self):
-        import json
+    def test_old_context_workset_and_binding_are_refused_without_rewrite(self):
+        import tempfile
         from pathlib import Path
-        from sec_edgar_ingest.config import Settings
-        from sec_edgar_ingest.storage.contracts import deployment_binding
-        from sec_edgar_ingest.worksets import decode_source_workset, decode_snapshot_workset, encode_workset
-        root = Path(__file__).resolve().parents[3]
-        bundle = root/'specs/evidence/sec-filing-index-ingestion/stage-2/verification/sec-edgar-stage-2-46bhxh8j'
-        objects = bundle/'state/.fixture-state/objects'
-        paths = sorted((objects/'worksets/sec').glob('*/sha256=*/workset.json'))
-        self.assertEqual(len(paths), 4)
-        for path in paths:
-            body = path.read_bytes()
-            decoder = decode_source_workset if '/source/' in str(path) else decode_snapshot_workset
-            workset = decoder(body)
-            self.assertEqual(encode_workset(workset), body)
-            config = workset.context.to_mapping()['effective_config']
-            settings = Settings.from_mapping(config)
-            self.assertEqual(settings.to_mapping(), config)
-            self.assertEqual(settings.config_sha256, workset.context.config_sha256)
-        registries = list((objects/'locks').glob('**/binding.json'))
-        self.assertEqual(len(registries), 1)
-        body = registries[0].read_bytes()
-        saved = json.loads(body)
-        binding = deployment_binding(settings, root=Path(saved['storage']['local_root']))
-        self.assertEqual(canonical_json(binding), body)
+        from sec_edgar_ingest.models import RunContext, parse_json
+        from sec_edgar_ingest.storage.contracts import Conflict, REGISTRY_PATH
+        from sec_edgar_ingest.storage.local import LocalObjectStore
+        from sec_edgar_ingest.worksets import decode_source_workset, encode_workset
+        from support import fixture_context, fixture_settings, fixture_workset
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = fixture_settings(root=root)
+            context = fixture_context(settings=settings)
+            old_context = context.to_mapping()
+            old_context.pop('runtime')
+            old_context.pop('format_version')
+            old_context['image_digest'] = 'sha256:' + 'f' * 64
+            with self.assertRaises(ValueError):
+                RunContext.from_mapping(old_context)
+            workset = fixture_workset((), context=context)
+            old_workset = parse_json(encode_workset(workset))
+            old_workset['format_version'] = 'sec-acquisition-v1'
+            old_workset['context'] = old_context
+            with self.assertRaises(ValueError):
+                decode_source_workset(canonical_json(old_workset))
+            objects = LocalObjectStore(root)
+            objects.put_once('retained/evidence.json', canonical_json(old_workset))
+            registry = root / 'objects' / REGISTRY_PATH
+            binding = parse_json(registry.read_bytes())
+            binding['binding_version'] = 'sec-deployment-binding-v1'
+            registry.write_bytes(canonical_json(binding))
+            before = {path.relative_to(root): path.read_bytes() for path in root.rglob('*') if path.is_file()}
+            with self.assertRaises(Conflict):
+                LocalObjectStore(root)
+            after = {path.relative_to(root): path.read_bytes() for path in root.rglob('*') if path.is_file()}
+            self.assertEqual(after, before)
 
 
 def observation_ref():
@@ -112,7 +121,8 @@ def observation_ref():
 
 def generation_manifest():
     from sec_edgar_ingest.etl.contracts import GenerationManifest, FileRef
-    return GenerationManifest(quarter='2015Q1', generation_id='d'*64, base_generation_id=None, source_fingerprint='e'*64, parser_version='parser-v1', schema_version='sec-index-v1', image_digest='sha256:'+'f'*64, sources=(observation_ref(),), files=(FileRef('curated/sec/g/data.parquet', 'a'*64, 10, 1, 'data'),), row_count=1, added=1, updated=0, withdrawn=0, unresolved_absence=0, provenance_refreshed=0, quarter_mode='open', membership_source=None, retained_from_generation=None, gate='clear')
+    from sec_edgar_ingest.runtime import fixture_descriptor
+    return GenerationManifest(quarter='2015Q1', generation_id='d'*64, base_generation_id=None, source_fingerprint='e'*64, parser_version='parser-v1', schema_version='sec-index-v1', runtime=fixture_descriptor('etl-record-test'), sources=(observation_ref(),), files=(FileRef('curated/sec/g/data.parquet', 'a'*64, 10, 1, 'data'),), row_count=1, added=1, updated=0, withdrawn=0, unresolved_absence=0, provenance_refreshed=0, quarter_mode='open', membership_source=None, retained_from_generation=None, gate='clear')
 
 
 class EtlRecordTests(unittest.TestCase):

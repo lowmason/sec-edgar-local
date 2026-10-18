@@ -55,7 +55,7 @@ class EtlCliTests(unittest.TestCase):
     def argv(self, command='transform', ref=None, attempt=None):
         return [command, '--config', str(self.config), '--run-id', 'etl-cli', '--execution-id', 'execution',
                 '--attempt-id', attempt or command, '--deadline', self.context.deadline.isoformat(),
-                '--state-dir', str(self.root), '--workset', ref or self.snapshot_ref]
+                '--workset', ref or self.snapshot_ref]
 
     def invoke(self, argv):
         stdout, stderr = io.StringIO(), io.StringIO()
@@ -133,14 +133,14 @@ class EtlCliTests(unittest.TestCase):
         self.assertEqual(self.invoke(self.argv()), (0, first))
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual([row.to_mapping() for row in self.store.scan('Attempt', {})], attempts)
-        for change in ('force', 'workset', 'execution', 'deadline', 'image', 'parser', 'config'):
+        for change in ('force', 'workset', 'execution', 'deadline', 'runtime', 'parser', 'config'):
             argv = self.argv()
             config = self.settings.to_mapping()
             if change == 'force': argv.append('--force')
             elif change == 'workset': argv[-1] = 'worksets/sec/snapshot/sha256=' + 'f' * 64 + '/workset.json'
             elif change == 'execution': argv[argv.index('--execution-id') + 1] = 'other'
             elif change == 'deadline': argv[argv.index('--deadline') + 1] = self.context.deadline.replace(microsecond=0).isoformat()
-            elif change == 'image': config['worker']['image_digest'] = 'sha256:' + 'f' * 64
+            elif change == 'runtime': config['runtime']['fixture_id'] = 'changed-runtime'
             elif change == 'parser': config['etl']['parser_version'] = 'fixture-index-parser-v2'
             else: config['sec']['requests_per_second'] = 2
             self.config.write_bytes(canonical_json(config))
@@ -178,7 +178,7 @@ class EtlCliTests(unittest.TestCase):
 
     def test_unprintable_exception_text_still_reports_structured_errors(self):
         from sec_edgar_ingest.models import require_text
-        candidates = ['candidates', '--config', str(self.config), '--state-dir', str(self.root)]
+        candidates = ['candidates', '--config', str(self.config)]
         for attempt, text in (('empty', ''), ('multiline', 'Operation returned an invalid status\nRequestId:abc')):
             with self.subTest(attempt), patch('sec_edgar_ingest.cli.run_transform', side_effect=RuntimeError(text)):
                 code, message = self.invoke(self.argv(attempt=attempt))
@@ -253,7 +253,7 @@ class EtlCliTests(unittest.TestCase):
         path = first['result_ref']
         original = self.objects.read(path)
         result = read_etl_result(path, self.objects)
-        self.assertEqual(result.format_version, 'sec-etl-result-v1')
+        self.assertEqual(result.format_version, 'sec-local-etl-result-v1')
         with self.assertRaises(ValueError): read_result(path, self.objects)
         for mutation in ('format', 'counter', 'unknown', 'outcome', 'input', 'start', 'canonical', 'missing'):
             invalid = json.loads(original)
@@ -270,11 +270,11 @@ class EtlCliTests(unittest.TestCase):
                     read_etl_result(path, self.objects)
 
     def seed_members(self, members):
-        from support import fixture_snapshot, fixture_workset
+        from support import fixture_context, fixture_snapshot, fixture_workset
         from sec_edgar_ingest.models import Binding
         from sec_edgar_ingest.state import AcquisitionState
         from sec_edgar_ingest.worksets import make_snapshot_workset, encode_workset
-        sources = fixture_workset(tuple(source for source, body in members))
+        sources = fixture_workset(tuple(source for source, body in members), context=fixture_context(settings=self.settings))
         self.objects.put_once(f'worksets/sec/source/sha256={sources.workset_id}/workset.json', encode_workset(sources))
         snapshots = []
         acquisition = AcquisitionState(self.store)
@@ -588,14 +588,14 @@ class EtlCliTests(unittest.TestCase):
         self.assertEqual(len(list(self.store.scan('PublicationReceipt', {}))), 1)
         self.checkpoint('pointer-after-replay')
 
-    def test_begun_intent_refuses_changed_image_execution_and_config(self):
+    def test_begun_intent_refuses_changed_runtime_execution_and_config(self):
         with patch('sec_edgar_ingest.cli.run_transform', side_effect=RuntimeError('interrupt before work')):
             self.assertEqual(self.invoke(self.argv())[0], 9)
         before = [row.to_mapping() for row in self.store.scan('Attempt', {})]
-        for change in ('image', 'execution', 'parser', 'force', 'workset'):
+        for change in ('runtime', 'execution', 'parser', 'force', 'workset'):
             config = self.settings.to_mapping()
             argv = self.argv()
-            if change == 'image': config['worker']['image_digest'] = 'sha256:' + 'f' * 64
+            if change == 'runtime': config['runtime']['fixture_id'] = 'changed-runtime'
             elif change == 'execution': argv[argv.index('--execution-id') + 1] = 'different'
             elif change == 'parser': config['etl']['parser_version'] = 'fixture-index-parser-v2'
             elif change == 'force': argv.append('--force')

@@ -2,7 +2,7 @@
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
-from sec_edgar_ingest.config import pin_context
+from sec_edgar_ingest.config import Settings, pin_context
 from support import fixture_context, fixture_settings
 
 
@@ -16,6 +16,17 @@ def etl_context(parser_version='fixture-index-parser-v1', command='transform', a
                       started_at=started, deadline=started + timedelta(seconds=3600),
                       effective_config={}, pinned_on=None)
     return settings, pin_context(settings, context, started.date())[0]
+
+
+def runtime_context(settings, context, runtime):
+    """Pin a runtime-only fixture change without rewriting its source provenance."""
+    from sec_edgar_ingest.runtime import configured_descriptor
+    mapping = settings.to_mapping()
+    mapping['runtime'] = runtime
+    settings = Settings.from_mapping(mapping)
+    context = replace(context, runtime=configured_descriptor(settings),
+                      config_sha256=settings.config_sha256, effective_config={}, pinned_on=None)
+    return settings, pin_context(settings, context, context.started_at.date())[0]
 
 
 def seed_snapshot(root, source, body):

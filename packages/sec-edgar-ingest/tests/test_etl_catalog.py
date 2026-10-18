@@ -220,11 +220,12 @@ class EtlCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'pinned'):
             self.build([ref])
 
-    def test_existing_generation_preserves_producing_image(self):
+    def test_existing_generation_preserves_producing_runtime(self):
         ref = self.observation()
         first = self.build([ref])
-        self.settings = fixture_settings(etl={'parser_version': self.context.parser_version}, worker={'image_digest': 'sha256:' + 'b'*64}, fixture={'allow_clock_override': True}, root=self.root)
-        self.context = replace(self.context, image_digest=self.settings.worker.image_digest,
+        self.settings = fixture_settings(etl={'parser_version': self.context.parser_version}, runtime={'kind': 'fixture', 'fixture_id': 'next-release'}, fixture={'allow_clock_override': True}, root=self.root)
+        from sec_edgar_ingest.runtime import configured_descriptor
+        self.context = replace(self.context, runtime=configured_descriptor(self.settings),
                                config_sha256=self.settings.config_sha256, pinned_on=None, effective_config={})
         self.context = pin_context(self.settings, self.context, date(2026, 10, 7))[0]
         self.assertEqual(self.build([ref]), first)

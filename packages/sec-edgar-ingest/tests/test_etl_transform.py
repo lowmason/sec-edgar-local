@@ -165,7 +165,7 @@ class EtlTransformTests(unittest.TestCase):
         self.assertEqual(before, manifests[0].read_bytes())
         self.assertEqual(len(list(self.store.scan('Processing', {}))), 1)
 
-    def test_image_change_adopts_original_producer_manifest_even_when_forced(self):
+    def test_runtime_change_adopts_original_producer_manifest_even_when_forced(self):
         from dataclasses import replace
         from sec_edgar_ingest.config import Settings, pin_context
         self.seed()
@@ -173,15 +173,18 @@ class EtlTransformTests(unittest.TestCase):
         ref = first.observations[0]
         before = self.objects.read(ref.manifest_ref)
         mapping = self.settings.to_mapping()
-        mapping['worker']['image_digest'] = 'sha256:' + 'b' * 64
+        mapping['runtime']['fixture_id'] = 'new-producing-release'
         self.settings = Settings.from_mapping(mapping)
-        updated = replace(self.context, image_digest=self.settings.worker.image_digest,
+        from sec_edgar_ingest.runtime import configured_descriptor
+        updated = replace(self.context, runtime=configured_descriptor(self.settings),
                           config_sha256=self.settings.config_sha256, effective_config={}, pinned_on=None)
         self.context = pin_context(self.settings, updated, updated.started_at.date())[0]
         second = self.transform(force=True)
         self.assertTrue(second.complete, second.failures)
         self.assertEqual(second.observations, first.observations)
         self.assertEqual(self.objects.read(ref.manifest_ref), before)
+        from sec_edgar_ingest.models import parse_json, to_mapping_value
+        self.assertEqual(parse_json(before)['runtime'], to_mapping_value(first.context.runtime))
 
     def test_partial_members_recover_using_successful_processing(self):
         from sec_edgar_ingest.models import Binding

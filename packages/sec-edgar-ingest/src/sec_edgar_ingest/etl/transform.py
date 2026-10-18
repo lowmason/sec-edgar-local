@@ -28,7 +28,7 @@ from .parser import ParseError, iter_observations, parse_fields, supported_parse
 from .state import EtlState
 
 BATCH_ROWS = 8192
-OBSERVATION_FORMAT = 'sec-observation-v1'
+OBSERVATION_FORMAT = 'sec-local-observation-v1'
 PARQUET_VERSION = '2.6'
 HTTP_OK = 200
 RETAINED_ENTITY_HEADERS = frozenset({'content-type', 'content-encoding', 'etag', 'last-modified'})
@@ -108,12 +108,15 @@ def read_observations(ref: ObservationRef, objects: ObjectStore) -> Iterator[Obs
 def _read_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, bytes]:
     body = objects.read(path)
     value = parse_json(body)
-    if (not isinstance(value, dict) or set(value) != {'format_version', 'observation', 'runtime'}
-            or value['format_version'] != OBSERVATION_FORMAT or canonical_json(value) != body):
-        raise ValueError('invalid observation manifest')
-    from ..runtime import validate_descriptor
-    validate_descriptor(value['runtime'])
+    if not isinstance(value, dict) or set(value) != {'format_version', 'observation', 'runtime'}:
+        raise ValueError('observation manifest requires exact local fields')
+    if value['format_version'] != OBSERVATION_FORMAT:
+        raise ValueError('unsupported observation manifest version')
+    from ..runtime import validate_producer
+    validate_producer(value['runtime'], objects)
     ref = ObservationRef.from_mapping(value['observation'])
+    if canonical_json(value) != body:
+        raise ValueError('observation manifest must be canonical')
     if ref.manifest_ref != path:
         raise ValueError('observation manifest address differs')
     with closing(read_observations(ref, objects)) as rows:

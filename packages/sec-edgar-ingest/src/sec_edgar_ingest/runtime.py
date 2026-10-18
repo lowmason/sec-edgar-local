@@ -12,6 +12,7 @@ from .models import canonical_json, parse_json, require_hash, require_text, safe
 
 if TYPE_CHECKING:
     from .config import Settings
+    from .storage.contracts import ObjectStore
 
 
 IDENTITY_FIELDS = {
@@ -201,3 +202,27 @@ def validate_manifest(value: Mapping[str, object]) -> dict[str, object]:
     if manifest["release_id"] != expected:
         raise ValueError("release_id does not match canonical release identity")
     return parse_json(canonical_json(manifest))
+
+
+def validate_producer(runtime: Mapping[str, object], objects: ObjectStore) -> None:
+    """Verify retained producer evidence without consulting the executing environment."""
+    descriptor = validate_descriptor(runtime)
+    if descriptor['kind'] == 'fixture':
+        return
+    release_id = descriptor['release_sha256']
+    path = f'runtime/native/sha256={release_id}/release.json'
+    body = objects.read(path)
+    manifest = validate_manifest(parse_json(body))
+    if manifest['release_id'] != release_id:
+        raise ValueError('saved producer manifest differs from runtime release identity')
+    if canonical_json(manifest) != body:
+        raise ValueError('saved producer manifest must use canonical JSON')
+
+
+def retain_manifest(objects: ObjectStore, manifest: Mapping[str, object]) -> str:
+    """Retain verified native identity after preflight; historical readers never call this."""
+    verified = validate_manifest(manifest)
+    path = f"runtime/native/sha256={verified['release_id']}/release.json"
+    objects.put_once(path, canonical_json(verified))
+    validate_producer(native_descriptor(verified['release_id']), objects)
+    return path

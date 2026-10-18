@@ -14,9 +14,9 @@ from ..models import (Error, Record, RunContext, SCHEMA_VERSION, Snapshot, Sourc
                       canonical_json, parse_json, quarter_value, require_hash, require_number,
                       require_text, require_utc, freeze, safe_relative_path, validate_record_fields)
 
-TRANSFORMED_FORMAT = 'sec-transformed-workset-v1'
-GENERATION_FORMAT = 'sec-generation-v1'
-RESULT_FORMAT = 'sec-etl-result-v1'
+TRANSFORMED_FORMAT = 'sec-local-transformed-workset-v1'
+GENERATION_FORMAT = 'sec-local-generation-v1'
+RESULT_FORMAT = 'sec-local-etl-result-v1'
 APPROVAL_FORMAT = 'sec-withdrawal-approval-v1'
 MAX_OPERATOR_CHARS = 256
 ROLLBACK_FORMAT = 'sec-pointer-rollback-v1'
