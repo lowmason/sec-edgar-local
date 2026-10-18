@@ -248,6 +248,53 @@ class LauncherPreparationTests(unittest.TestCase):
         self.assertEqual(kill.call_args_list, [call(42, signal.SIGTERM), call(42, signal.SIGKILL)])
         self.assertEqual(tree.call_count, 2, 'forced cleanup must observe process exit after SIGKILL')
 
+    def test_forced_residual_drain_is_finite_and_fair_with_unavailable_ancestry(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+        import signal
+        invocation = self.prepare()
+        for budget in ('bytes', 'time'):
+            with self.subTest(budget=budget), tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+                process = MagicMock(pid=123, returncode=None)
+                process.poll.side_effect = lambda: process.returncode
+                def reap(**kwargs):
+                    process.returncode = -signal.SIGKILL
+                    return process.returncode
+                process.wait.side_effect = reap
+                archives = [MagicMock(error=None, truncation=None) for _ in range(2)]
+                terminals = [MagicMock(error=None, truncation=None) for _ in range(2)]
+                channels = {stdout: (archives[0], terminals[0]), stderr: (archives[1], terminals[1])}
+                descriptors = [stdout.fileno(), stderr.fileno()]
+                reads = []
+                def continuous_output(descriptor, count):
+                    reads.append(descriptor)
+                    self.assertLessEqual(len(reads), 64,
+                        'forced residual drain continued without a finite byte/time bound')
+                    return b'x' * count
+                ticks = iter((0, 11))
+                current = 11.0
+                def clock():
+                    nonlocal current
+                    initial = next(ticks, None)
+                    if initial is not None:
+                        return initial
+                    current += 0.4 if budget == 'time' else 0
+                    return current
+                observer = SimpleNamespace(processes={}, error='ancestry unavailable', close=lambda: None)
+                with patch.object(self.launcher, '_Descendants', return_value=observer), \
+                        patch.object(self.launcher, '_cleanup_descendants', return_value=False), \
+                        patch.object(self.launcher, '_signal_group'), \
+                        patch.object(self.launcher.selectors, 'DefaultSelector'), \
+                        patch.object(self.launcher.time, 'monotonic', side_effect=clock), \
+                        patch.object(self.launcher.os, 'read', side_effect=continuous_output):
+                    status, uncertain = self.launcher._supervise(invocation, process, channels, [signal.SIGTERM])
+                self.assertEqual(status, -signal.SIGKILL)
+                self.assertTrue(uncertain)
+                self.assertEqual(reads[:4], descriptors * 2)
+                self.assertTrue(all(sink.truncation for sink in archives))
+                if budget == 'time':
+                    self.assertLess(len(reads), 32)
+
 
 class BootstrapTests(unittest.TestCase):
     def setUp(self):

@@ -97,6 +97,7 @@ def runner(root, status, mode, fault, timeout):
         now + timedelta(seconds=timeout), 'a' * 64)
     actual_write, actual_fsync, actual_popen = os.write, os.fsync, subprocess.Popen
     actual_tree = local_cli._process_tree
+    actual_supervise = local_cli._supervise
     archives = {name: (root / (name + '.jsonl')).stat().st_ino for name in ('stdout', 'stderr')}
     def fail_write(fd, body):
         if fault in ('stdout', 'stderr', 'both') and os.fstat(fd).st_ino in (
@@ -133,10 +134,18 @@ def runner(root, status, mode, fault, timeout):
         if any(pid in tree for pid in children):
             event(root, 'tree_observed')
         return tree
+    def supervise(*args):
+        result, uncertain = actual_supervise(*args)
+        if fault == 'truncation':
+            for archive, _ in args[2].values():
+                archive.truncation = 'forced residual output limit exhausted'
+            uncertain = True
+        return result, uncertain
     with patch.object(local_cli.os, 'write', side_effect=fail_write), \
             patch.object(local_cli.os, 'fsync', side_effect=fail_fsync), \
             patch.object(local_cli.subprocess, 'Popen', side_effect=launch), \
-            patch.object(local_cli, '_process_tree', side_effect=snapshot):
+            patch.object(local_cli, '_process_tree', side_effect=snapshot), \
+            patch.object(local_cli, '_supervise', side_effect=supervise):
         status = local_cli.run_invocation(invocation)
     event(root, 'wrapper_finished', status=status)
     return status

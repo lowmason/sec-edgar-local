@@ -33,6 +33,8 @@ STREAM_CHUNK_BYTES = 65_536
 TERMINAL_QUEUE_BYTES = 1_048_576
 TERMINAL_DRAIN_SECONDS = 1.0
 ENGINE_DRAIN_SECONDS = 10.0
+FORCED_OUTPUT_SECONDS = 1.0
+FORCED_OUTPUT_BYTES_PER_STREAM = 1_048_576
 POLL_SECONDS = 0.02
 
 
@@ -146,6 +148,7 @@ class _Sink:
         self.terminal = terminal
         self.pending = bytearray()
         self.error: str | None = None
+        self.truncation: str | None = None
         self.original_flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
         if terminal:
             fcntl.fcntl(descriptor, fcntl.F_SETFL, self.original_flags | os.O_NONBLOCK)
@@ -198,6 +201,32 @@ def _emit_event(sinks: Sequence[_Sink], event: str, **fields: object) -> None:
     body = canonical_json({'event': event, **fields}) + b'\n'
     for sink in sinks:
         sink.accept(body)
+
+
+def _drain_residual(channels: dict[object, tuple[_Sink, _Sink]]) -> None:
+    """Retain bounded residual bytes fairly even if an unknown writer survives."""
+    remaining = {stream: FORCED_OUTPUT_BYTES_PER_STREAM for stream in channels}
+    until = time.monotonic() + FORCED_OUTPUT_SECONDS
+    while remaining and time.monotonic() < until:
+        for stream in tuple(remaining):
+            try:
+                body = os.read(stream.fileno(), min(STREAM_CHUNK_BYTES, remaining[stream]))
+            except BlockingIOError:
+                del remaining[stream]
+                continue
+            if not body:
+                del remaining[stream]
+                continue
+            for sink in channels[stream]:
+                sink.accept(body)
+            remaining[stream] -= len(body)
+            if remaining[stream] == 0:
+                for sink in channels[stream]:
+                    sink.truncation = 'forced residual output byte limit exhausted'
+                del remaining[stream]
+    for stream in remaining:
+        for sink in channels[stream]:
+            sink.truncation = 'forced residual output time limit exhausted'
 
 
 def _process_tree() -> dict[int, tuple[int, int, bytes]]:
@@ -355,17 +384,7 @@ def _supervise(invocation: Invocation, process: subprocess.Popen,
             descendants.close()
             descendants_drained = _cleanup_descendants(descendants.processes)
             if forced:
-                # Read any final buffered bytes without waiting on inherited EOF.
-                for stream, sinks in channels.items():
-                    while True:
-                        try:
-                            body = os.read(stream.fileno(), STREAM_CHUNK_BYTES)
-                        except BlockingIOError:
-                            break
-                        if not body:
-                            break
-                        for sink in sinks:
-                            sink.accept(body)
+                _drain_residual(channels)
             return returncode, forced or not descendants_drained or descendants.error is not None
     finally:
         for stream in channels:
@@ -414,7 +433,8 @@ def run_invocation(invocation: Invocation) -> int:
             os.fsync(sinks[2].descriptor)
         except OSError as error:
             sinks[2].fail(error)
-        failed = {sink.name: sink.error for sink in sinks if sink.error is not None}
+        failed = {sink.name: sink.error if sink.error is not None else sink.truncation
+                  for sink in sinks if sink.error is not None or sink.truncation is not None}
         if failed:
             _emit_event(sinks[2:], 'logging_failed', engine_returncode=engine_returncode,
                         failures=failed, shutdown_uncertain=uncertain)

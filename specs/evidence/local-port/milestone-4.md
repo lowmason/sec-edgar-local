@@ -103,3 +103,25 @@ Tool versions remain CPython 3.14.0 and uv 0.13.1 (Homebrew 2026-10-14 aarch64-a
 Forced-descendant confirmation follow-up: the preparation command plus `-k forced_descendant` gave `Ran 1 test in 0.063s`, `FAILED (failures=1)`, exit 1: SIGKILL was issued but the exit-observation pass had not occurred (`tree.call_count` 1 instead of 2). Cleanup now performs a final bounded process-birth-checked observation after forced termination, while retaining uncertainty and never treating a forced kill as graceful HTTP drain. The process suite also runs a real installed engine and separately grouped child that both ignore SIGTERM/SIGINT; the wrapper preserves actual -9, emits uncertainty, creates no durable result, and verifies neither PID survives. The focused loop and final results are recorded with the follow-up commit in the report.
 
 The final follow-up precommit focused loop passed: preparation `Ran 22 tests in 6.798s`, `OK`, exit 0; installed process `Ran 14 tests in 40.735s`, `OK`, exit 0. `git diff --check` exited 0. Both actual forced-engine cases and the forced-exit observation regression were included, with origin/SHA identity assertions active.
+
+## Task 12 review fix round 1: T12-I1
+
+The scoped independent review found the forced residual pipe loop still had no byte/time bound. A surviving unobserved writer could continuously replenish stdout after engine termination and unavailable ancestry, prevent wrapper completion indefinitely, and starve stderr. Reading nonblocking pipes alone did not bound that phase.
+
+The forced-only final drain now uses a one-second shared allowance and a 1,048,576-byte per-stream retention budget, reading at most one existing 65,536-byte chunk from each channel per round. EOF or would-block ends that channel; budget exhaustion marks incomplete retention while the surrounding forced shutdown remains uncertain. Truncation counts as required logging failure (wrapper 9) and retains actual engine return code in the launcher event. Healthy archive/terminal sinks remain usable for that event; the wrapper never relaunches or fabricates durable completion. Normal supervision/stream retention policy is unchanged.
+
+Observed small-cycle commands, all from repository root with the same offline environment:
+
+```sh
+UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never UV_CACHE_DIR=/private/tmp/sec-edgar-local-uv-cache uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p test_local_launcher.py -k forced_residual -v
+UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never UV_CACHE_DIR=/private/tmp/sec-edgar-local-uv-cache uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p test_launcher_process.py -k archive_failures -v
+```
+
+- Residual-bound red: `Ran 1 test in 0.070s`, `FAILED (failures=2)`, exit 1. Both byte/time subcases reached the explicit 65th-read sentinel without a supervision bound; stderr could not receive its turn. The deterministic probe dispatches no worker and represents failed ancestry plus a dead engine and continuously readable surviving-writer pipes.
+- Residual-bound green: same command, `Ran 1 test in 0.076s`, `OK`, exit 0. Constant-clock output reaches a finite byte bound; advancing-clock output reaches the time bound sooner; both streams receive alternating turns, mark truncation, and preserve actual -9 plus uncertainty.
+- Installed precedence red: `Ran 1 test in 8.274s`, `FAILED (failures=1)`, exit 1. The new truncated-retention subcase returned engine 10 instead of required wrapper 9.
+- Installed precedence green: same command, `Ran 1 test in 8.558s`, `OK`, exit 0. The case keeps durable result bytes intact, one dispatch/child drain, actual engine 10 in stderr diagnostics, and logging-failure precedence. The complete covering gate further asserts healthy stdout archive bytes and archived stderr diagnostics for this case. Installed source origin/SHA checks remain active, with guard and offline settings preserved during scoped native-ps escalation.
+
+Final covering gate and commit are recorded in the appended Task 12 fix report. No genuine SEC HTTP, new dependency/policy surface, or additional self-review breadth was introduced.
+
+T12-I1 full covering loop passed: `test_local_launcher.py` - `Ran 23 tests in 6.919s`, `OK`; `test_launcher_process.py` - `Ran 14 tests in 41.948s`, `OK`; loop exit 0. The full loop uses the two-file command already recorded above, retaining offline settings, guard, scoped native-ps escalation, and installed path/source-SHA assertions. `git diff --check` exited 0 before the fix commit.

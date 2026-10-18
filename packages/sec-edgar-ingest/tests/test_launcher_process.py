@@ -118,7 +118,8 @@ class LauncherProcessTests(unittest.TestCase):
                 self.root = original
 
     def test_archive_failures_take_precedence_after_durable_engine_result(self):
-        for fault, status in (('stdout', 0), ('stderr', 5), ('both', 7), ('fsync', 11), ('late_fsync', 10)):
+        for fault, status in (('stdout', 0), ('stderr', 5), ('both', 7), ('fsync', 11),
+                              ('late_fsync', 10), ('truncation', 10)):
             with self.subTest(fault=fault), tempfile.TemporaryDirectory() as temporary:
                 original = self.root
                 self.root = Path(temporary)
@@ -130,6 +131,9 @@ class LauncherProcessTests(unittest.TestCase):
                 self.assertEqual(stdout, self.result(status))
                 self.assertIn(b'"engine_returncode":' + str(status).encode(), stderr)
                 self.assertIn(b'"event":"logging_failed"', stderr)
+                if fault == 'truncation':
+                    self.assertEqual((self.root / 'stdout.jsonl').read_bytes(), self.result(status))
+                    self.assertIn(b'"event":"logging_failed"', (self.root / 'stderr.jsonl').read_bytes())
                 self.assert_drained(status)
                 self.root = original
 
