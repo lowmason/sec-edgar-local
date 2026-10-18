@@ -118,8 +118,10 @@ class LauncherPreparationTests(unittest.TestCase):
         old = Path.cwd()
         try:
             os.chdir(self.root)
-            with patch.object(self.launcher, 'prepare_invocation', wraps=self.launcher.prepare_invocation) as prepare:
-                self.assertEqual(self.main('daily'), 2)  # Task 12 supplies dispatch.
+            with patch.object(self.launcher, 'prepare_invocation', wraps=self.launcher.prepare_invocation) as prepare, \
+                    patch.object(self.launcher, 'run_invocation', create=True, return_value=5) as run:
+                self.assertEqual(self.main('daily'), 5)
+            self.assertEqual(run.call_args.args[0].config_path.name, 'config.json')
             self.assertEqual(prepare.call_args.args[:3], (self.config, 'daily', 3300))
         finally:
             os.chdir(old)
@@ -128,8 +130,9 @@ class LauncherPreparationTests(unittest.TestCase):
         old = Path.cwd()
         try:
             os.chdir(self.project)
-            with patch.object(self.launcher, 'prepare_invocation', wraps=self.launcher.prepare_invocation) as prepare:
-                self.assertEqual(self.main('reconcile', '--config', 'conf/sec-edgar-local.json'), 2)
+            with patch.object(self.launcher, 'prepare_invocation', wraps=self.launcher.prepare_invocation) as prepare, \
+                    patch.object(self.launcher, 'run_invocation', create=True, return_value=10):
+                self.assertEqual(self.main('reconcile', '--config', 'conf/sec-edgar-local.json'), 10)
             self.assertEqual(prepare.call_args.args[0], self.config)
         finally:
             os.chdir(old)
@@ -198,6 +201,41 @@ class LauncherPreparationTests(unittest.TestCase):
                 self.http.assert_not_called()
                 self.assertFalse((self.project / 'data').exists())
         self.assertTrue(any((self.project / 'logs').glob('*/*/config.json')))
+
+    def test_pre_dispatch_archive_reopen_failure_retains_prepared_bytes(self):
+        invocation = self.prepare()
+        before = {path.name: path.read_bytes() for path in invocation.directory.iterdir()}
+        real_open = self.launcher.os.open
+        def fail_stderr(path, *args, **kwargs):
+            if Path(path).name == 'stderr.jsonl':
+                raise OSError('cannot reopen prepared stream')
+            return real_open(path, *args, **kwargs)
+        with patch.object(self.launcher.os, 'open', side_effect=fail_stderr), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(self.launcher.run_invocation(invocation), 2)
+        self.engine.assert_not_called()
+        self.assertEqual({path.name: path.read_bytes() for path in invocation.directory.iterdir()}, before)
+
+    def test_expired_invocation_refuses_before_open_or_dispatch(self):
+        from dataclasses import replace
+        invocation = replace(self.prepare(), deadline=datetime.now(timezone.utc) - timedelta(seconds=1))
+        with patch.object(self.launcher.os, 'open', side_effect=AssertionError('opened stream')), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(self.launcher.run_invocation(invocation), 2)
+        self.engine.assert_not_called()
+
+    def test_reused_descendant_pid_does_not_signal_new_process_group(self):
+        with patch.object(self.launcher, '_process_tree', return_value={42: (1, 42, b'new birth')}), \
+                patch.object(self.launcher.os, 'killpg') as kill:
+            self.assertTrue(self.launcher._cleanup_descendants({42: (42, b'old birth')}))
+        kill.assert_not_called()
+
+    def test_reused_engine_pid_cannot_adopt_unrelated_children(self):
+        remembered = {42: (42, b'old birth')}
+        with patch.object(self.launcher, '_process_tree', return_value={
+                42: (1, 42, b'new birth'), 43: (42, 43, b'unrelated child')}):
+            self.launcher._remember_descendants(42, remembered)
+        self.assertEqual(remembered, {42: (42, b'old birth')})
 
 
 class BootstrapTests(unittest.TestCase):
@@ -306,12 +344,15 @@ class InstalledLauncherTests(unittest.TestCase):
                                 UV_PYTHON_DOWNLOADS='never')
 
     def test_shell_finds_default_outside_checkout_and_archives_real_installed_release(self):
-        result = subprocess.run([str(self.project / 'scripts/sec-edgar-local'), 'backfill'],
+        # An expired preparation deadline proves real installed dispatch selection
+        # without authorizing any live engine/network work in this bootstrap test.
+        result = subprocess.run([str(self.project / 'scripts/sec-edgar-local'), 'backfill',
+            '--timeout-seconds', '0.000001'],
             cwd=self.poison, env=self.environment, capture_output=True, text=True, timeout=30)
-        self.assertEqual(result.returncode, 2, result.stderr)  # Task 12 supplies dispatch.
+        self.assertEqual(result.returncode, 2, result.stderr)
         self.assertEqual(result.stdout, '')
         event = json.loads(result.stderr)
-        self.assertEqual(event['error'], 'launcher dispatch is not yet implemented')
+        self.assertEqual(event['error'], 'deadline expired before engine dispatch')
         record = json.loads(Path(event['invocation']).read_bytes())
         self.assertEqual(record['release_id'], self.release.release_id)
         self.assertEqual(record['original_config_path'], str(self.config))
