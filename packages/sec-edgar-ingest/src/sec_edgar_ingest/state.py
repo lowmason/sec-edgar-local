@@ -12,16 +12,17 @@ from collections.abc import Callable
 from datetime import date, datetime, timezone
 
 from .config import HTTP_ATTEMPT_LIMIT
-from .models import Binding, BodyReceipt, CommandResult, DirectoryOutcome, Error, Permit, RunContext, Snapshot, Source, Versioned, canonical_json, require_hash, require_number, require_text, require_utc, safe_relative_path
+from .models import Binding, BodyReceipt, CommandResult, DirectoryOutcome, Error, Permit, RunContext, Snapshot, Source, Versioned, canonical_json, require_hash, require_number, require_text, require_utc, safe_relative_path, to_mapping_value
 from .storage.contracts import AlreadyExists, CAS_ATTEMPTS, Conflict, StateStore
 
 
 HTTP_SUCCESS = 200
+PROVENANCE_FIELDS = ("runtime", "parser_version", "schema_version", "config_sha256")
 
 
 def attempt_key(context: RunContext) -> str:
-    return hashlib.sha256(canonical_json({name: getattr(context, name) for name in
-        ("run_id", "execution_id", "command", "attempt_id", "image_digest")})).hexdigest()
+    return hashlib.sha256(canonical_json({name: to_mapping_value(getattr(context, name)) for name in
+        ("run_id", "execution_id", "command", "attempt_id", "runtime")})).hexdigest()
 
 
 class AcquisitionState:
@@ -531,5 +532,5 @@ def _request_key(context: RunContext, url: str, ordinal: int) -> str:
     return hashlib.sha256(canonical_json([attempt_key(context), url, ordinal])).hexdigest()
 
 
-def _run_provenance(context: RunContext) -> dict[str, str]:
-    return {name: getattr(context, name) for name in ("run_id", "image_digest", "parser_version", "schema_version", "config_sha256")}
+def _run_provenance(context: RunContext) -> dict[str, object]:
+    return {name: to_mapping_value(getattr(context, name)) for name in ("run_id", *PROVENANCE_FIELDS)}

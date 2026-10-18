@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import re
 import sys
 from collections.abc import Sequence
@@ -11,9 +10,10 @@ from dataclasses import replace
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from .runtime import configured_descriptor
 from . import __version__
 from .collection import collect
-from .config import Settings, load_config, load_config_env, pin_context
+from .config import Settings, load_config, pin_context
 from .coordination import Clock, Coordinator
 from .discovery import discover
 from .etl.approval import activation_ref, approve
@@ -32,7 +32,6 @@ from .results import exit_code, log_event, read_result, result_path, write_resul
 from .state import AcquisitionState, attempt_key
 from .storage import open_stores
 from .storage.contracts import CAS_ATTEMPTS, ClockUncertain, Conflict, OwnershipLost, StoreMissing
-from .storage.identity import EXECUTION_NAME_ENV, OPERATOR_TOKEN_SCOPE, principal_from_token, worker_client_id
 from .workflows.checked import Dispatcher as WorkflowDispatcher, ChildUnfinished
 from .workflows.contracts import WORKFLOW_COMMANDS, WORKFLOW_PRIORITY, workflow_path
 from .workflows.results import freeze_workflow, read_workflow_result, write_workflow_result
@@ -77,18 +76,9 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest='command')
     for command in ('discover', 'collect', 'transform', 'publish', *WORKFLOW_COMMANDS):
         sub = commands.add_parser(command)
-        workflow = command in WORKFLOW_COMMANDS
-        if workflow:
-            source = sub.add_mutually_exclusive_group(required=True)
-            source.add_argument('--config')
-            source.add_argument('--config-env', metavar='NAME',
-                                help='read the configuration JSON from this environment variable')
-            sub.add_argument('--execution-id', help='local-fixture only; Azure uses ' + EXECUTION_NAME_ENV)
         for name in ('config', 'run-id', 'execution-id', 'attempt-id', 'deadline'):
-            if not (workflow and name in ('config', 'execution-id')):
-                sub.add_argument('--' + name, required=True)
-        for name in ('state-dir', 'today'):
-            sub.add_argument('--' + name)
+            sub.add_argument('--' + name, required=True)
+        sub.add_argument('--today')
         if command in ('discover', 'collect', *WORKFLOW_COMMANDS):
             sub.add_argument('--fixture-pack')
         if command == 'discover':
@@ -102,20 +92,16 @@ def _parser() -> argparse.ArgumentParser:
     sub = commands.add_parser('approve')
     for name in ('config', 'quarter', 'generation', 'quarterly-sha256'):
         sub.add_argument('--' + name, required=True)
-    sub.add_argument('--approver', help='local-fixture only; Azure records the signed-in principal')
-    sub.add_argument('--state-dir')
+    sub.add_argument('--approver', required=True, help='explicit local audit label')
     sub = commands.add_parser('candidates')
     sub.add_argument('--config', required=True)
-    sub.add_argument('--state-dir')
     sub = commands.add_parser('history')
     sub.add_argument('--config', required=True)
     sub.add_argument('--quarter', required=True)
-    sub.add_argument('--state-dir')
     sub = commands.add_parser('rollback')
     for name in ('config', 'quarter', 'from-generation', 'to-generation', 'reason'):
         sub.add_argument('--' + name, required=True)
-    sub.add_argument('--operator', help='local-fixture only; Azure records the signed-in principal')
-    sub.add_argument('--state-dir')
+    sub.add_argument('--operator', required=True, help='explicit local audit label')
     return parser
 
 
@@ -136,7 +122,7 @@ def _validate(args) -> tuple[Settings, date | None, datetime, FixturePack | None
     settings = load_config(Path(args.config))
     etl = args.command in ('transform', 'publish')
     if etl:
-        supported_parser(settings.etl.parser_version, fixture=settings.storage.backend == 'local-fixture')
+        supported_parser(settings.etl.parser_version, fixture=settings.acquisition.mode == 'fixture')
         if settings.etl.schema_version != SCHEMA_VERSION:
             raise ValueError('unsupported ETL schema version')
     if not settings.coordination.lease_seconds.is_integer():
@@ -147,18 +133,8 @@ def _validate(args) -> tuple[Settings, date | None, datetime, FixturePack | None
     today = date.fromisoformat(args.today) if args.today else None
     if args.today and today.isoformat() != args.today:
         raise ValueError('today must be a canonical ISO date')
-    if settings.storage.backend == 'azure':
-        if getattr(args, 'fixture_pack', None) or args.state_dir or args.today:
-            raise ValueError('fixture pack, state directory and date override are fixture-only')
-        worker_client_id(os.environ)
-        pack = None
-    else:
-        if not etl and not args.fixture_pack:
-            raise ValueError('local-fixture commands require an explicit fixture pack')
-        if not settings.fixture or (args.today and not settings.fixture.allow_clock_override):
-            if args.today:
-                raise ValueError('today requires the explicit fixture clock override marker')
-        pack = None if etl else FixturePack.load(Path(args.fixture_pack))
+    pack = _fixture_pack(settings, getattr(args, 'fixture_pack', None), today,
+                         required=not etl)
     # A completed result may outlive its deadline; only its saved context can authorize replay.
     now = Clock().now()
     if deadline > now:
@@ -170,11 +146,32 @@ def _validate(args) -> tuple[Settings, date | None, datetime, FixturePack | None
     return settings, today, deadline, pack
 
 
+def _fixture_pack(settings, path, today, *, required):
+    if settings.acquisition.mode == 'live':
+        if path is not None or today is not None:
+            raise ValueError('fixture pack and date override require fixture acquisition')
+        return None
+    if today is not None and (not settings.fixture or not settings.fixture.allow_clock_override):
+        raise ValueError('today requires the explicit fixture clock override marker')
+    if required and not path:
+        raise ValueError('fixture acquisition requires an explicit fixture pack')
+    return FixturePack.load(Path(path)) if path else None
+
+
 def _new_context(args, settings, deadline, today, started) -> RunContext:
     priority = 'daily' if args.command == 'discover' and args.mode == 'daily' else 'backfill'
-    context = RunContext(args.run_id, args.execution_id, args.command, args.attempt_id,
-                         settings.worker.image_digest, settings.etl.parser_version, settings.etl.schema_version,
-                         settings.config_sha256, started, deadline, priority)
+    context = RunContext(run_id=args.run_id,
+        execution_id=args.execution_id,
+        command=args.command,
+        attempt_id=args.attempt_id,
+        runtime=configured_descriptor(settings),
+        parser_version=settings.etl.parser_version,
+        schema_version=settings.etl.schema_version,
+        config_sha256=settings.config_sha256,
+        started_at=started,
+        deadline=deadline,
+        priority=priority,
+        format_version='sec-local-run-context-v1')
     return pin_context(settings, context, today or started.date())[0]
 
 
@@ -197,7 +194,7 @@ def _matching_context(saved, current, *, explicit_today) -> RunContext:
     if not explicit_today:
         expected['pinned_on'] = actual['pinned_on']
     if expected != actual:
-        raise Conflict('attempt replay differs from its exact saved correlation/config/image/versions/deadline')
+        raise Conflict('attempt replay differs from its exact saved correlation/config/runtime/versions/deadline')
     # Validate the original start and pin date; never fabricate a fresh start for replay.
     pin_context(Settings.from_mapping(actual['effective_config']), saved, saved.pinned_on)
     return saved
@@ -245,7 +242,7 @@ def _existing_etl_context(current, state, objects, intent, explicit_today):
     else:
         if saved is not None:
             raise Conflict('completed ETL result has no command intent')
-        # Attempt keys include image/execution, while immutable command paths do not.
+        # Attempt keys include runtime/execution, while immutable command paths do not.
         # Find an interrupted begin even if the caller now supplies a different key.
         matching = [RunContext.from_mapping(row.to_mapping()['value']['context'])
                     for row in state.store.scan('Attempt', {})
@@ -273,9 +270,20 @@ def _existing_etl_context(current, state, objects, intent, explicit_today):
 def _discover_result(workset, context, clock):
     gaps = tuple(directory.error for directory in workset.directories if directory.error is not None)
     outcome = 'discovery_failed' if not workset.discovery_complete else ('success' if workset.members else 'no_new_sources')
-    return CommandResult(context, outcome, f'worksets/sec/source/sha256={workset.workset_id}/workset.json',
-                         None, len(workset.members), 0, 0, 0, len(gaps), 0, gaps,
-                         context.started_at, max(context.started_at, clock.now()))
+    return CommandResult(context=context,
+        outcome=outcome,
+        source_workset_ref=f'worksets/sec/source/sha256={workset.workset_id}/workset.json',
+        snapshot_workset_ref=None,
+        discovered=len(workset.members),
+        downloaded=0,
+        unchanged=0,
+        pending=0,
+        failed=len(gaps),
+        quarantined=0,
+        gaps=gaps,
+        started_at=context.started_at,
+        ended_at=max(context.started_at, clock.now()),
+        format_version='sec-local-command-result-v1')
 
 
 def _collection_outcome(result):
@@ -319,22 +327,11 @@ def _stdout(result, reference):
 
 
 def _validate_workflow(args):
-    for name in ('run_id', 'attempt_id'):
+    for name in ('run_id', 'attempt_id', 'execution_id'):
         _segment(getattr(args, name), name)
-    settings = (load_config_env(args.config_env, os.environ) if args.config_env is not None
-                else load_config(Path(args.config)))
-    if settings.storage.backend == 'azure':
-        if args.execution_id is not None:
-            raise ValueError('--execution-id is refused on Azure; the job execution name is used')
-        # The workflow path reads the resolved execution ID from args from here on.
-        args.execution_id = os.environ.get(EXECUTION_NAME_ENV, '')
-        if not args.execution_id:
-            raise ValueError(f'{EXECUTION_NAME_ENV} must name the job execution on Azure')
-    elif args.execution_id is None:
-        raise ValueError('local-fixture workflow commands require --execution-id')
-    _segment(args.execution_id, 'execution_id')
+    settings = load_config(Path(args.config))
     supported_parser(settings.etl.parser_version,
-                     fixture=settings.storage.backend == 'local-fixture')
+                     fixture=settings.acquisition.mode == 'fixture')
     if settings.etl.schema_version != SCHEMA_VERSION:
         raise ValueError('unsupported ETL schema version')
     if not settings.coordination.lease_seconds.is_integer():
@@ -345,17 +342,7 @@ def _validate_workflow(args):
     today = date.fromisoformat(args.today) if args.today else None
     if args.today and today.isoformat() != args.today:
         raise ValueError('today must be a canonical ISO date')
-    if settings.storage.backend == 'azure':
-        if args.fixture_pack or args.state_dir or args.today:
-            raise ValueError('fixture pack, state directory and date override are fixture-only')
-        worker_client_id(os.environ)
-        pack = None
-    else:
-        if not args.fixture_pack:
-            raise ValueError('local-fixture workflow requires an explicit fixture pack')
-        if args.today and (not settings.fixture or not settings.fixture.allow_clock_override):
-            raise ValueError('today requires the explicit fixture clock override marker')
-        pack = FixturePack.load(Path(args.fixture_pack))
+    pack = _fixture_pack(settings, args.fixture_pack, today, required=True)
     # Do not construct a fresh context here: the immutable saved pin must be read first.
     return settings, today, deadline, pack
 
@@ -398,9 +385,18 @@ def _workflow_saved(args, store, objects):
 
 
 def _workflow_context(args, settings, today, deadline, started, pinned):
-    context = RunContext(args.run_id, args.execution_id, args.command, args.attempt_id,
-        settings.worker.image_digest, settings.etl.parser_version, settings.etl.schema_version,
-        settings.config_sha256, started, deadline, WORKFLOW_PRIORITY[args.command])
+    context = RunContext(run_id=args.run_id,
+        execution_id=args.execution_id,
+        command=args.command,
+        attempt_id=args.attempt_id,
+        runtime=configured_descriptor(settings),
+        parser_version=settings.etl.parser_version,
+        schema_version=settings.etl.schema_version,
+        config_sha256=settings.config_sha256,
+        started_at=started,
+        deadline=deadline,
+        priority=WORKFLOW_PRIORITY[args.command],
+        format_version='sec-local-run-context-v1')
     return pin_context(settings, context, today or pinned or started.date())
 
 
@@ -419,13 +415,13 @@ def _workflow_main(args):
         return 2
     opened, context = (), None
     try:
-        opened = open_stores(settings, base_path=Path(args.state_dir) if args.state_dir else None)
+        opened = open_stores(settings)
         store, objects, leases = opened
         frozen = _workflow_saved(args, store, objects)
         saved = None if frozen is None else RunContext.from_mapping(frozen['context'])
         started = saved.started_at if saved is not None else Clock().now()
         pinned = saved.pinned_on if saved is not None else None
-        # Exact supplied correlation/config/image/versions/deadline is compared by T6.
+        # Exact supplied correlation/config/runtime/versions/deadline is compared by T6.
         # An omitted date reuses the saved pin, even after the calendar changes.
         if saved is None and deadline <= Clock().now():
             raise _ExpiredAttempt('an expired deadline permits only exact completed-result replay')
@@ -448,7 +444,7 @@ def _workflow_main(args):
         # Adapters belonging to children are constructed only inside their public CLI paths.
         dispatcher = WorkflowDispatcher(context, settings,
             Path(args.fixture_pack) if args.fixture_pack else None,
-            Path(args.state_dir) if args.state_dir else None, store, objects)
+            None, store, objects)
         log_event(context, 'command_started', {'command': args.command})
         result = run_workflow(context, settings, intent, dispatcher, store, objects)
         reference = write_workflow_result(result, store, objects)
@@ -484,8 +480,6 @@ def _operator_settings(args) -> Settings:
     if args.command == 'history':
         quarter_value(args.quarter)
     settings = load_config(Path(args.config))
-    if settings.storage.backend == 'azure' and args.state_dir:
-        raise ValueError('state directory is fixture-only')
     return settings
 
 
@@ -495,22 +489,11 @@ def _configuration_error(error: Exception) -> int:
 
 
 def _operator_identity(settings: Settings, supplied: str | None, flag: str | None):
-    """(credential, actor). Azure uses the operator's `az login` and records its principal, refusing free
-    text; the local-fixture backend requires the free-text flag of a command that records an actor."""
-    if settings.storage.backend != 'azure':
-        if flag is not None and supplied is None:
-            raise ValueError(f'--{flag} is required on the local-fixture backend')
-        return None, supplied
-    if supplied is not None:
-        raise ValueError(f'--{flag} is refused on Azure; the signed-in principal is recorded')
-    from azure.core.exceptions import ClientAuthenticationError
-    from .storage.azure import operator_credential
-    credential = operator_credential()
-    try:
-        token = credential.get_token(OPERATOR_TOKEN_SCOPE)
-    except ClientAuthenticationError as error:
-        raise ValueError('operator sign-in is unavailable: ' + error_text(error)) from error
-    return credential, principal_from_token(token.token)
+    """Return the explicit local audit label for commands that record an actor."""
+    if flag is not None:
+        from .models import require_text
+        require_text(supplied, '--' + flag)
+    return supplied
 
 
 def _operator_main(args, event: str | None, empty: dict[str, object], run, actor: str | None = None) -> int:
@@ -520,13 +503,12 @@ def _operator_main(args, event: str | None, empty: dict[str, object], run, actor
     """
     try:
         settings = _operator_settings(args)
-        credential, principal = _operator_identity(settings, None if actor is None else getattr(args, actor), actor)
+        principal = _operator_identity(settings, None if actor is None else getattr(args, actor), actor)
     except (ValueError, OSError, TypeError) as error:
         return _configuration_error(error)
     opened = ()
     try:
-        opened = open_stores(settings, base_path=Path(args.state_dir) if args.state_dir else None,
-                             access='operator', credential=credential)
+        opened = open_stores(settings, access='operator')
         store, objects, _ = opened
         value = {**empty, **run(objects, EtlState(store), principal)}
     except StoreMissing as error:
@@ -611,7 +593,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     opened = ()
     try:
         clock = Clock()
-        opened = open_stores(settings, base_path=Path(args.state_dir) if args.state_dir else None)
+        opened = open_stores(settings)
         store, objects, leases = opened
         state = AcquisitionState(store, clock=clock)
         path = f'runs/sec/{args.run_id}/{args.command}/{args.attempt_id}/result.json'

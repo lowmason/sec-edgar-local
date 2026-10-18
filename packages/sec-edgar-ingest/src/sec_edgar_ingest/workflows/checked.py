@@ -12,6 +12,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TypedDict
 
+from ..runtime import configured_descriptor
 from ..config import Settings, pin_context
 from ..download import FixturePack
 from ..models import CommandResult, Error, RunContext, canonical_json, parse_json, require_hash, safe_relative_path, to_mapping_value
@@ -105,17 +106,17 @@ def make_call(context, command, attempt_id, input_ref, fixture_sha256=None, *,
         intent = {'command': command, 'today': today_text, 'workset': input_ref,
                   'force': force if command == 'transform' else None}
     else:
-        if settings.storage.backend == 'local-fixture':
+        if settings.acquisition.mode == 'fixture':
             require_hash(fixture_sha256, 'fixture_sha256')
         elif fixture_sha256 is not None or today is not None:
-            raise ValueError('Azure cannot carry fixture-only inputs')
+            raise ValueError('live acquisition cannot carry fixture-only inputs')
         intent = {'command': command, 'today': today_text, 'fixture_sha256': fixture_sha256,
             'mode': mode if command == 'discover' else None,
             'discovery_id': discovery_id if command == 'discover' else None,
             'refresh': refresh if command == 'discover' else None,
             'workset': input_ref if command == 'collect' else None}
-    if settings.storage.backend == 'azure' and today is not None:
-        raise ValueError('Azure cannot carry date override')
+    if settings.acquisition.mode == 'live' and today is not None:
+        raise ValueError('live acquisition cannot carry date override')
     return {'format_version': 'sec-workflow-child-call-v1', 'workflow_command': workflow_command,
         'workflow_attempt_id': workflow_attempt_id, 'step_id': step_id,
         'context': child.to_mapping(), 'intent': intent, 'input_ref': input_ref,
@@ -260,14 +261,14 @@ def _validate_input_output(call, result, store, objects):
         workset = _source_input(result.source_workset_ref, objects)
         if workset.discovery_id != call['intent']['discovery_id']:
             raise Conflict('discovery output differs from requested session')
-        for field in ('run_id', 'command', 'config_sha256', 'image_digest', 'parser_version', 'schema_version', 'effective_config'):
+        for field in ('run_id', 'command', 'config_sha256', 'runtime', 'parser_version', 'schema_version', 'effective_config'):
             if getattr(workset.context, field) != getattr(result.context, field):
                 raise Conflict('discovery output has changed frozen provenance')
     elif command == 'collect':
         source = _source_input(call['input_ref'], objects)
         if result.source_workset_ref != call['input_ref']:
             raise Conflict('collection result differs from exact requested source workset')
-        for field in ('config_sha256', 'image_digest', 'parser_version', 'schema_version', 'effective_config'):
+        for field in ('config_sha256', 'runtime', 'parser_version', 'schema_version', 'effective_config'):
             if getattr(source.context, field) != getattr(result.context, field):
                 raise Conflict('collection settings differ from origin acquisition context')
         if result.snapshot_workset_ref is not None:
@@ -342,8 +343,8 @@ def read_child(call, store, objects):
 def unfinished_child(call, store):
     value, expected = _validated(call)
     matches = [row for row in store.scan('Attempt', {})
-               if all(row.value['context'][field] == getattr(expected, field)
-                      for field in ('run_id', 'command', 'attempt_id', 'execution_id', 'image_digest'))]
+               if all(to_mapping_value(row.value['context'][field]) == to_mapping_value(getattr(expected, field))
+                      for field in ('run_id', 'command', 'attempt_id', 'execution_id', 'runtime'))]
     if len(matches) != 1:
         raise Conflict('unfinished child lacks one exact begun Attempt')
     row = matches[0].to_mapping()['value']
@@ -395,13 +396,13 @@ class Dispatcher:
             raise ValueError('dispatcher requires a pinned workflow context')
         if pin_context(settings, context, context.pinned_on)[0] != context:
             raise ValueError('workflow context differs from current settings')
-        if settings.storage.backend == 'local-fixture':
+        if settings.acquisition.mode == 'fixture':
             if fixture_pack is None:
                 raise ValueError('fixture workflow requires its explicit pack')
             self.pack = FixturePack.load(fixture_pack)
         else:
-            if fixture_pack is not None or state_dir is not None:
-                raise ValueError('fixture inputs are forbidden for Azure')
+            if fixture_pack is not None:
+                raise ValueError('fixture inputs are forbidden for live acquisition')
             self.pack = None
         self.context, self.settings, self.fixture_pack = context, settings, fixture_pack
         self.state_dir, self.store, self.objects, self.observer = state_dir, store, objects, observer
@@ -416,15 +417,15 @@ class Dispatcher:
         parent = self.context
         attempt = child_attempt_id(parent.run_id, parent.command, parent.attempt_id, step_id, command)
         child = replace(parent, command=command, attempt_id=attempt,
-            image_digest=settings.worker.image_digest, parser_version=settings.etl.parser_version,
+            runtime=configured_descriptor(settings), parser_version=settings.etl.parser_version,
             schema_version=settings.etl.schema_version, config_sha256=settings.config_sha256,
             effective_config={}, pinned_on=None,
             priority='daily' if command == 'discover' and parsed['mode'] == 'daily' else 'backfill')
         if command == 'collect':
             child = replace(child, priority=_source_input(parsed['workset'], self.objects).context.priority)
         child = pin_context(settings, child, parent.pinned_on)[0]
-        fixture = settings.storage.backend == 'local-fixture'
-        today = parent.pinned_on if fixture and settings.fixture.allow_clock_override else None
+        fixture = settings.acquisition.mode == 'fixture'
+        today = parent.pinned_on if fixture and settings.fixture and settings.fixture.allow_clock_override else None
         digest = self.pack.manifest_sha256 if command in ('discover', 'collect') and self.pack else None
         call = make_call(child, command, attempt, parsed.get('workset'), digest,
             workflow_command=parent.command, workflow_attempt_id=parent.attempt_id, step_id=step_id,
@@ -432,7 +433,7 @@ class Dispatcher:
             refresh=parsed.get('refresh', False), force=parsed.get('force', False))
         if command == 'collect':
             source = _source_input(call['input_ref'], self.objects)
-            for field in ('config_sha256', 'image_digest', 'parser_version', 'schema_version', 'effective_config'):
+            for field in ('config_sha256', 'runtime', 'parser_version', 'schema_version', 'effective_config'):
                 if getattr(source.context, field) != getattr(child, field):
                     raise Conflict('collection dispatch differs from origin settings/versions')
         elif command in ('transform', 'publish'):
@@ -454,8 +455,6 @@ class Dispatcher:
             argv = [command, '--config', str(config), '--run-id', parent.run_id,
                 '--execution-id', parent.execution_id, '--attempt-id', attempt,
                 '--deadline', parent.deadline.isoformat(), *flags]
-            if self.state_dir is not None:
-                argv.extend(('--state-dir', str(self.state_dir)))
             if today is not None:
                 argv.extend(('--today', today.isoformat()))
             if command in ('discover', 'collect') and self.fixture_pack is not None:

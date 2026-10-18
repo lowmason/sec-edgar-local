@@ -4,15 +4,15 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Literal
 
 import pyarrow as pa
 
-from ..models import (Error, IMAGE_PATTERN, Record, RunContext, SCHEMA_VERSION, Snapshot, Source,
+from ..models import (Error, Record, RunContext, SCHEMA_VERSION, Snapshot, Source,
                       canonical_json, parse_json, quarter_value, require_hash, require_number,
-                      require_text, require_utc, safe_relative_path, validate_record_fields)
+                      require_text, require_utc, freeze, safe_relative_path, validate_record_fields)
 
 TRANSFORMED_FORMAT = 'sec-transformed-workset-v1'
 GENERATION_FORMAT = 'sec-generation-v1'
@@ -174,7 +174,7 @@ class GenerationManifest(Record):
     source_fingerprint: str
     parser_version: str
     schema_version: str
-    image_digest: str
+    runtime: Mapping[str, object] = field(kw_only=True)
     sources: tuple[ObservationRef, ...]
     files: tuple[FileRef, ...]
     row_count: int
@@ -193,8 +193,8 @@ class GenerationManifest(Record):
         _record(self)
         if self.format_version != GENERATION_FORMAT:
             raise ValueError('unsupported generation format')
-        if IMAGE_PATTERN.fullmatch(self.image_digest) is None:
-            raise ValueError('immutable producing image digest required')
+        from ..runtime import validate_descriptor
+        object.__setattr__(self, 'runtime', freeze(validate_descriptor(self.runtime)))
         _counts(self, 'row_count', 'added', 'updated', 'withdrawn', 'unresolved_absence', 'provenance_refreshed')
         if len({ref.source.source_id for ref in self.sources}) != len(self.sources):
             raise ValueError('duplicate generation source')

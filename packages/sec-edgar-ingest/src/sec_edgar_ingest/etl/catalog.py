@@ -248,12 +248,25 @@ def build_candidate(quarter: str, previous: GenerationCapture | None, incoming: 
                 objects.verify(ref.path, ref.sha256, ref.byte_count)
                 files.append(ref)
                 observe(observer, 'candidate.after_' + role)
-        manifest = GenerationManifest(quarter, generation_id, previous.generation_id if previous else None,
-                                      fingerprint, context.parser_version, context.schema_version, context.image_digest,
-                                      selected, tuple(files), counts['data'], counts['added'], counts['updated'],
-                                      counts['withdrawn'], counts['unresolved_absence'], counts['provenance_refreshed'],
-                                      mode, membership, retained,
-                                      'awaiting_approval' if mode == 'closed' and counts['withdrawn'] else 'clear')
+        manifest = GenerationManifest(quarter=quarter,
+        generation_id=generation_id,
+        base_generation_id=previous.generation_id if previous else None,
+        source_fingerprint=fingerprint,
+        parser_version=context.parser_version,
+        schema_version=context.schema_version,
+        runtime=context.runtime,
+        sources=selected,
+        files=tuple(files),
+        row_count=counts['data'],
+        added=counts['added'],
+        updated=counts['updated'],
+        withdrawn=counts['withdrawn'],
+        unresolved_absence=counts['unresolved_absence'],
+        provenance_refreshed=counts['provenance_refreshed'],
+        quarter_mode=mode,
+        membership_source=membership,
+        retained_from_generation=retained,
+        gate='awaiting_approval' if mode == 'closed' and counts['withdrawn'] else 'clear')
         validate_files(manifest, objects)
         if previous:
             objects.put_once(base + '/retained-base.json', canonical_json(previous.to_mapping()))

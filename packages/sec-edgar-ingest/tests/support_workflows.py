@@ -59,21 +59,26 @@ from sec_edgar_ingest.etl.state import EtlState
 class CommandHarness:
     def __init__(self, root, pack, settings=None):
         self.root, self.pack = Path(root), Path(pack)
-        self.settings = settings or fixture_settings(
+        self.settings = settings or fixture_settings(root=self.root / '.fixture-state',
             backfill={'start_quarter': '2026Q3', 'end_quarter': 'open'},
             etl={'parser_version': 'fixture-index-parser-v1'},
             fixture={'allow_clock_override': True, 'allow_deadline_override': False})
+        from sec_edgar_ingest.config import normalize_paths, Settings
+        value = self.settings.to_mapping()
+        value['storage']['root'] = str((self.root / '.fixture-state').resolve())
+        value['logging']['root'] = str((self.root / '.fixture-logs').resolve())
+        self.settings = normalize_paths(Settings.from_mapping(value), self.root)
         self.config = self.root / 'config.json'
         self.config.write_bytes(canonical_json(to_mapping_value(self.settings.to_mapping())))
         self.deadline = datetime.now(timezone.utc) + timedelta(seconds=1800)
-        self.opened = open_stores(self.settings, base_path=self.root)
+        self.opened = open_stores(self.settings)
         self.store, self.objects, self.leases = self.opened
         self.calls = []
 
     def invoke(self, command, flags=(), run='r', attempt='a', today='2026-10-07', deadline=None):
         argv = [command, '--config', str(self.config), '--run-id', run, '--execution-id', 'manual',
                 '--attempt-id', attempt, '--deadline', (deadline or self.deadline).isoformat(),
-                '--state-dir', str(self.root), '--today', today, *flags]
+                '--today', today, *flags]
         if command in ('discover', 'collect', 'backfill', 'daily', 'reconcile'):
             argv += ['--fixture-pack', str(self.pack)]
         stdout, stderr = io.StringIO(), io.StringIO()

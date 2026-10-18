@@ -9,13 +9,14 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from support import fixture_settings, fixture_source, listing_response, store_bundle, zip_bytes
+from sec_edgar_ingest.runtime import configured_descriptor
 from sec_edgar_ingest.config import pin_context
 from sec_edgar_ingest.models import RunContext, canonical_json
 
 
 def workflow_fixture(root: Path, *, command='backfill', prefix=False):
     root.mkdir(parents=True, exist_ok=True)
-    settings = fixture_settings(
+    settings = fixture_settings(root=root / '.fixture-state',
         backfill={'start_quarter': '2026Q4', 'end_quarter': 'open'},
         daily={'start_date': '2026-10-01'},
         etl={'parser_version': 'fixture-index-parser-v1'},
@@ -23,9 +24,18 @@ def workflow_fixture(root: Path, *, command='backfill', prefix=False):
         fixture={'allow_clock_override': True, 'allow_deadline_override': True},
     )
     now = datetime.now(timezone.utc)
-    context = RunContext('checked-run', 'checked-execution', command, 'checked-attempt',
-        settings.worker.image_digest, settings.etl.parser_version, settings.etl.schema_version,
-        settings.config_sha256, now, now + timedelta(seconds=3600), command)
+    context = RunContext(run_id='checked-run',
+        execution_id='checked-execution',
+        command=command,
+        attempt_id='checked-attempt',
+        runtime=configured_descriptor(settings),
+        parser_version=settings.etl.parser_version,
+        schema_version=settings.etl.schema_version,
+        config_sha256=settings.config_sha256,
+        started_at=now,
+        deadline=now + timedelta(seconds=3600),
+        priority=command,
+        format_version='sec-local-run-context-v1')
     context = pin_context(settings, context, date(2026, 10, 8))[0]
     bodies = root / 'bodies'
     bodies.mkdir(exist_ok=True)

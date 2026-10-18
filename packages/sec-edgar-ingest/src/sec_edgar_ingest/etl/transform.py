@@ -15,7 +15,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from ..config import Settings, pin_context
-from ..models import (BodyReceipt, Error, IMAGE_PATTERN, RunContext, Snapshot, Source,
+from ..models import (to_mapping_value, BodyReceipt, Error, RunContext, Snapshot, Source,
                       canonical_json, error_text, parse_json, quarter_for)
 from ..state import AcquisitionState
 from ..storage.contracts import BoundaryObserver, Conflict, FILE_CHUNK_BYTES, ObjectStore, observe
@@ -108,10 +108,11 @@ def read_observations(ref: ObservationRef, objects: ObjectStore) -> Iterator[Obs
 def _read_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, bytes]:
     body = objects.read(path)
     value = parse_json(body)
-    if (not isinstance(value, dict) or set(value) != {'format_version', 'observation', 'image_digest'}
-            or value['format_version'] != OBSERVATION_FORMAT or canonical_json(value) != body
-            or not isinstance(value['image_digest'], str) or IMAGE_PATTERN.fullmatch(value['image_digest']) is None):
+    if (not isinstance(value, dict) or set(value) != {'format_version', 'observation', 'runtime'}
+            or value['format_version'] != OBSERVATION_FORMAT or canonical_json(value) != body):
         raise ValueError('invalid observation manifest')
+    from ..runtime import validate_descriptor
+    validate_descriptor(value['runtime'])
     ref = ObservationRef.from_mapping(value['observation'])
     if ref.manifest_ref != path:
         raise ValueError('observation manifest address differs')
@@ -147,7 +148,7 @@ def _existing(source, snapshot, context, objects, state):
 def _validate_context(context: RunContext, settings: Settings) -> None:
     if context.pinned_on is None or pin_context(settings, context, context.pinned_on)[0] != context:
         raise ValueError('transform requires its exact pinned effective configuration')
-    supported_parser(context.parser_version, fixture=settings.storage.backend == 'local-fixture')
+    supported_parser(context.parser_version, fixture=settings.acquisition.mode == 'fixture')
     _check_deadline(context)
 
 
@@ -238,7 +239,7 @@ def transform_member(source: Source, snapshot: Snapshot, context: RunContext, se
             objects.verify(ref.rows_ref, ref.rows_sha256, ref.rows_bytes)
             observe(observer, 'transform.after_rows')
             manifest = canonical_json({'format_version': OBSERVATION_FORMAT, 'observation': ref.to_mapping(),
-                                       'image_digest': context.image_digest})
+                                       'runtime': to_mapping_value(context.runtime)})
             if existing is not None:
                 manifest = existing[1]
             try:

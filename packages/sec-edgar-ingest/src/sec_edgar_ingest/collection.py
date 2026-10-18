@@ -107,7 +107,7 @@ def _validated_saved_receipt(workset: SourceWorkset, source: Source, entry: dict
     if context.pinned_on is None:
         raise Conflict('staged receipt requires its actual context pinning date')
     pinned, _ = pin_context(settings, context, context.pinned_on)
-    fields = ('image_digest', 'parser_version', 'schema_version', 'config_sha256')
+    fields = ('runtime', 'parser_version', 'schema_version', 'config_sha256')
     if pinned != context or any(getattr(context, field) != getattr(workset.context, field) for field in fields):
         raise Conflict('staged receipt has conflicting frozen versions/configuration')
     if context.effective_config != workset.context.effective_config:
@@ -259,11 +259,11 @@ def _check_collector_context(workset, context, settings, client):
     if context.pinned_on is None:
         raise ValueError('collector context requires its actual pinning date')
     pinned, _ = pin_context(settings, context, context.pinned_on)
-    fields = ('config_sha256', 'image_digest', 'parser_version', 'schema_version')
+    fields = ('config_sha256', 'runtime', 'parser_version', 'schema_version')
     if (pinned != context or client.settings != settings
             or any(getattr(context, field) != getattr(workset.context, field) for field in fields)
             or context.effective_config != workset.context.effective_config):
-        raise ValueError('collector config/image/parser/schema must match the frozen source workset')
+        raise ValueError('collector config/runtime/parser/schema must match the frozen source workset')
 
 
 def _check_collection_input(workset, context, settings, client, objects):
@@ -382,8 +382,19 @@ def collect(workset: SourceWorkset, context: RunContext, settings: Settings, cli
                 outcome = 'state_conflict'
                 gaps.append(Error(outcome, error_text(error), False, None, {}))
     downloaded = len(fetched)
-    result = CommandResult(context, outcome, source_ref, snapshot_ref, len(workset.members),
-                           downloaded, len(accepted)-downloaded, len(workset.members)-len(accepted), failed, quarantined,
-                           tuple(gaps), context.started_at, max(context.started_at, client.clock.now()))
+    result = CommandResult(context=context,
+        outcome=outcome,
+        source_workset_ref=source_ref,
+        snapshot_workset_ref=snapshot_ref,
+        discovered=len(workset.members),
+        downloaded=downloaded,
+        unchanged=len(accepted)-downloaded,
+        pending=len(workset.members)-len(accepted),
+        failed=failed,
+        quarantined=quarantined,
+        gaps=tuple(gaps),
+        started_at=context.started_at,
+        ended_at=max(context.started_at, client.clock.now()),
+        format_version='sec-local-command-result-v1')
     faults.hit('before_result_write')
     return result

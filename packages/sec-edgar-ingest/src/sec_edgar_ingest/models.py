@@ -13,12 +13,13 @@ from typing import Literal, Union, get_args, get_origin, get_type_hints
 
 from .urls import canonical_source_url, canonical_listing_url, source_id as url_source_id
 
-FORMAT_VERSION = "sec-acquisition-v1"
+FORMAT_VERSION = "sec-local-acquisition-v1"
+RUN_CONTEXT_VERSION = "sec-local-run-context-v1"
+COMMAND_RESULT_VERSION = "sec-local-command-result-v1"
 SCHEMA_VERSION = "sec-index-v1"
 QUARTERLY_ENVELOPE_VERSION = "sec-quarterly-envelope-v1"
 DAILY_ENVELOPE_VERSION = "sec-daily-envelope-v1"
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
-IMAGE_PATTERN = re.compile(r"sha256:[0-9a-f]{64}\Z")
 QUARTER_PATTERN = re.compile(r"([0-9]{4})Q([1-4])\Z")
 RAW_SNAPSHOT_PATH = re.compile(
     r"raw/sec/indexes/kind=(quarterly|daily)/period=([^/]+)/sha256=([0-9a-f]{64})/(master\.(?:zip|idx))\Z"
@@ -317,7 +318,8 @@ class RunContext(Record):
     execution_id: str
     command: str
     attempt_id: str
-    image_digest: str
+    runtime: Mapping[str, object] = field(kw_only=True)
+    format_version: str = field(kw_only=True)
     parser_version: str
     schema_version: str
     config_sha256: str
@@ -331,8 +333,10 @@ class RunContext(Record):
         validate_record_fields(self)
         for label in ("run_id", "execution_id", "command", "attempt_id", "parser_version"):
             require_text(getattr(self, label), label)
-        if IMAGE_PATTERN.fullmatch(self.image_digest) is None:
-            raise ValueError("image_digest must be immutable sha256")
+        from .runtime import validate_descriptor
+        if self.format_version != RUN_CONTEXT_VERSION:
+            raise ValueError("unsupported run context format")
+        object.__setattr__(self, "runtime", freeze(validate_descriptor(self.runtime)))
         if self.schema_version != SCHEMA_VERSION:
             raise ValueError("unsupported schema_version")
         require_hash(self.config_sha256, "config_sha256")
@@ -486,6 +490,7 @@ class SnapshotWorkset(Record):
 
 @dataclass(frozen=True, slots=True)
 class CommandResult(Record):
+    format_version: str = field(kw_only=True)
     context: RunContext
     outcome: str
     source_workset_ref: str | None
@@ -502,6 +507,8 @@ class CommandResult(Record):
 
     def __post_init__(self):
         validate_record_fields(self)
+        if self.format_version != COMMAND_RESULT_VERSION:
+            raise ValueError("unsupported command result format")
         require_text(self.outcome, "outcome")
         for label in ("discovered", "downloaded", "unchanged", "pending", "failed", "quarantined"):
             require_number(getattr(self, label), label, integer=True)

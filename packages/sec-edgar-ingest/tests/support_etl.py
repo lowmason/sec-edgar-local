@@ -6,10 +6,10 @@ from sec_edgar_ingest.config import pin_context
 from support import fixture_context, fixture_settings
 
 
-def etl_context(parser_version='fixture-index-parser-v1', command='transform', attempt='etl1'):
-    settings = fixture_settings(etl={'parser_version': parser_version})
+def etl_context(parser_version='fixture-index-parser-v1', command='transform', attempt='etl1', *, root=None):
+    settings = fixture_settings(root=root, etl={'parser_version': parser_version})
     started = datetime.now(timezone.utc)
-    context = replace(fixture_context(), command=command, attempt_id=attempt,
+    context = replace(fixture_context(settings=settings), command=command, attempt_id=attempt,
                       parser_version=parser_version, config_sha256=settings.config_sha256,
                       started_at=started, deadline=started + timedelta(seconds=3600),
                       effective_config={}, pinned_on=None)
@@ -23,7 +23,7 @@ def seed_snapshot(root, source, body):
     from support import fixture_snapshot, fixture_workset, store_bundle
     store, objects, leases = store_bundle(root)
     leases.close()
-    source_set = fixture_workset(members=(source,))
+    source_set = fixture_workset(members=(source,), context=fixture_context(settings=fixture_settings(root=root)))
     snapshot = fixture_snapshot(source, body)
     objects.put_once(snapshot.raw_path, body)
     objects.put_once(f'worksets/sec/source/sha256={source_set.workset_id}/workset.json',

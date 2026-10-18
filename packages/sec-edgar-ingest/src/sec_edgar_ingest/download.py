@@ -158,7 +158,7 @@ class RequestClient:
         self.settings = Settings.from_mapping(settings.to_mapping())
         if coordinator.settings != self.settings:
             raise ValueError("request client and coordinator require the same effective settings")
-        if isinstance(sender, ScriptedSender) and settings.storage.backend != "local-fixture":
+        if isinstance(sender, ScriptedSender) and settings.acquisition.mode != "fixture":
             raise ValueError("scripted transport is fixture-only")
         self.coordinator, self.sender, self.state, self.clock = coordinator, sender, state, clock
         self.jitter = random.random
@@ -629,7 +629,7 @@ class BoundedSender:
         transport = _Transport(url, str(spool), self.settings.sec.user_agent,
             self.settings.http.connect_timeout_seconds, self.settings.http.read_timeout_seconds,
             self.settings.http.max_received_bytes, permit.start_before_mono, permit.deadline_mono,
-            origin, self.settings.storage.backend == "local-fixture" and "fixture" in self.settings.worker.provenance)
+            origin, self.settings.acquisition.mode == "fixture")
         _validate_transport_origin(transport)
         if cancellation.is_set() or self.clock.monotonic() >= min(permit.start_before_mono, permit.deadline_mono):
             receipt, _ = self._receipt(transport, reason="permit_expired")
@@ -739,7 +739,7 @@ class _FixtureSender:
     def send(self, url: str, context: RunContext, permit: Permit, *, cancellation) -> BodyReceipt:
         from .models import canonical_json
         from .storage.contracts import AlreadyExists, CAS_ATTEMPTS, Conflict
-        if context.effective_config.get('storage', {}).get('backend') != 'local-fixture':
+        if context.effective_config.get('acquisition', {}).get('mode') != 'fixture':
             raise FixtureError('fixture transport refuses a production context')
         if cancellation.is_set() or self.clock.monotonic() >= permit.start_before_mono:
             raise OwnershipLost('fixture transport refuses a cancelled or expired permit')

@@ -231,7 +231,7 @@ def _verify_receipt_context(value: object, frozen_context: RunContext) -> None:
         pin_context(settings, transport_context, transport_context.pinned_on)
     except ValueError as error:
         raise Conflict('cached listing receipt has invalid transport context') from error
-    provenance_fields = ('run_id', 'command', 'config_sha256', 'image_digest', 'parser_version', 'schema_version')
+    provenance_fields = ('run_id', 'command', 'config_sha256', 'runtime', 'parser_version', 'schema_version')
     if (any(getattr(transport_context, field) != getattr(frozen_context, field) for field in provenance_fields)
             or transport_context.effective_config != frozen_context.effective_config):
         raise Conflict('cached listing receipt has conflicting frozen transport provenance')

@@ -50,7 +50,7 @@ def _validate_result(result: EtlResult) -> None:
     settings = Settings.from_mapping(context.to_mapping()['effective_config'])
     if context.pinned_on is None or pin_context(settings, context, context.pinned_on)[0] != context:
         raise ValueError('ETL result requires its exact pinned effective configuration')
-    supported_parser(context.parser_version, fixture=settings.storage.backend == 'local-fixture')
+    supported_parser(context.parser_version, fixture=settings.acquisition.mode == 'fixture')
     if result.started_at != context.started_at:
         raise ValueError('ETL result must preserve its exact context start')
     validate_workset_ref(result.input_ref, 'snapshot' if context.command == 'transform' else 'transformed')
@@ -214,7 +214,7 @@ def run_publish(transformed_workset_ref: str, context: RunContext, settings: Set
                 objects: ObjectStore, store: StateStore, *, observer: BoundaryObserver | None = None) -> EtlResult:
     if context.command != 'publish' or context.pinned_on is None or pin_context(settings, context, context.pinned_on)[0] != context:
         raise ValueError('publish requires its exact pinned effective configuration')
-    supported_parser(context.parser_version, fixture=settings.storage.backend == 'local-fixture')
+    supported_parser(context.parser_version, fixture=settings.acquisition.mode == 'fixture')
     if context.schema_version != SCHEMA_VERSION:
         raise ValueError('unsupported ETL schema version')
     if datetime.now(timezone.utc) >= context.deadline:

@@ -269,7 +269,7 @@ def _validate_selection(selection, context, invocation, store, objects):
         if session['discovery_id'] != expected_id or session['frozen']['mode'] != expected_mode:
             raise Conflict('selection captured session identity or discovery mode differs')
         current = template if template is not None else context
-        for field in ('run_id', 'image_digest', 'parser_version', 'schema_version', 'config_sha256', 'effective_config'):
+        for field in ('run_id', 'runtime', 'parser_version', 'schema_version', 'config_sha256', 'effective_config'):
             if getattr(origin, field) != getattr(current, field):
                 raise Conflict('selection discovery session differs from current frozen run provenance')
         if origin.pinned_on != context.pinned_on or session['frozen']['end'] != invocation['pinned_end_quarter']:

@@ -11,10 +11,8 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from support import cli_harness, fixture_context, store_bundle
-from support_azure import WORKER_CLIENT_ID
+from support import cli_harness, fixture_context, fixture_settings, store_bundle
 from sec_edgar_ingest.models import CommandResult, canonical_json
-from sec_edgar_ingest.storage.identity import WORKER_CLIENT_ID_ENV
 
 
 class ResultTests(unittest.TestCase):
@@ -24,9 +22,22 @@ class ResultTests(unittest.TestCase):
         except ModuleNotFoundError:
             self.fail('Task 8 must implement durable results')
 
-    def result(self):
-        ctx = fixture_context()
-        return CommandResult(ctx, 'success', None, None, 0, 0, 0, 0, 0, 0, (), ctx.started_at, ctx.started_at)
+    def result(self, *, root=None):
+        ctx = fixture_context(settings=fixture_settings(root=root))
+        return CommandResult(context=ctx,
+        outcome='success',
+        source_workset_ref=None,
+        snapshot_workset_ref=None,
+        discovered=0,
+        downloaded=0,
+        unchanged=0,
+        pending=0,
+        failed=0,
+        quarantined=0,
+        gaps=(),
+        started_at=ctx.started_at,
+        ended_at=ctx.started_at,
+        format_version='sec-local-command-result-v1')
 
     def test_canonical_result_codec_is_strict_and_roundtrips(self):
         result = self.result()
@@ -47,7 +58,7 @@ class ResultTests(unittest.TestCase):
             self.addCleanup(store.close)
             self.addCleanup(leases.close)
             state = AcquisitionState(store)
-            result = self.result()
+            result = self.result(root=Path(temporary))
             state.begin_attempt(result.context)
             finish = state.finish_attempt
             def observed_finish(value):
@@ -69,7 +80,7 @@ class ResultTests(unittest.TestCase):
             store, objects, leases = store_bundle(Path(temporary))
             self.addCleanup(store.close)
             self.addCleanup(leases.close)
-            objects.put_once('runs/sec/wrong/collect/attempt/result.json', self.result().to_json())
+            objects.put_once('runs/sec/wrong/collect/attempt/result.json', self.result(root=Path(temporary)).to_json())
             with self.assertRaises((Conflict, ValueError)):
                 results.read_result('runs/sec/wrong/collect/attempt/result.json', objects)
 
@@ -125,7 +136,7 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(done.returncode, 2)
                     self.assertEqual(h.external_client_constructions, 0)
 
-    def test_fixture_pack_required_and_overrides_rejected_in_azure_before_clients(self):
+    def test_fixture_pack_required_before_clients(self):
         h = self.harness()
         common = list(h.common)
         position = common.index('--fixture-pack')
@@ -388,29 +399,19 @@ class ValidationBoundaryTests(unittest.TestCase):
                 self.assertEqual(done.returncode, 2, done.stderr)
                 self.assertEqual(h.external_client_constructions, 0)
 
-    def test_azure_fixture_arguments_and_distant_deadline_refuse_before_clients(self):
+    def test_legacy_options_and_distant_deadline_refuse_before_stores(self):
         h = cli_harness('valid-quarter-and-daily')
         self.addCleanup(h.close)
-        cfg = json.loads(h.config_path.read_text())
-        cfg.pop('fixture')
-        cfg['http']['retry_base_seconds'], cfg['http']['retry_cap_seconds'] = 2, 120
-        cfg['worker'] = {'image_digest': 'sha256:' + 'a' * 64, 'provenance': 'immutable-image'}
-        cfg['etl']['parser_version'] = 'envelope-v1'
-        storage = cfg['storage']
-        storage.pop('root')
-        storage.update({'backend': 'azure', 'account_name': 'secedgardevb8617',
-                        'blob_endpoint': 'https://secedgardevb8617.blob.core.windows.net',
-                        'table_endpoint': 'https://secedgardevb8617.table.core.windows.net',
-                        'raw_container': 'raw', 'workset_container': 'worksets', 'quarantine_container': 'quarantine', 'lock_container': 'locks',
-                        'lock_blob': 'sec-owner-lowell-mason/sentinel.json', 'binding_registry_blob': 'sec-owner-lowell-mason/binding.json'})
-        h.config_path.write_text(json.dumps(cfg))
         args = ['--mode', 'quarterly', '--discovery-id', 'd', '--execution-id', 'e', '--attempt-id', 'a']
-        self.assertEqual(h.invoke('discover', args).returncode, 2)
-        common = ['--config', str(h.config_path), '--run-id', 'cli-run', '--deadline', '2099-01-01T00:00:00Z']
-        with patch.dict(os.environ, {WORKER_CLIENT_ID_ENV: WORKER_CLIENT_ID}):
-            distant = h.invoke('discover', args, common=common)
+        for option in ('--state-dir', '--config-env'):
+            done = h.invoke('discover', [*args, option, 'unsupported'])
+            self.assertEqual(done.returncode, 2, done.stderr)
+        cfg = json.loads(h.config_path.read_text())
+        cfg['fixture']['allow_deadline_override'] = False
+        h.config_path.write_text(json.dumps(cfg))
+        distant = h.invoke('discover', args)
         self.assertEqual(distant.returncode, 2)
-        self.assertIn('3600-second worker allowance', distant.stderr)
+        self.assertIn('execution.max_run_seconds', distant.stderr)
         self.assertEqual(h.external_client_constructions, 0)
 
     def test_missing_valid_workset_retains_failed_attempt(self):
@@ -450,7 +451,7 @@ class ErrorIntegrityTests(unittest.TestCase):
             self.addCleanup(store.close)
             self.addCleanup(leases.close)
             state = AcquisitionState(store)
-            result = ResultTests().result()
+            result = ResultTests().result(root=Path(temporary))
             state.begin_attempt(result.context)
             state.finish_attempt(replace(result, downloaded=1))
             with self.assertRaises(Conflict):

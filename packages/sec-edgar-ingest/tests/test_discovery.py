@@ -1,3 +1,4 @@
+from sec_edgar_ingest.runtime import fixture_descriptor
 """Offline trusted listing discovery and durable recovery contracts."""
 import hashlib
 import json
@@ -251,7 +252,7 @@ class DiscoveryTests(unittest.TestCase):
         h = self.harness({'full-index': [listing_response('full-index', ['2026/', 'master.zip', 'master.gz'])],
                           '2026Q3': [listing_response('2026Q3', ['master.zip', 'master.gz'], family='full-index')],
                           '2026Q4': [listing_response('2026Q4', ['master.zip'], family='full-index')]})
-        h.settings = fixture_settings(backfill={'start_quarter': '2026Q3', 'end_quarter': 'open'},
+        h.settings = fixture_settings(root=h.root, backfill={'start_quarter': '2026Q3', 'end_quarter': 'open'},
                               fixture={'allow_clock_override': True})
         h.coordinator.settings = h.settings
         h.client.settings = h.settings
@@ -291,7 +292,7 @@ class DiscoveryTests(unittest.TestCase):
         from support import fixture_settings
         h = self.harness({'full-index': [listing_response('full-index', ['2015/', 'master.zip'])],
                           '2015Q1': [listing_response('2015Q1', ['master.zip'], family='full-index')]})
-        h.settings = fixture_settings(backfill={'start_quarter': '2015Q1', 'end_quarter': '2015Q1'},
+        h.settings = fixture_settings(root=h.root, backfill={'start_quarter': '2015Q1', 'end_quarter': '2015Q1'},
                                       fixture={'allow_clock_override': True})
         h.coordinator.settings = h.client.settings = h.settings
         workset = h.run('quarterly', date(2026, 10, 6), 'historical')
@@ -443,7 +444,7 @@ class DiscoveryTests(unittest.TestCase):
         h = self.harness({})
         h.run('daily', date(2026, 10, 6), 'config-frozen')
         before = len(h.attempted_urls)
-        h.settings = fixture_settings(backfill={'start_quarter': '2026Q3'}, fixture={'allow_clock_override': True})
+        h.settings = fixture_settings(root=h.root, backfill={'start_quarter': '2026Q3'}, fixture={'allow_clock_override': True})
         h.coordinator.settings = h.client.settings = h.settings
         with self.assertRaises(Conflict):
             h.run('daily', date(2026, 10, 6), 'config-frozen')
@@ -452,7 +453,7 @@ class DiscoveryTests(unittest.TestCase):
     def test_daily_endpoint_cannot_exclude_current_quarter_even_when_listings_are_empty(self):
         from support import fixture_settings
         h = self.harness({})
-        h.settings = fixture_settings(backfill={'start_quarter': '2015Q1', 'end_quarter': '2015Q1'},
+        h.settings = fixture_settings(root=h.root, backfill={'start_quarter': '2015Q1', 'end_quarter': '2015Q1'},
                                       fixture={'allow_clock_override': True})
         h.coordinator.settings = h.client.settings = h.settings
         with self.assertRaisesRegex(ValueError, 'endpoint'):
@@ -485,7 +486,7 @@ class DiscoveryTests(unittest.TestCase):
         from sec_edgar_ingest.storage.contracts import Conflict
         cases = (
             ('run_id', 'another-run'), ('command', 'collect'),
-            ('config_sha256', 'b'*64), ('image_digest', 'sha256:'+'b'*64),
+            ('config_sha256', 'b'*64), ('runtime', fixture_descriptor('other-release')),
             ('parser_version', 'another-parser'), ('schema_version', 'sec-index-v2'),
             ('effective_config', {}), ('pinned_on', None),
             ('pinned_on', '2014-01-01'), (None, None),
@@ -554,7 +555,7 @@ class DiscoveryTests(unittest.TestCase):
             responses[url] = [ResponseSpec(200, values['body'], {'X-Fixture': f'retained-original-SEC-{number:04d}'})]
             hashes[url] = records[stem+'.body']['sha256']
         h = self.harness(responses)
-        h.settings = fixture_settings(backfill={'start_quarter': '2010Q1', 'end_quarter': '2010Q1'},
+        h.settings = fixture_settings(root=h.root, backfill={'start_quarter': '2010Q1', 'end_quarter': '2010Q1'},
                                       fixture={'allow_clock_override': True})
         h.coordinator.settings = h.client.settings = h.settings
         result = h.run('quarterly', date(2026, 10, 6), 'retained-hierarchy')

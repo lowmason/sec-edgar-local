@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from support import FIXTURE_CONFIG, fixture_context, fixture_settings
+from sec_edgar_ingest.runtime import fixture_descriptor
 
 
 class ConfigTests(unittest.TestCase):
@@ -26,13 +27,10 @@ class ConfigTests(unittest.TestCase):
     def test_invalid_configuration_precedes_external_factories(self):
         value = fixture_settings().to_mapping()
         value["sec"]["max_active_collectors"] = 2
-        with patch("azure.identity.DefaultAzureCredential") as credential, \
-             patch("azure.storage.blob.BlobServiceClient") as client, \
-             patch("requests.Session") as transport:
+        with patch("requests.Session") as transport:
             with self.assertRaises(ValueError):
                 self.config.Settings.from_mapping(value)
-            for factory in (credential, client, transport):
-                factory.assert_not_called()
+            transport.assert_not_called()
 
     def test_rejects_configuration_matrix(self):
         cases = [
@@ -44,8 +42,8 @@ class ConfigTests(unittest.TestCase):
             ("unsupported config", "config_version", "v2"),
             ("unsupported schema", "etl.schema_version", "sec-index-v2"),
             ("absent parser", "etl.parser_version", None),
-            ("absent image", "worker.image_digest", None),
-            ("malformed image", "worker.image_digest", "latest"),
+            ("absent fixture id", "runtime.fixture_id", None),
+            ("malformed runtime", "runtime.kind", "container"),
             ("zero rate", "sec.requests_per_second", 0),
             ("target at ten", "sec.requests_per_second", 10),
             ("negative attempts", "http.max_attempts", -1),
@@ -54,12 +52,12 @@ class ConfigTests(unittest.TestCase):
             ("infinity", "http.exchange_deadline_seconds", float("inf")),
             ("zero received", "http.max_received_bytes", 0),
             ("negative expanded", "http.max_expanded_bytes", -1),
-            ("unsafe path", "storage.root", "../outside"),
-            ("absolute output path", "storage.root", "/tmp/outside"),
+            ("empty root", "storage.root", ""),
+            ("invalid root", "storage.root", 123),
             ("bad namespace", "coordination.namespace", "independent-lane"),
             ("renew after lease", "coordination.renew_every_seconds", 60),
-            ("bad retries", "jobs.replica_retry_limit", 1),
-            ("bad replays", "orchestration.transient_replays", 2),
+            ("old retries", "jobs", {"replica_retry_limit": 1}),
+            ("old replays", "orchestration", {"transient_replays": 2}),
             ("no withdrawal gate", "reconciliation.require_withdrawal_approval", False),
             ("unknown nested key", "http.burst", 3),
             ("unknown root key", "unexpected", True),
@@ -78,50 +76,35 @@ class ConfigTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.config.Settings.from_mapping(value)
 
-    def azure_value(self):
+    def live_value(self):
         value = fixture_settings().to_mapping()
-        value["storage"] = {
-            "backend": "azure", "account_name": "secedgardevb8617",
-            "blob_endpoint": "https://secedgardevb8617.blob.core.windows.net",
-            "table_endpoint": "https://secedgardevb8617.table.core.windows.net",
-            "raw_container": "raw", "workset_container": "worksets",
-            "quarantine_container": "quarantine", "lock_container": "locks",
-            "lock_blob": "sec-owner-lowell-mason/sentinel.json",
-            "binding_registry_blob": "sec-owner-lowell-mason/binding.json",
-            "source_table": "SourceState", "attempt_table": "Attempts",
-            "blob_api_version": "2026-04-06", "table_api_version": "2020-12-06",
-        }
-        value["worker"] = {"image_digest": "sha256:" + "1" * 64,
-                           "provenance": "immutable-image"}
-        value["etl"]["parser_version"] = "accepted-parser-v1"
+        value['acquisition'] = {'mode': 'live'}
+        value['runtime'] = {'kind': 'native', 'release_manifest':
+            '/tmp/releases/sha256=' + 'a' * 64 + '/release.json'}
+        value['etl']['parser_version'] = 'sec-index-parser-v1'
         return value
 
-    def test_azure_explicit_binding_and_credential_free_endpoints(self):
-        valid = self.azure_value()
+    def test_native_live_binding_and_explicit_runtime(self):
+        valid = self.live_value()
         settings = self.config.Settings.from_mapping(valid)
-        self.assertEqual(settings.storage.lock_container, "locks")
-        self.assertEqual(settings.storage.account_name, "secedgardevb8617")
+        self.assertEqual(settings.storage.backend, 'local')
+        self.assertEqual(settings.runtime.kind, 'native')
         cases = [
-            ("missing Azure endpoint", "storage.blob_endpoint", None),
-            ("credentials in endpoint", "storage.blob_endpoint",
-             "https://user:secret@secedgardevb8617.blob.core.windows.net"),
-            ("query credential", "storage.table_endpoint",
-             "https://secedgardevb8617.table.core.windows.net?sig=hidden"),
-            ("foreign account", "storage.account_name", "otheraccount"),
-            ("foreign endpoint", "storage.table_endpoint", "https://other.table.core.windows.net"),
-            ("different sentinel", "storage.lock_blob", "independent-sentinel"),
-            ("different namespace", "coordination.namespace", "othernamespace"),
-            ("different budget", "sec.requests_per_second", 2),
-            ("synthetic image", "worker.image_digest", "sha256:" + "0" * 64),
-            ("fixture marker", "worker.provenance", "synthetic-fixture"),
-            ("fixture parser", "etl.parser_version", "fixture-envelope-v1"),
-            ("fixture-only cap", "http.max_received_bytes", 32),
-            ("fixture-only override", "fixture", {"allow_deadline_override": True}),
+            ('absent runtime', 'runtime', None),
+            ('unaddressed release', 'runtime.release_manifest', '/tmp/release.json'),
+            ('legacy image', 'worker', {'image_digest': 'sha256:' + '1' * 64}),
+            ('provider backend', 'storage.backend', 'azure'),
+            ('different namespace', 'coordination.namespace', 'othernamespace'),
+            ('too high budget', 'sec.requests_per_second', 4),
+            ('fixture runtime', 'runtime', {'kind': 'fixture', 'fixture_id': 'test'}),
+            ('fixture parser', 'etl.parser_version', 'fixture-envelope-v1'),
+            ('fixture-only cap', 'http.max_received_bytes', 32),
+            ('fixture-only override', 'fixture', {'allow_deadline_override': True}),
         ]
         for name, dotted, replacement in cases:
             with self.subTest(name=name):
                 value = copy.deepcopy(valid)
-                parts = dotted.split(".")
+                parts = dotted.split('.')
                 target = value if len(parts) == 1 else value[parts[0]]
                 if replacement is None:
                     target.pop(parts[-1])
@@ -147,7 +130,9 @@ class ConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "config.yaml"
             path.write_bytes(FIXTURE_CONFIG.read_bytes())
-            self.assertEqual(self.config.load_config(path), fixture_settings())
+            expected = self.config.normalize_paths(self.config.parse_config(path.read_text()), path.resolve().parent)
+            self.assertEqual(self.config.load_config(path), expected)
+            self.assertEqual(expected.storage.root, str((path.parent / ".fixture-state").resolve()))
             self.assertFalse((Path(temporary) / ".fixture-state").exists())
             path.write_text("config_version: sec-acquisition-v1")
             with self.assertRaisesRegex(ValueError, "JSON"):
@@ -170,7 +155,7 @@ class ConfigTests(unittest.TestCase):
         cases = [
             ("future endpoint", fixture_settings(backfill={"end_quarter": "2027Q1"}), context),
             ("unbound config", fixture_settings(), replace(context, config_sha256="f" * 64)),
-            ("unbound image", fixture_settings(), replace(context, image_digest="sha256:" + "f" * 64)),
+            ("unbound runtime", fixture_settings(), replace(context, runtime=fixture_descriptor("different"))),
             ("unbound parser", fixture_settings(), replace(context, parser_version="other-v1")),
             ("too long", fixture_settings(), replace(context, deadline=context.started_at + timedelta(seconds=3601))),
         ]
@@ -196,27 +181,26 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(quarter, "2026Q4")
         self.assertTrue(pinned.effective_config["fixture"]["allow_clock_override"])
 
-    def test_azure_deadlines_and_two_callers_share_one_binding(self):
-        settings = self.config.Settings.from_mapping(self.azure_value())
-        original = fixture_context()
-        context = replace(original, image_digest=settings.worker.image_digest,
-                          parser_version=settings.etl.parser_version,
-                          config_sha256=settings.config_sha256)
-        self.assertEqual(self.config.pin_context(settings, context, date(2026, 10, 6))[1], "2026Q4")
+    def test_local_deadlines_and_two_callers_share_one_namespace(self):
+        settings = fixture_settings()
+        context = fixture_context(settings=settings)
+        self.assertEqual(self.config.pin_context(settings, context, date(2026, 10, 6))[1], '2026Q4')
         for name, start, end in [
-            ("over allowance", context.started_at, context.started_at + timedelta(seconds=3601)),
-            ("at start", context.started_at, context.started_at),
-            ("before start", context.started_at, context.started_at - timedelta(seconds=1)),
-            ("non-UTC", context.started_at.replace(tzinfo=None), context.deadline),
+            ('over allowance', context.started_at, context.started_at + timedelta(seconds=3601)),
+            ('at start', context.started_at, context.started_at),
+            ('before start', context.started_at, context.started_at - timedelta(seconds=1)),
+            ('non-UTC', context.started_at.replace(tzinfo=None), context.deadline),
         ]:
             with self.subTest(name=name), self.assertRaises(ValueError):
                 candidate = replace(context, started_at=start, deadline=end)
                 self.config.pin_context(settings, candidate, date(2026, 10, 6))
-        contender = self.azure_value()
-        contender["coordination"]["namespace"] = "backfill-independent"
-        with self.assertRaisesRegex(ValueError, "namespace"):
+        contender = settings.to_mapping()
+        contender['coordination']['namespace'] = 'backfill-independent'
+        with self.assertRaisesRegex(ValueError, 'namespace'):
             self.config.Settings.from_mapping(contender)
-        self.assertEqual(settings.storage.lock_blob, fixture_settings().storage.lock_blob)
+        bounded = fixture_settings(execution={'max_run_seconds': 10})
+        with self.assertRaisesRegex(ValueError, 'execution.max_run_seconds'):
+            self.config.pin_context(bounded, fixture_context(settings=bounded), date(2026, 10, 6))
 
     def test_config_parser_rejects_duplicate_keys_and_non_utf8(self):
         with tempfile.TemporaryDirectory() as directory:

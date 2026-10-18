@@ -86,7 +86,7 @@ class WorkflowMembers:
                     context.started_at, context.deadline, context.pinned_on):
                 raise Conflict('member child differs from original workflow namespace/context')
             if not call['step_id'].startswith('repair-') and child.command != 'collect':
-                if child.effective_config != context.effective_config or child.image_digest != context.image_digest:
+                if child.effective_config != context.effective_config or child.runtime != context.runtime:
                     raise Conflict('member child differs from current workflow settings')
 
     def record(self, result, context, evidence) -> Mapping:

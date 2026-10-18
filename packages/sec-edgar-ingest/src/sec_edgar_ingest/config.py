@@ -286,14 +286,15 @@ def pin_context(settings: Settings, context: RunContext, today: date) -> tuple[R
         raise ValueError("today must be an explicit date")
     if today != context.started_at.date() and not (settings.fixture and settings.fixture.allow_clock_override):
         raise ValueError("fixture clock override must be explicitly labelled")
-    expected = {"image_digest": settings.worker.image_digest, "parser_version": settings.etl.parser_version,
+    from .runtime import configured_descriptor
+    expected = {"runtime": configured_descriptor(settings), "parser_version": settings.etl.parser_version,
                 "schema_version": settings.etl.schema_version, "config_sha256": settings.config_sha256}
     for label, value in expected.items():
-        if getattr(context, label) != value:
+        if context.to_mapping()[label] != value:
             raise ValueError(f"context {label} does not match the effective configuration")
     duration = (context.deadline - context.started_at).total_seconds()
-    if duration > WORKER_ALLOWANCE_SECONDS and not (settings.fixture and settings.fixture.allow_deadline_override):
-        raise ValueError("context deadline exceeds the accepted 3600-second worker allowance")
+    if duration > settings.execution.max_run_seconds and not (settings.fixture and settings.fixture.allow_deadline_override):
+        raise ValueError("context deadline exceeds execution.max_run_seconds")
     end = quarter_for(today) if settings.backfill.end_quarter == "open" else settings.backfill.end_quarter
     if quarter_value(end) > quarter_value(quarter_for(today)):
         raise ValueError("backfill endpoint is in a future quarter")

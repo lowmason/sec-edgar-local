@@ -10,10 +10,11 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
+from sec_edgar_ingest.runtime import fixture_descriptor
 from sec_edgar_ingest.storage.contracts import Conflict
 from sec_edgar_ingest.worksets import decode_snapshot_workset, encode_workset, make_source_workset
 from support import (CollectionCrash, collection_harness, collection_race_entry, discovery_harness,
-                     failed_response, fixture_context, fixture_source, fixture_workset,
+                     failed_response, fixture_context, fixture_settings, fixture_source, fixture_workset,
                      listing_response, retain_collection_proof, run_collection_process, valid_idx_response)
 
 CRASH_POINTS = ('after_receipt_checkpoint', 'after_raw_promotion', 'after_promotion_receipt',
@@ -29,10 +30,11 @@ class CollectionTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
         self.source = fixture_source(kind='daily', period='2026-10-01')
-        self.workset = fixture_workset((self.source,))
+        self.workset = fixture_workset((self.source,), context=fixture_context(settings=fixture_settings(root=self.root)))
 
     def harness(self, responses):
         h = collection_harness(self.root, responses)
+        self.workset = fixture_workset((self.source,), context=h.context)
         self.addCleanup(h.close)
         return h
 
@@ -52,7 +54,7 @@ class CollectionTests(unittest.TestCase):
     def test_partial_success_404_then_only_unresolved_member_fetches(self):
         sources = tuple(sorted((self.source, fixture_source(kind='daily', period='2026-10-02')),
                                key=lambda source: source.source_id))
-        workset = fixture_workset(sources)
+        workset = fixture_workset(sources, context=fixture_context(settings=fixture_settings(root=self.root)))
         h = self.harness([valid_idx_response('daily'), failed_response(404), valid_idx_response('daily', 'Recovery')])
         first = h.collect(workset)
         self.assertEqual(first.outcome, 'incomplete')
@@ -71,6 +73,7 @@ class CollectionTests(unittest.TestCase):
 
     def unsafe_text_harness(self, name):
         h = collection_harness(self.root / name, [])
+        self.workset = fixture_workset((self.source,), context=h.context)
         self.addCleanup(h.close)
         return h
 
@@ -137,11 +140,11 @@ class CollectionTests(unittest.TestCase):
 
     def test_successful_empty_and_failed_empty_have_distinct_results(self):
         h = self.harness([])
-        empty = fixture_workset(())
+        empty = fixture_workset((), context=fixture_context(settings=fixture_settings(root=self.root)))
         successful = h.collect(empty)
         self.assertEqual(successful.outcome, 'no_new_sources')
         self.assertEqual(h.snapshot_workset(successful).snapshots, ())
-        failed = h.collect(fixture_workset((), discovery_complete=False))
+        failed = h.collect(fixture_workset((), discovery_complete=False, context=fixture_context(settings=fixture_settings(root=self.root))))
         self.assertEqual(failed.outcome, 'incomplete')
         self.assertIsNone(failed.snapshot_workset_ref)
         self.assertTrue(any(gap.code == 'discovery_failed' for gap in failed.gaps))
@@ -149,7 +152,7 @@ class CollectionTests(unittest.TestCase):
 
     def test_incomplete_discovery_retains_successful_member_without_snapshot_workset(self):
         h = self.harness([valid_idx_response('daily')])
-        workset = fixture_workset((self.source,), discovery_complete=False)
+        workset = fixture_workset((self.source,), discovery_complete=False, context=fixture_context(settings=fixture_settings(root=self.root)))
         result = h.collect(workset)
         self.assertEqual(result.outcome, 'incomplete')
         self.assertEqual(result.downloaded, 1)
@@ -160,6 +163,7 @@ class CollectionTests(unittest.TestCase):
         for corruption in ('missing', 'corrupt'):
             with self.subTest(corruption=corruption), tempfile.TemporaryDirectory() as directory:
                 h = collection_harness(Path(directory), [valid_idx_response('daily')])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 self.addCleanup(h.close)
                 first = h.collect(self.workset)
                 snapshot = h.snapshot_workset(first).snapshots[0]
@@ -172,25 +176,25 @@ class CollectionTests(unittest.TestCase):
                 self.assertEqual(h.fetch_count, 1)
                 self.assertEqual(h.source_state.binding(self.workset.workset_id, self.source.source_id).snapshot_sha256, snapshot.sha256)
 
-    def test_mismatched_config_parser_image_or_client_refuses_before_request(self):
+    def test_mismatched_config_parser_runtime_or_client_refuses_before_request(self):
         for field, value in (('config_sha256', 'f'*64), ('parser_version', 'other-parser'),
-                             ('image_digest', 'sha256:'+'f'*64)):
+                             ('runtime', fixture_descriptor('other-release'))):
             with self.subTest(field=field):
                 h = self.harness([])
-                h.context = replace(fixture_context(), **{field: value})
+                h.context = replace(fixture_context(settings=fixture_settings(root=self.root)), **{field: value})
                 result = h.collect(self.workset)
                 self.assertEqual(result.outcome, 'configuration')
                 self.assertIsNone(result.snapshot_workset_ref)
                 self.assertEqual(h.fetch_count, 0)
         with self.assertRaises(ValueError):
-            replace(fixture_context(), schema_version='sec-index-v2')
+            replace(fixture_context(settings=fixture_settings(root=self.root)), schema_version='sec-index-v2')
 
     def test_collector_current_context_and_snapshot_workset_origin_are_distinct(self):
         origin = replace(self.workset.context, command='discover', execution_id='discovery-execution')
         workset = make_source_workset(origin, self.workset.pinned_end_quarter, 'origin',
             self.workset.members, self.workset.directories, self.workset.overlap_from)
         h = self.harness([valid_idx_response('daily')])
-        h.context = replace(fixture_context(), run_id='current-collection-run')
+        h.context = replace(fixture_context(settings=fixture_settings(root=self.root)), run_id='current-collection-run')
         result = h.collect(workset)
         self.assertEqual(result.context.command, 'collect')
         self.assertEqual(result.context.run_id, 'current-collection-run')
@@ -250,11 +254,11 @@ class CollectionTests(unittest.TestCase):
         sources = tuple(sorted((self.source, fixture_source(kind='daily', period='2026-10-02')),
                                key=lambda source: source.source_id))
         h = self.harness([ResponseSpec(200, b'bad envelope', {}), valid_idx_response('daily')])
-        result = h.collect(fixture_workset(sources))
+        result = h.collect(fixture_workset(sources, context=h.context))
         self.assertEqual(result.outcome, 'incomplete')
         self.assertEqual((result.downloaded, result.pending, result.failed, result.quarantined), (1, 1, 1, 1))
         self.assertEqual(h.fetch_count, 2)
-        self.assertIsNotNone(h.source_state.binding(fixture_workset(sources).workset_id, sources[1].source_id))
+        self.assertIsNotNone(h.source_state.binding(fixture_workset(sources, context=fixture_context(settings=fixture_settings(root=self.root))).workset_id, sources[1].source_id))
 
     def test_access_denial_and_policy_block_stop_remaining_members(self):
         from sec_edgar_ingest.download import ResponseSpec
@@ -264,13 +268,14 @@ class CollectionTests(unittest.TestCase):
             (ResponseSpec(429, b'throttled', {'Retry-After': '1'+'0'*400}), 'deferred')):
             with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
                 h = collection_harness(Path(directory), [response, valid_idx_response('daily')])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 self.addCleanup(h.close)
-                result = h.collect(fixture_workset(sources))
+                result = h.collect(fixture_workset(sources, context=h.context))
                 self.assertEqual(result.outcome, outcome)
                 self.assertEqual(h.fetch_count, 1)
                 self.assertEqual(result.pending, 2)
                 self.assertIsNone(result.snapshot_workset_ref)
-                again = h.collect(fixture_workset(sources))
+                again = h.collect(fixture_workset(sources, context=h.context))
                 self.assertEqual(again.outcome, outcome)
                 self.assertEqual(h.fetch_count, 1)
 
@@ -334,6 +339,7 @@ class CollectionTests(unittest.TestCase):
         for corruption in ('missing', 'corrupt'):
             with self.subTest(corruption=corruption), tempfile.TemporaryDirectory() as directory:
                 h = collection_harness(Path(directory), [valid_idx_response('daily')])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 self.addCleanup(h.close)
                 h.fail_at('after_promotion_receipt')
                 with self.assertRaises(CollectionCrash):
@@ -383,7 +389,7 @@ class CollectionTests(unittest.TestCase):
         from sec_edgar_ingest.download import ResponseSpec
         sources = tuple(sorted((self.source, fixture_source(kind='daily', period='2026-10-02')),
                                key=lambda source: source.source_id))
-        workset = fixture_workset(sources)
+        workset = fixture_workset(sources, context=fixture_context(settings=fixture_settings(root=self.root)))
         h = self.harness([valid_idx_response('daily'), ResponseSpec(403, b'access denied', {})])
         h.objects.put_once(h.source_workset_path(workset), encode_workset(workset))
         h.source_state.observe(sources[1], h.clock.now(), 'available')
@@ -442,7 +448,7 @@ class CollectionTests(unittest.TestCase):
         source = fixture_source(period='2015Q1')
         response = valid_idx_response('quarterly')
         h = self.harness([response])
-        result = h.collect(fixture_workset((source,)))
+        result = h.collect(fixture_workset((source,), context=fixture_context(settings=fixture_settings(root=self.root))))
         self.assertEqual(result.outcome, 'success')
         snapshot = h.snapshot_workset(result).snapshots[0]
         self.assertEqual(snapshot.representation, 'zip')
@@ -457,6 +463,7 @@ class CollectionTests(unittest.TestCase):
                              ('validators', {'ETag': 'invented validator'})):
             with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
                 h = collection_harness(Path(directory), [valid_idx_response('daily')])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 self.addCleanup(h.close)
                 h.fail_at('after_promotion_receipt')
                 with self.assertRaises(CollectionCrash):
@@ -475,7 +482,7 @@ class CollectionTests(unittest.TestCase):
     def test_process_exit_preserves_first_pin_and_fetches_only_unresolved_member(self):
         sources = tuple(sorted((self.source, fixture_source(kind='daily', period='2026-10-02')),
                                key=lambda source: source.source_id))
-        workset = fixture_workset(sources)
+        workset = fixture_workset(sources, context=fixture_context(settings=fixture_settings(root=self.root)))
         h = self.harness([])
         h.objects.put_once(h.source_workset_path(workset), encode_workset(workset))
         (self.root / 'input-workset.json').write_bytes(encode_workset(workset))
@@ -506,6 +513,7 @@ class CollectionTests(unittest.TestCase):
             with self.subTest(point=point), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 h = collection_harness(root, [])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 h.objects.put_once(h.source_workset_path(self.workset), encode_workset(self.workset))
                 h.close()
                 (root / 'input-workset.json').write_bytes(encode_workset(self.workset))
@@ -550,6 +558,7 @@ class CollectionTests(unittest.TestCase):
             with self.subTest(point=point), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 h = collection_harness(root, [])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 h.objects.put_once(h.source_workset_path(self.workset), encode_workset(self.workset))
                 h.close()
                 (root / 'input-workset.json').write_bytes(encode_workset(self.workset))
@@ -650,6 +659,7 @@ class CollectionTests(unittest.TestCase):
             with self.subTest(corruption=corruption), tempfile.TemporaryDirectory() as directory:
                 h = collection_harness(Path(directory), [ResponseSpec(200, b'retained retry prefix',
                     {'X-Fixture': 'partial'}, 'read_timeout'), valid_idx_response('daily')])
+                self.workset = fixture_workset((self.source,), context=h.context)
                 self.addCleanup(h.close)
                 h.fail_at('after_receipt_checkpoint')
                 with self.assertRaises(CollectionCrash):

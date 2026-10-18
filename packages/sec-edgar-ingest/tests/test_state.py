@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sec_edgar_ingest.models import Binding, BodyReceipt, CommandResult, Error, Permit
-from support import Faults, FixtureClock, fixture_context, fixture_snapshot, fixture_source, store_bundle
+from support import Faults, FixtureClock, fixture_context, fixture_settings, fixture_snapshot, fixture_source, store_bundle
 
 
 class TracedBindingStore:
@@ -219,7 +219,7 @@ class StateTests(unittest.TestCase):
         self.assertEqual(set(pending), set(sources[:-1]))
 
     def test_attempts_reopen_unfinished_and_finish_idempotently_without_erasure(self):
-        context = fixture_context()
+        context = fixture_context(settings=fixture_settings(root=self.root))
         self.state.begin_attempt(context)
         unfinished = tuple(self.store.scan("Attempt", {}))
         self.assertEqual(len(unfinished), 1)
@@ -230,8 +230,20 @@ class StateTests(unittest.TestCase):
         reopened.begin_attempt(context)
         self.assertEqual(tuple(reopened_store.scan("Attempt", {})), unfinished)
         error = Error("timeout", "interrupted body", True, self.source.source_id, {})
-        result = CommandResult(context, "failed", None, None, 1, 0, 0, 1, 1, 0, (error,),
-                               context.started_at, context.started_at + timedelta(seconds=10))
+        result = CommandResult(context=context,
+        outcome="failed",
+        source_workset_ref=None,
+        snapshot_workset_ref=None,
+        discovered=1,
+        downloaded=0,
+        unchanged=0,
+        pending=1,
+        failed=1,
+        quarantined=0,
+        gaps=(error,),
+        started_at=context.started_at,
+        ended_at=context.started_at + timedelta(seconds=10),
+        format_version='sec-local-command-result-v1')
         reopened.finish_attempt(result)
         finished = tuple(self.store.scan("Attempt", {}))[0]
         self.assertEqual(finished.to_mapping()["value"]["result"], result.to_mapping())
@@ -242,7 +254,7 @@ class StateTests(unittest.TestCase):
             reopened.finish_attempt(replace(result, outcome="success", gaps=()))
 
     def test_request_attempts_are_immutable_auditable_and_bounded(self):
-        context = fixture_context()
+        context = fixture_context(settings=fixture_settings(root=self.root))
         self.state.begin_attempt(context)
         receipt = BodyReceipt(self.source.canonical_url, 503, {"Retry-After": "120"}, self.root / "body",
                               context.started_at, 0, "0" * 64, False,

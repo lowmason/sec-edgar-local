@@ -41,16 +41,24 @@ def retained_path(original_path: str) -> Path:
     return target
 
 
+def local_config_mapping(*, root: Path | None = None) -> dict:
+    """Build a detached config map without constructing a store."""
+    from sec_edgar_ingest.config import load_config
+    value = load_config(FIXTURE_CONFIG).to_mapping()
+    if root is not None:
+        value["storage"]["root"] = str(root.resolve())
+        value["logging"]["root"] = str((root.parent / (root.name + "-logs")).resolve())
+    return value
+
+
 def fixture_settings(*, root: Path | None = None, **overrides: object) -> "Settings":
     from sec_edgar_ingest.config import Settings, normalize_paths
-    value = json.loads(FIXTURE_CONFIG.read_text())
+    value = local_config_mapping(root=root)
     for key, override in overrides.items():
         if isinstance(override, dict) and isinstance(value.get(key), dict):
             value[key].update(override)
         else:
             value[key] = override
-    if root is not None:
-        value["storage"]["root"] = str(root.resolve())
     return normalize_paths(Settings.from_mapping(value), FIXTURE_CONFIG.resolve().parent)
 
 
@@ -66,14 +74,16 @@ def spawn_tolerant_settings(**overrides: dict) -> "Settings":
     return fixture_settings(**sections)
 
 
-def fixture_context(command: str = "collect", priority: str = "backfill") -> "RunContext":
+def fixture_context(command: str = "collect", priority: str = "backfill", *, settings: "Settings | None" = None) -> "RunContext":
     from sec_edgar_ingest.config import pin_context
     from sec_edgar_ingest.models import RunContext
-    settings = fixture_settings()
+    from sec_edgar_ingest.runtime import configured_descriptor
+    settings = settings or fixture_settings()
     started = datetime(2026, 10, 6, tzinfo=timezone.utc)
     context = RunContext(
         run_id="fixture-run", execution_id="fixture-execution", command=command,
-        attempt_id="fixture-attempt", image_digest=settings.worker.image_digest,
+        attempt_id="fixture-attempt", runtime=configured_descriptor(settings),
+        format_version="sec-local-run-context-v1",
         parser_version=settings.etl.parser_version, schema_version=settings.etl.schema_version,
         config_sha256=settings.config_sha256, started_at=started,
         deadline=started + timedelta(seconds=3600), priority=priority,
@@ -97,7 +107,7 @@ def fixture_source(period: str = "2015Q1", kind: str = "quarterly") -> "Source":
     return Source(source_id(url), url, kind, period, representation)
 
 
-def fixture_workset(members: tuple["Source", ...], discovery_complete: bool = True) -> "SourceWorkset":
+def fixture_workset(members: tuple["Source", ...], discovery_complete: bool = True, *, context: "RunContext | None" = None) -> "SourceWorkset":
     from sec_edgar_ingest.models import DirectoryOutcome, Error
     from sec_edgar_ingest.worksets import make_source_workset
     by_directory = {}
@@ -118,7 +128,7 @@ def fixture_workset(members: tuple["Source", ...], discovery_complete: bool = Tr
             "2015Q2", "discovery_failed", None, (), Error("listing", "failed", True, None, {}),
         )
         directories += (failed,)
-    return make_source_workset(fixture_context(), "2026Q4", "fixture-discovery",
+    return make_source_workset(context or fixture_context(), "2026Q4", "fixture-discovery",
                                tuple(members), directories, date(2026, 10, 1))
 
 
@@ -233,7 +243,7 @@ class CoordinationHarness:
         faults = Faults()
         state, _, leases = store_bundle(self.root, clock=self.clock, observer=faults)
         self.faults[owner], self.leases[owner] = faults, leases
-        coordinator = Coordinator(fixture_settings(), state, leases, self.clock)
+        coordinator = Coordinator(fixture_settings(root=self.root), state, leases, self.clock)
         coordinator.observer = self.events.append
         self.coordinators[owner] = coordinator
         context = coordinator.turn(owner, priority, self.clock.now()+timedelta(seconds=3600))
@@ -411,14 +421,15 @@ def _exchange_process(root, worker, value, condition, queue, lock, sequence, beg
     state = leases = None
     try:
         state, _, leases = store_bundle(root, clock=clock)
-        coordinator = Coordinator(fixture_settings(), state, leases, clock)
+        settings = fixture_settings(root=root)
+        coordinator = Coordinator(settings, state, leases, clock)
         coordinator.observer = recorder.observe
         recorder.emit("ready")
         if not begin.wait(10):
             raise TimeoutError("parent did not release process launch barrier")
         exchanges = 2 if worker == "backfill" else 1
         for ordinal in range(exchanges):
-            context = replace(fixture_context(priority=worker), execution_id=worker, attempt_id=f"{worker}-{ordinal}")
+            context = replace(fixture_context(priority=worker, settings=settings), execution_id=worker, attempt_id=f"{worker}-{ordinal}")
             sender = ProcessSender(root, clock, coordinator, recorder, 503 if worker == "backfill" and ordinal == 0 else 200)
             receipt = coordinator.exchange(context, "https://www.sec.gov/Archives/edgar/full-index/2015/QTR1/index.json", sender)
             if not receipt.complete:
@@ -597,8 +608,8 @@ class DownloadHarness:
         self.directory = tempfile.TemporaryDirectory() if root is None else None
         self.root = Path(self.directory.name) if root is None else Path(root)
         self.clock = clock or fixture_clock()
-        self.settings = settings or fixture_settings()
-        self.context = context or fixture_context()
+        self.settings = settings or fixture_settings(root=self.root)
+        self.context = context or fixture_context(settings=self.settings)
         self.store, self.objects, self.leases = store_bundle(self.root, clock=self.clock)
         self.state = AcquisitionState(self.store, clock=self.clock)
         self.coordinator = Coordinator(self.settings, self.store, self.leases, self.clock)
@@ -774,7 +785,7 @@ def loopback_sender(settings, clock, origin, *, target=None, spool=None):
     from urllib.parse import urlsplit
     class FixtureLoopbackSender(BoundedSender):
         def _validated_origin(self, url):
-            if self.settings.storage.backend != "local-fixture" or "fixture" not in self.settings.worker.provenance:
+            if self.settings.acquisition.mode != "fixture":
                 raise ValueError("loopback exception is expressly fixture-only")
             parsed = urlsplit(url)
             if parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or parsed.username or parsed.password or parsed.fragment or urlsplit(origin).netloc != parsed.netloc:
@@ -805,7 +816,7 @@ def real_permit(clock, seconds=0.4, *, start_seconds=1/3):
 def real_context(clock, settings):
     from dataclasses import replace
     now = clock.now()
-    return replace(fixture_context(), started_at=now, deadline=now+timedelta(seconds=10),
+    return replace(fixture_context(settings=settings), started_at=now, deadline=now+timedelta(seconds=10),
                    pinned_on=now.date(), config_sha256=settings.config_sha256, effective_config=settings.to_mapping())
 
 
@@ -947,7 +958,7 @@ class DiscoveryHarness:
         self.directory = tempfile.TemporaryDirectory(prefix='sec-discovery-') if root is None else None
         self.root = Path(self.directory.name) if root is None else Path(root)
         self.clock = fixture_clock()
-        self.settings = fixture_settings(fixture={"allow_clock_override": True})
+        self.settings = fixture_settings(root=self.root, fixture={"allow_clock_override": True})
         self.store, self.objects, self.leases = store_bundle(self.root, clock=self.clock)
         self.state = AcquisitionState(self.store, clock=self.clock)
         self.coordinator = Coordinator(self.settings, self.store, self.leases, self.clock)
@@ -1018,7 +1029,7 @@ class DiscoveryHarness:
         from sec_edgar_ingest.config import pin_context
         self.family = 'daily-index' if mode == 'daily' else 'full-index'
         self.invocations += 1
-        context = replace(fixture_context(command='discover', priority='daily' if mode == 'daily' else 'backfill'),
+        context = replace(fixture_context(command='discover', priority='daily' if mode == 'daily' else 'backfill', settings=self.settings),
                           attempt_id=f'discover-{self.invocations}', execution_id=f'discover-{today}',
                           config_sha256=self.settings.config_sha256, pinned_on=None)
         context, _ = pin_context(self.settings, context, today)
@@ -1027,14 +1038,14 @@ class DiscoveryHarness:
     def run_single_directory(self, period: str) -> "SourceWorkset":
         year, quarter = period.split('Q')
         day = date(int(year), (int(quarter)-1)*3+1, 1)
-        self.settings = fixture_settings(backfill={'start_quarter': period, 'end_quarter': 'open'}, daily={'start_date': day.isoformat()}, fixture={'allow_clock_override': True})
+        self.settings = fixture_settings(root=self.root, backfill={'start_quarter': period, 'end_quarter': 'open'}, daily={'start_date': day.isoformat()}, fixture={'allow_clock_override': True})
         # The explicit fixture clock override pins this selected historical test quarter.
         from dataclasses import replace
         from sec_edgar_ingest.config import pin_context
         from sec_edgar_ingest.discovery import discover
         self.coordinator.settings = self.settings
         self.client.settings = self.settings
-        context = replace(fixture_context('discover', 'daily'), config_sha256=self.settings.config_sha256, pinned_on=None)
+        context = replace(fixture_context('discover', 'daily', settings=self.settings), config_sha256=self.settings.config_sha256, pinned_on=None)
         context, _ = pin_context(self.settings, context, day)
         self.seed_boundary(day)
         # Daily always includes preceding overlap; synthesize the other leaf as valid empty.
@@ -1082,7 +1093,7 @@ class CollectionHarness:
         from sec_edgar_ingest.state import AcquisitionState
         self.root = Path(root)
         self.clock = clock or fixture_clock()
-        self.settings = fixture_settings()
+        self.settings = fixture_settings(root=self.root)
         self.store, self.objects, self.leases = store_bundle(self.root, clock=self.clock)
         self.source_state = AcquisitionState(self.store, clock=self.clock)
         self.coordinator = Coordinator(self.settings, self.store, self.leases, self.clock)
@@ -1099,7 +1110,7 @@ class CollectionHarness:
         self.client.jitter = lambda: 0.0
         self.faults = Faults()
         self.forbid_fetch = False
-        self.context = fixture_context()
+        self.context = fixture_context(settings=self.settings)
         self.invocations = 0
         self.closed = False
 
@@ -1388,7 +1399,7 @@ class CliHarness:
         self.root = Path(self.temporary.name)
         self.config_path = self.root / 'config.json'
         self.pack_path = self.root / 'manifest.json'
-        config = json.loads(FIXTURE_CONFIG.read_text())
+        config = local_config_mapping(root=self.root / '.fixture-state')
         config['backfill'] = {'start_quarter': '2015Q1', 'end_quarter': '2015Q1'}
         config['fixture'] = {'allow_clock_override': True, 'allow_deadline_override': True}
         config['http']['retry_base_seconds'] = 0.001
@@ -1422,7 +1433,7 @@ class CliHarness:
             manifest['responses'][quarter] = [response] * (5 if fixture == 'retry-exhausted' else 1)
         self.pack_path.write_text(json.dumps(manifest))
         self.common = ['--config', str(self.config_path), '--fixture-pack', str(self.pack_path),
-                       '--state-dir', str(self.root), '--today', '2026-10-06',
+                       '--today', '2026-10-06',
                        '--deadline', '2099-01-01T00:00:00Z', '--run-id', 'cli-run']
         self.calls = []
 
