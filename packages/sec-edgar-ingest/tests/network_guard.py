@@ -76,16 +76,19 @@ def install_checkout_policy(releases):
            for path, resolved in exceptions):
         raise ValueError('checkout policy cannot exempt a source root')
 
-    def require_path(raw):
+    def require_path(raw, *, cwd=None):
         if isinstance(raw, int) or raw is None:
             return
         value = os.fsdecode(raw)
         if value.startswith('<') and value.endswith('>'):
             return
-        lexical = Path(os.path.abspath(value))
+        path = Path(value)
+        if cwd is not None and not path.is_absolute():
+            path = Path(cwd) / path
+        lexical = Path(os.path.abspath(path))
         # Resolve the original spelling: collapsing '..' first would hide a
         # preceding symlink's real parent and could misattribute a source open.
-        resolved = Path(value).resolve()
+        resolved = path.resolve()
         for root, real_root in roots:
             lexical_denied = lexical.is_relative_to(root) and not any(
                 lexical.is_relative_to(path) for path, _ in exceptions)
@@ -104,10 +107,30 @@ def install_checkout_policy(releases):
         elif event == 'import' and args[1] is not None:
             require_path(args[1])
         elif event in ('subprocess.Popen', 'os.exec', 'os.posix_spawn'):
-            require_path(args[0])
+            child_cwd = args[2] if event == 'subprocess.Popen' and args[2] is not None else os.getcwd()
+            child_cwd = Path(os.fsdecode(child_cwd))
+            if not child_cwd.is_absolute():
+                child_cwd = Path.cwd() / child_cwd
+            require_path(child_cwd)
+            executable = args[0]
+            if not isinstance(executable, int):
+                executable = os.fsdecode(executable)
+                if os.path.dirname(executable) or event != 'subprocess.Popen':
+                    require_path(executable, cwd=child_cwd)
+                else:
+                    environment = args[3] if event == 'subprocess.Popen' else args[2]
+                    # Match POSIX child PATH lookup, including child-relative entries.
+                    for entry in os.get_exec_path(environment):
+                        candidate = Path(entry or '.') / executable
+                        if not candidate.is_absolute():
+                            candidate = child_cwd / candidate
+                        if candidate.is_file() and os.access(candidate, os.X_OK):
+                            require_path(candidate)
+                            break
             # Python script execution is distinct from data/provenance arguments.
             argv = args[1]
-            if isinstance(argv, (list, tuple)) and Path(os.fsdecode(args[0])).name.startswith('python'):
+            if (isinstance(argv, (list, tuple)) and not isinstance(executable, int)
+                    and Path(executable).name.startswith('python')):
                 arguments = iter(argv[1:])
                 for argument in arguments:
                     if argument in ('-c', '-m'):
@@ -116,7 +139,7 @@ def install_checkout_policy(releases):
                         next(arguments, None)
                         continue
                     if not os.fsdecode(argument).startswith('-'):
-                        require_path(argument)
+                        require_path(argument, cwd=child_cwd)
                         break
 
     # CPython's open audit event omits dir_fd. Attribute that event to the real

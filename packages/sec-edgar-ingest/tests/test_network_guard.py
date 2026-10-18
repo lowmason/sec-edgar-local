@@ -416,3 +416,76 @@ try:
 finally:os.close(allowed_fd);os.close(denied_fd)
 ''')
         self.assertEqual(proof, {'allowed': True, 'denied': True})
+
+    def test_subprocess_cwd_denies_both_roots_and_resolved_aliases(self):
+        proof = self.isolated_probe('''
+import json,pathlib,subprocess,network_guard
+outside=pathlib.Path.cwd();denied=[]
+roots=('/Users/lowell/Projects/sec-edgar','/Users/lowell/Projects/sec-edgar-local')
+for index,root in enumerate(roots):
+    (outside/str(index)).symlink_to(root)
+    (outside/(str(index)+'-git')).symlink_to(pathlib.Path(root)/'.git')
+network_guard.install_checkout_policy(())
+for index,root in enumerate(roots):
+    for cwd in (root,str(outside/str(index)),str(outside/(str(index)+'-git')/'..'),str(index)):
+        try:subprocess.run(['/bin/pwd'],cwd=cwd,capture_output=True,text=True,check=True)
+        except PermissionError:denied.append(True)
+        else:denied.append(False)
+print(json.dumps({'denied':denied}))
+''')
+        self.assertEqual(proof['denied'], [True] * 8)
+
+    def test_subprocess_paths_follow_child_cwd_and_path_with_exact_release_exception(self):
+        project = TESTS.resolve().parents[2]
+        with tempfile.TemporaryDirectory(prefix='audit-subprocess-', dir=project / 'releases') as directory:
+            selected = Path(directory) / 'releases' / ('sha256=' + 'c' * 64)
+            selected.mkdir(parents=True)
+            (selected / 'script.py').write_text('import sys;print(sys.argv[1])\n')
+            tool = selected / 'selected-tool'
+            tool.write_text('#!/bin/sh\nprintf selected\n')
+            tool.chmod(0o755)
+            body = '''
+import json,os,pathlib,subprocess,sys,network_guard
+outside=pathlib.Path.cwd();child=outside/'child';child.mkdir()
+(child/'source').symlink_to('/Users/lowell/Projects/sec-edgar-local')
+selected=pathlib.Path(SELECTED)
+(child/'selected').symlink_to(selected)
+(child/'bin').mkdir()
+(child/'bin/safe-tool').write_text('#!/bin/sh\\nprintf safe\\n')
+(child/'bin/safe-tool').chmod(0o755)
+(child/'script.py').write_text('import sys;print(sys.argv[1])')
+native=[str(pathlib.Path(sys.executable).resolve()),'-I','-B','-X','pycache_prefix=/dev/null']
+network_guard.install_checkout_policy((str(selected),))
+denied=[]
+for argv,environment in (
+    (native+['source/scripts/verify-native-release.py','--help'],None),
+    (['source/scripts/verify-native-release.py','--help'],None),
+    (['verify-native-release.py','--help'],{'PATH':'source/.git/../scripts:/usr/bin:/bin'})):
+    try:subprocess.run(argv,cwd=child,env=environment,capture_output=True,text=True)
+    except PermissionError:denied.append(True)
+    else:denied.append(False)
+data='/Users/lowell/Projects/sec-edgar/source-import-is-data'
+allowed=[]
+for argv,cwd,environment in (
+    (native+['script.py',data],pathlib.Path('child'),None),
+    (native+['script.py',data],selected,None),
+    (['./selected-tool'],selected,None),
+    (['selected-tool'],child,{'PATH':'selected:/usr/bin:/bin'}),
+    (['safe-tool'],child,{'PATH':'source/scripts:bin:/usr/bin:/bin'})):
+    done=subprocess.run(argv,cwd=cwd,env=environment,capture_output=True,text=True)
+    allowed.append({'exit':done.returncode,'stdout':done.stdout.strip()})
+direct=outside/'verify-native-release.py';direct.write_text('#!/bin/sh\\nexit 0\\n');direct.chmod(0o755)
+try:pid=os.posix_spawn('verify-native-release.py',['verify-native-release.py'],{'PATH':'/Users/lowell/Projects/sec-edgar-local/scripts'})
+except PermissionError:direct_spawn=False
+else:direct_spawn=os.waitpid(pid,0)[1]==0
+print(json.dumps({'denied':denied,'allowed':allowed,'parent_cwd':str(pathlib.Path.cwd()),'outside':str(outside),'direct_spawn':direct_spawn}))
+'''.replace('SELECTED', repr(str(selected)))
+            proof = self.isolated_probe(body)
+        self.assertEqual(proof['denied'], [True] * 3)
+        self.assertEqual(proof['allowed'], [
+            {'exit': 0, 'stdout': '/Users/lowell/Projects/sec-edgar/source-import-is-data'},
+            {'exit': 0, 'stdout': '/Users/lowell/Projects/sec-edgar/source-import-is-data'},
+            {'exit': 0, 'stdout': 'selected'}, {'exit': 0, 'stdout': 'selected'},
+            {'exit': 0, 'stdout': 'safe'}])
+        self.assertEqual(proof['parent_cwd'], proof['outside'])
+        self.assertTrue(proof['direct_spawn'], 'explicit posix_spawn path does not search child PATH')
