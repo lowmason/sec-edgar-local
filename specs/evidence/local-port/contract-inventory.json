@@ -43,7 +43,7 @@
         "results._validate_report"
       ],
       "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
-      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+      "negative_test": "test_local_workflow_contracts.ReviewRegressionTests.test_conflicting_frozen_selection_refuses_before_missing_index_repair"
     },
     {
       "family": "child-call",
@@ -331,7 +331,12 @@
       "readers": [
         "results.freeze_workflow",
         "cli._workflow_frozen",
-        "cli._workflow_saved"
+        "cli._workflow_saved",
+        "contracts.validate_invocation",
+        "results._validate_selection",
+        "results._validate_report",
+        "runner.run_workflow",
+        "runner.select_work"
       ],
       "hash_sites": [
         "results.freeze_workflow"
@@ -340,7 +345,7 @@
         "results._validate_selection"
       ],
       "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
-      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+      "negative_test": "test_local_workflow_contracts.ReviewRegressionTests.test_coherent_invocation_copies_refuse_at_every_shared_reader"
     },
     {
       "family": "report-intent",
@@ -463,7 +468,8 @@
       ],
       "readers": [
         "processing.validate_member_evidence",
-        "results._capture_or_validate_discovery_failure"
+        "results._capture_or_validate_discovery_failure",
+        "contracts.validate_terminal_details"
       ],
       "hash_sites": [
         "members.WorkflowMembers.record",
@@ -473,7 +479,7 @@
         "processing.validate_member_evidence"
       ],
       "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation",
-      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation"
+      "negative_test": "test_local_workflow_contracts.ReviewRegressionTests.test_coherent_terminal_details_refuse_independently_of_copy_equality"
     },
     {
       "family": "selection-job",

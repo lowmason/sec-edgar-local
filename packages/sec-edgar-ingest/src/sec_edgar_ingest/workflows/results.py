@@ -1,6 +1,6 @@
 # workflows/results.py
 from __future__ import annotations
-from .contracts import LOCAL_CONTRACT, require_contract
+from .contracts import LOCAL_CONTRACT, require_contract, validate_invocation, validate_terminal_details
 from ..models import freeze, to_mapping_value
 
 import hashlib
@@ -53,7 +53,7 @@ def _match_context(current, saved):
 
 
 def _index(context, invocation, store, objects):
-    require_contract(invocation)
+    validate_invocation(invocation)
     key = workflow_key(context)
     expected = {'contract_version': LOCAL_CONTRACT, 'context': context.to_mapping(), 'intent': _plain(invocation),
                 'selection_ref': None, 'result_ref': None}
@@ -82,9 +82,7 @@ def _index(context, invocation, store, objects):
 
 
 def freeze_workflow(current, intent, store, objects) -> RunContext:
-    require_contract(intent)
-    if set(intent) != {'contract_version', 'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}:
-        raise Conflict('workflow invocation fields differ')
+    validate_invocation(intent)
     path = _sibling(current, 'intent.json')
     try:
         frozen, body = _read(path, objects)
@@ -127,12 +125,8 @@ def _capture_or_validate_discovery_failure(selection, call, template, objects, s
     if error is None or error not in selection['gaps']:
         raise Conflict('failed discovery lacks its original error gap')
     terminal = error['details']
-    require_contract(terminal)
-    fields = {'contract_version', 'call', 'outcome', 'exit', 'stdout', 'stderr', 'gaps', 'repair_pending', 'resumable'}
-    if (set(terminal) != fields or terminal['call'] != call
-            or terminal['outcome'] != error['code']
-            or type(terminal['exit']) is not int
-            or not isinstance(terminal['stdout'], str) or not isinstance(terminal['stderr'], str)
+    validate_terminal_details(terminal)
+    if (terminal['call'] != call or terminal['outcome'] != error['code']
             or terminal['repair_pending'] is not False or terminal['resumable'] is not False):
         raise Conflict('failed discovery terminal details differ from original child')
     gaps = tuple(Error.from_mapping(value) for value in terminal['gaps'])
@@ -177,6 +171,7 @@ def _validate_selection(selection, context, invocation, store, objects, captured
     from .completion import validate_parent_provenance, validate_discovery_session
     from .members import WorkflowMembers, download_times
     from .provenance import read_member
+    validate_invocation(invocation)
     fields = {'contract_version', 'format_version', 'context', 'invocation', 'members', 'jobs',
               'member_provenance', 'already_complete', 'discovery_call',
               'discovery_error', 'parent_ref', 'parent_provenance', 'discovery_session',
@@ -187,7 +182,10 @@ def _validate_selection(selection, context, invocation, store, objects, captured
     require_contract(selection)
     version = selection.get('format_version')
     if (version != SELECTION_FORMAT or set(selection) != fields
-            or selection['context'] != context.to_mapping() or selection['invocation'] != _plain(invocation)):
+            or selection['context'] != context.to_mapping()):
+        raise Conflict('selection differs from frozen workflow intent')
+    validate_invocation(selection['invocation'])
+    if selection['invocation'] != _plain(invocation):
         raise Conflict('selection differs from frozen workflow intent')
     members = selection['members']
     keys = [(v['source']['period'], v['source']['source_id'], v['member_id']) for v in members]
@@ -377,9 +375,10 @@ def freeze_selection(context, selection, store, objects):
     selection = _plain(selection)
     require_contract(selection)
     path = _sibling(context, 'selection.json')
+    body = canonical_json(to_mapping_value(selection))
     captured_terminal = None
     try:
-        _read(path, objects)
+        _, saved_body = _read(path, objects)
     except FileNotFoundError:
         if selection.get('format_version') != SELECTION_FORMAT:
             raise Conflict('new selection must use the current format')
@@ -400,12 +399,14 @@ def freeze_selection(context, selection, store, objects):
             captured = actual.to_mapping()['value']
             if selection['discovery_session'] != {'contract_version': LOCAL_CONTRACT, **captured} or selection['required_units'] != captured['frozen']['units']:
                 raise Conflict('initial selection omitted or changed actual discovery session/required units')
+    else:
+        if saved_body != body:
+            raise Conflict('frozen selection differs from exact proposed selection')
     _validate_selection(selection, context, invocation['intent'], store, objects, captured_terminal)
     _index(context, invocation['intent'], store, objects)
     if captured_terminal is not None:
         terminal_path = selection['discovery_call']['result_ref'].rsplit('/', 1)[0] + '/terminal.json'
         objects.put_once(terminal_path, canonical_json(to_mapping_value(captured_terminal)))
-    body = canonical_json(to_mapping_value(selection))
     objects.put_once(path, body)
     objects.verify(path, hashlib.sha256(body).hexdigest(), len(body))
     if objects.read(path) != body:
@@ -423,7 +424,9 @@ def _validate_report(result, store, objects):
                      'discovered_sources', 'unresolved_before'}
     if set(intent) != intent_fields:
         raise Conflict('workflow report intent schema differs')
+    validate_invocation(intent['invocation'])
     frozen, _ = _read(_sibling(context, 'intent.json'), objects)
+    validate_invocation(frozen['intent'])
     if frozen != {'contract_version': LOCAL_CONTRACT, 'context': context.to_mapping(), 'intent': _plain(intent['invocation'])}:
         raise Conflict('report differs from immutable invocation/context')
     selection, selection_body = _read(_sibling(context, 'selection.json'), objects)

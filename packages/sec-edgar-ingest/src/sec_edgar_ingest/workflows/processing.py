@@ -1,4 +1,4 @@
-from .contracts import LOCAL_CONTRACT, require_contract
+from .contracts import LOCAL_CONTRACT, require_contract, validate_terminal_details
 from collections.abc import Mapping
 from dataclasses import dataclass
 from ..config import Settings
@@ -152,7 +152,7 @@ def validate_member_evidence(result, evidence, objects) -> None:
             retained_body = objects.read(call['result_ref'].rsplit('/', 1)[0] + '/terminal.json')
             retained = parse_json(retained_body)
             require_contract(retained)
-            require_contract(terminal)
+            validate_terminal_details(terminal)
             if set(retained) != {'contract_version', 'context', 'terminal_error'}:
                 raise Conflict('terminal capture fields differ')
             actual = RunContext.from_mapping(retained['context'])

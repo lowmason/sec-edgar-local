@@ -401,3 +401,172 @@ class ContractInventoryTests(unittest.TestCase):
                 module_name, class_name, method_name = reference.split('.')
                 module = __import__(module_name)
                 self.assertTrue(callable(getattr(getattr(module, class_name), method_name)), reference)
+
+
+class ReviewRegressionTests(unittest.TestCase):
+    fixture = EnvelopeFamilyTests.fixture
+
+    def delete_workflow_index(self, context, store):
+        from sec_edgar_ingest.storage.contracts import identity, table_for
+        key = results.workflow_key(context)
+        partition, _ = identity('WorkflowAttempt', key)
+        with closing(sqlite3.connect(store.database)) as database:
+            database.execute('DELETE FROM records WHERE table_name=? AND partition=? AND key=?',
+                             (table_for('WorkflowAttempt'), partition, key))
+            database.commit()
+
+    def test_coherent_invocation_copies_refuse_at_every_shared_reader(self):
+        from support_workflows import CommandHarness, simple_pack
+        from sec_edgar_ingest.workflows.summary import _validated_milestone
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            harness = CommandHarness(root, simple_pack(root / 'pack'))
+            self.addCleanup(harness.close)
+            self.assertEqual(harness.invoke('reconcile', run='coherent-invocation')[0], 0)
+            store, objects = harness.store, harness.objects
+            reference = harness.calls[-1]['stdout']['result_ref']
+            report = results.read_workflow_result(reference, store, objects)
+            context = report.context
+            intent_path, selection_path = (results._sibling(context, name)
+                                           for name in ('intent.json', 'selection.json'))
+            original = {path: objects.read(path) for path in (intent_path, selection_path, reference)}
+            invocation = report.to_mapping()['intent']['invocation']
+            variants = [('missing-marker', {k: v for k, v in invocation.items() if k != 'contract_version'}),
+                        ('foreign-marker', {**invocation, 'contract_version': 'foreign'}),
+                        ('unknown-field', {**invocation, 'unexpected_local_field': True}),
+                        ('missing-field', {k: v for k, v in invocation.items() if k != 'today'})]
+            for name, altered in variants:
+                intent = parse_json(original[intent_path])
+                intent['intent'] = altered
+                selection = parse_json(original[selection_path])
+                selection['invocation'] = altered
+                selection_body = canonical_json(selection)
+                payload = report.to_mapping()
+                payload['intent']['invocation'] = altered
+                payload['intent']['selection'] = results._descriptor(selection_path, selection_body)
+                changed = WorkflowResult.from_mapping(payload)
+                (objects.directory / intent_path).write_bytes(canonical_json(intent))
+                (objects.directory / selection_path).write_bytes(selection_body)
+                (objects.directory / reference).write_bytes(canonical_json(payload))
+                milestone = {'contract_version': LOCAL, 'workflow': 'reconcile',
+                             'ended_at': report.ended_at, 'result_ref': reference}
+                readers = [('_validate_report', lambda: results._validate_report(changed, store, objects)),
+                           ('_validate_selection', lambda: results._validate_selection(selection, context, altered, store, objects)),
+                           ('read_workflow_result', lambda: results.read_workflow_result(reference, store, objects)),
+                           ('milestone', lambda: _validated_milestone(milestone, store, objects))]
+                try:
+                    for reader_name, reader in readers:
+                        self.delete_workflow_index(context, store)
+                        before = durable_snapshot(store, objects)
+                        with self.subTest(mutation=name, reader=reader_name):
+                            try:
+                                with self.assertRaises((Conflict, ValueError)):
+                                    reader()
+                            finally:
+                                self.assertEqual(durable_snapshot(store, objects), before)
+                finally:
+                    for path, body in original.items():
+                        (objects.directory / path).write_bytes(body)
+            self.delete_workflow_index(context, store)
+            self.assertEqual(results.read_workflow_result(reference, store, objects), report)
+
+    def test_invocation_refuses_before_new_workflow_dispatch(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from sec_edgar_ingest.workflows.runner import run_workflow, select_work
+        case = self.fixture()
+        store, objects = case.f.store, case.f.objects
+        context = replace(case.context, attempt_id='invocation-dispatch-boundary')
+        variants = [{k: v for k, v in case.invocation.items() if k != 'contract_version'},
+                    {**case.invocation, 'contract_version': 'foreign'},
+                    {**case.invocation, 'unexpected_local_field': True},
+                    {k: v for k, v in case.invocation.items() if k != 'today'}]
+        for altered in variants:
+            for reader in (run_workflow, select_work):
+                dispatcher = SimpleNamespace(execute=Mock(side_effect=AssertionError('unsupported invocation reached child dispatch')))
+                before = durable_snapshot(store, objects)
+                with self.subTest(reader=reader.__name__, fields=list(altered)):
+                    refused = False
+                    try:
+                        reader(context, case.f.settings, altered, dispatcher, store, objects)
+                    except (ValueError, Conflict):
+                        refused = True
+                    except AssertionError:
+                        pass
+                    self.assertTrue(refused, 'unsupported invocation was not refused at the workflow entry')
+                    dispatcher.execute.assert_not_called()
+                    self.assertEqual(durable_snapshot(store, objects), before)
+
+    def test_coherent_terminal_details_refuse_independently_of_copy_equality(self):
+        case = self.fixture()
+        f, store, objects = case.f, case.f.store, case.f.objects
+        context = replace(case.context, attempt_id='coherent-terminal')
+        dispatcher = checked.Dispatcher(context, f.settings, f.pack, f.root.parent, store, objects)
+        with patch('sec_edgar_ingest.cli.collect', side_effect=RuntimeError('coherent terminal')):
+            processed = processing.process_member(f.value, context, dispatcher, store, objects)
+        registry = WorkflowMembers(store, objects)
+        descriptor = registry.record(processed.result, context, processed.evidence)
+        terminal = to_mapping_value(processed.evidence['terminal_error'])
+        terminal_path = terminal['call']['result_ref'].rsplit('/', 1)[0] + '/terminal.json'
+        original_terminal = objects.read(terminal_path)
+        original_receipt = objects.read(descriptor['ref'])
+        key = hashlib.sha256(canonical_json([LOCAL, context.run_id, context.command, context.attempt_id,
+                              processed.result.member_id, context.parser_version, context.schema_version])).hexdigest()
+        variants = [('missing-marker', {k: v for k, v in terminal.items() if k != 'contract_version'}),
+                    ('foreign-marker', {**terminal, 'contract_version': 'foreign'}),
+                    ('unknown-field', {**terminal, 'unexpected_local_field': True}),
+                    ('missing-field', {k: v for k, v in terminal.items() if k != 'stdout'}),
+                    ('stdout-type', {**terminal, 'stdout': None}),
+                    ('stderr-type', {**terminal, 'stderr': False}),
+                    ('repair-pending-type', {**terminal, 'repair_pending': 0}),
+                    ('resumable-type', {**terminal, 'resumable': 0})]
+        for name, altered in variants:
+            evidence = to_mapping_value(processed.evidence)
+            evidence['terminal_error'] = altered
+            retained = parse_json(original_terminal)
+            retained['terminal_error'] = altered
+            receipt = parse_json(original_receipt)
+            receipt['evidence'] = evidence
+            body = canonical_json(receipt)
+            (objects.directory / terminal_path).write_bytes(canonical_json(retained))
+            (objects.directory / descriptor['ref']).write_bytes(body)
+            row = store.get('WorkflowMemberResult', key)
+            changed_descriptor = registry._descriptor(processed.result, context, body)
+            store.replace('WorkflowMemberResult', key, changed_descriptor, row.version)
+            readers = [('member-evidence', lambda: processing.validate_member_evidence(processed.result, evidence, objects)),
+                       ('member-receipt', lambda: registry._read_receipt(descriptor['ref'])),
+                       ('member-index', lambda: registry.completed(f.value, context.parser_version, context.schema_version))]
+            try:
+                for reader_name, reader in readers:
+                    before = durable_snapshot(store, objects)
+                    with self.subTest(mutation=name, reader=reader_name):
+                        try:
+                            with self.assertRaises((Conflict, ValueError)):
+                                reader()
+                        finally:
+                            self.assertEqual(durable_snapshot(store, objects), before)
+            finally:
+                (objects.directory / terminal_path).write_bytes(original_terminal)
+                (objects.directory / descriptor['ref']).write_bytes(original_receipt)
+                row = store.get('WorkflowMemberResult', key)
+                store.replace('WorkflowMemberResult', key, descriptor, row.version)
+        processing.validate_member_evidence(processed.result, processed.evidence, objects)
+        self.assertEqual(registry._read_receipt(descriptor['ref'])[0], processed.result)
+
+    def test_conflicting_frozen_selection_refuses_before_missing_index_repair(self):
+        case = self.fixture()
+        store, objects = case.f.store, case.f.objects
+        original = results.freeze_selection(case.context, case.selection(), store, objects)
+        self.delete_workflow_index(case.context, store)
+        changed = {**original, 'boundary_before': '2026-10-02'}
+        results._validate_selection(changed, case.context, case.invocation, store, objects)
+        before = durable_snapshot(store, objects)
+        try:
+            with self.assertRaises(Conflict):
+                results.freeze_selection(case.context, changed, store, objects)
+        finally:
+            self.assertEqual(durable_snapshot(store, objects), before)
+        with patch.object(objects, 'put_once', wraps=objects.put_once) as put:
+            self.assertEqual(results.freeze_selection(case.context, original, store, objects), original)
+        self.assertTrue(put.called)
+        self.assertIsNotNone(store.get('WorkflowAttempt', results.workflow_key(case.context)))

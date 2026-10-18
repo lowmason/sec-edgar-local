@@ -34,7 +34,7 @@ from .storage import open_stores
 from .storage.contracts import CAS_ATTEMPTS, ClockUncertain, Conflict, OwnershipLost, StoreMissing
 from .workflows.checked import Dispatcher as WorkflowDispatcher, ChildUnfinished
 from .workflows.contracts import WORKFLOW_COMMANDS, WORKFLOW_PRIORITY, workflow_path
-from .workflows.contracts import LOCAL_CONTRACT, require_contract
+from .workflows.contracts import LOCAL_CONTRACT, require_contract, validate_invocation
 from .workflows.results import freeze_workflow, read_workflow_result, write_workflow_result
 from .workflows.runner import run_workflow
 from .workflows.summary import emit_summary
@@ -359,10 +359,7 @@ def _workflow_frozen(path, objects):
             or canonical_json(to_mapping_value(value)) != body):
         raise Conflict('workflow intent is not exact canonical context/intent')
     RunContext.from_mapping(value['context'])
-    if (not isinstance(value['intent'], dict)
-            or set(value['intent']) != {'contract_version', 'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}):
-        raise Conflict('workflow invocation fields differ')
-    require_contract(value['intent'])
+    validate_invocation(value['intent'])
     return value
 
 
@@ -382,10 +379,7 @@ def _workflow_saved(args, store, objects):
     saved = RunContext.from_mapping(value['context'])
     if (saved.run_id, saved.command, saved.attempt_id) != (args.run_id, args.command, args.attempt_id):
         raise Conflict('workflow begun index correlation differs')
-    if not isinstance(value['intent'], dict) or set(value['intent']) != {
-            'contract_version', 'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}:
-        raise Conflict('workflow begun invocation fields differ')
-    require_contract(value['intent'])
+    validate_invocation(value['intent'])
     from .workflows.results import _index
     _index(saved, value['intent'], store, objects)
     return {'contract_version': LOCAL_CONTRACT, 'context': value['context'], 'intent': value['intent']}

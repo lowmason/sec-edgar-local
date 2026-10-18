@@ -1,4 +1,4 @@
-from .contracts import LOCAL_CONTRACT
+from .contracts import LOCAL_CONTRACT, validate_invocation
 from collections.abc import Mapping
 from ..config import Settings
 from ..models import RunContext, to_mapping_value
@@ -62,6 +62,7 @@ def reuse_exact_binding(value: Mapping, store, objects) -> tuple[Error, ...]:
 
 def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispatcher: Dispatcher,
                  store, objects, observer=None) -> WorkflowResult:
+    validate_invocation(intent)
     registry, acquisition = WorkflowMembers(store, objects), AcquisitionState(store)
     selection_path = workflow_path(context).rsplit('/', 1)[0] + '/selection.json'
     try:
@@ -137,6 +138,7 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
 
 def select_work(context: RunContext, settings: Settings, intent: Mapping, dispatcher: Dispatcher,
                 store, objects) -> Mapping:
+    validate_invocation(intent)
     acquisition, registry = AcquisitionState(store), WorkflowMembers(store, objects)
     before = acquisition.daily_boundary()
     gaps = list(bootstrap_legacy(store, objects))

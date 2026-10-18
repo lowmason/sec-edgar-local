@@ -26,6 +26,28 @@ def require_contract(value: Mapping[str, object]) -> None:
         raise ValueError('unsupported local workflow contract')
 
 
+def validate_invocation(value: Mapping[str, object]) -> None:
+    if not isinstance(value, Mapping) or set(value) != {
+            'contract_version', 'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}:
+        raise ValueError('workflow invocation fields differ')
+    require_contract(value)
+
+
+def validate_terminal_details(value: Mapping[str, object]) -> None:
+    if not isinstance(value, Mapping) or set(value) != {
+            'contract_version', 'call', 'outcome', 'exit', 'stdout', 'stderr',
+            'gaps', 'repair_pending', 'resumable'}:
+        raise ValueError('workflow terminal details fields differ')
+    require_contract(value)
+    if (not isinstance(value['call'], Mapping) or not isinstance(value['outcome'], str)
+            or type(value['exit']) is not int or not isinstance(value['stdout'], str)
+            or not isinstance(value['stderr'], str) or not isinstance(value['gaps'], (list, tuple))
+            or type(value['repair_pending']) is not bool or type(value['resumable']) is not bool):
+        raise ValueError('workflow terminal details types differ')
+    for gap in value['gaps']:
+        Error.from_mapping(gap)
+
+
 FORMAT_VERSION = 'sec-local-workflow-result-v1'
 WORKFLOW_COMMANDS = ('backfill', 'daily', 'reconcile')
 WORKFLOW_PRIORITY = {'backfill': 'backfill', 'daily': 'daily', 'reconcile': 'reconciliation'}
