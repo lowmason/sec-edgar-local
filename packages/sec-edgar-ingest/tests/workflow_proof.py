@@ -413,41 +413,31 @@ def _isolated_script(python, harness, script_name, *arguments):
     return [str(python), '-I', '-c', bootstrap, *map(str, arguments)]
 
 
-def installed(output, wheel=None, reviewed_source=None):
+def installed(output):
     """Use current committed proof releases and the shared native verifier."""
     from support_release import proof_releases
-    from locked_proof import verify_native_release
+    from locked_proof import verify_native_release, verify_wrong_transitive
     project = Path(__file__).resolve().parents[3]
     a, b = proof_releases(project, project / 'releases/artifact-cache')
-    if wheel is not None and not wheel.is_file():
-        raise FileNotFoundError(wheel)
-    if reviewed_source is not None and not reviewed_source.is_dir():
-        raise FileNotFoundError(reviewed_source)
     return {'exit': 0, 'releases': [verify_native_release(release, Path(__file__).parent,
-        output / release.release_id) for release in (a, b)]}
+        output / release.release_id) for release in (a, b)],
+        'wrong_transitive': verify_wrong_transitive(a, Path(__file__).parent,
+                                                   output / 'wrong-transitive')}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Offline workflow process and installed proof')
     parser.add_argument('mode', choices=('native', 'installed'))
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--wheel', type=Path)
-    parser.add_argument('--reviewed-source', type=Path)
     args = parser.parse_args(argv)
     if not args.output.is_absolute():
         parser.error('output must be an explicit absolute path')
-    if args.mode == 'installed':
-        if (args.wheel is None or args.reviewed_source is None or
-                not args.wheel.is_absolute() or not args.reviewed_source.is_absolute()):
-            parser.error('installed requires absolute reviewed wheel and source paths')
-    elif args.wheel is not None or args.reviewed_source is not None:
-        parser.error('native does not accept installed-artifact arguments')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     started = time.monotonic()
     report = {'mode': args.mode, 'exit': 0, 'all22_stage7_checks': 'reserved/not_run'}
     try:
-        report.update(installed(output, args.wheel, args.reviewed_source)
+        report.update(installed(output)
                       if args.mode == 'installed' else native(output))
     except BaseException:
         report.update(exit=1, traceback=traceback.format_exc())

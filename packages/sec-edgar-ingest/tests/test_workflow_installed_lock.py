@@ -5,6 +5,7 @@ from sec_edgar_ingest.models import to_mapping_value
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from locked_proof import (
     assert_inventory, locked_requirements, marker_environment, inventory, verify_inventory,
@@ -35,6 +36,48 @@ wheels = [{{hash="sha256:{second}"}}]
     export = (f'requests==2.34.2 --hash=sha256:{first}\n'
               f"pycparser==3.0 ; implementation_name != 'PyPy' --hash=sha256:{second}\n")
     return lock, export
+
+
+class InstalledProofArgumentsTests(unittest.TestCase):
+    def test_obsolete_artifact_options_refuse_before_proofs_or_output(self):
+        import contextlib
+        import io
+        import workflow_proof
+        repo = Path(__file__).resolve().parents[3]
+        with tempfile.TemporaryDirectory() as directory:
+            for mode, flags in (('installed', ['--wheel', str(repo / 'uv.lock')]),
+                                ('installed', ['--reviewed-source', str(repo / 'conf')]),
+                                ('installed', ['--wheel', str(repo / 'uv.lock'),
+                                               '--reviewed-source', str(repo / 'conf')]),
+                                ('native', ['--wheel', str(repo / 'uv.lock'),
+                                            '--reviewed-source', str(repo / 'conf')])):
+                output = Path(directory) / 'proof'
+                with self.subTest(mode=mode, flags=flags), patch('support_release.proof_releases') as build:
+                    with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as refusal:
+                        workflow_proof.main([mode, '--output', str(output), *flags])
+                    self.assertEqual(refusal.exception.code, 2)
+                    build.assert_not_called()
+                    self.assertFalse(output.exists())
+
+    def test_installed_python_api_accepts_only_its_actual_output_target(self):
+        import inspect
+        from workflow_proof import installed
+        self.assertEqual(list(inspect.signature(installed).parameters), ['output'])
+
+    def test_installed_cli_needs_only_output_for_current_proofs(self):
+        import contextlib
+        import io
+        import workflow_proof
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'proof'
+            with patch.object(workflow_proof, 'installed', return_value={'exit': 0, 'releases': []}) as run:
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    try:
+                        code = workflow_proof.main(['installed', '--output', str(output)])
+                    except SystemExit:
+                        self.fail('current A/B proof CLI still requires ignored artifact arguments')
+            self.assertEqual(code, 0)
+            run.assert_called_once_with(output.resolve())
 
 
 class InstalledLockTests(unittest.TestCase):

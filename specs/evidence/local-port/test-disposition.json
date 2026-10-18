@@ -6355,8 +6355,11 @@
         }
       ],
       "current_inventory": {
-        "sha256": "843f2889f8de71b8bf39106e7657dd581bcf4be0370f6358a489ac4355cee94a",
+        "sha256": "ea831f6c0798bf9bf406f400ade9dba241da8bb2248eb5fb3212d48e3dadd54e",
         "test_methods": [
+          "InstalledProofArgumentsTests.test_obsolete_artifact_options_refuse_before_proofs_or_output",
+          "InstalledProofArgumentsTests.test_installed_python_api_accepts_only_its_actual_output_target",
+          "InstalledProofArgumentsTests.test_installed_cli_needs_only_output_for_current_proofs",
           "InstalledLockTests.test_complete_accepted_graph_rejects_wrong_transitive_with_direct_pins_intact",
           "InstalledLockTests.test_exact_set_rejects_missing_and_extra_distribution",
           "InstalledLockTests.test_marker_exclusion_does_not_drop_other_transitives",
@@ -6365,13 +6368,18 @@
           "InstalledLockTests.test_package_inventory_includes_py_typed_and_all_data_and_excludes_caches"
         ],
         "imports": [
+          "contextlib",
+          "inspect",
+          "io",
           "locked_proof",
           "network_guard",
           "pathlib",
           "sec_edgar_ingest.models",
           "subprocess",
           "tempfile",
-          "unittest"
+          "unittest",
+          "unittest.mock",
+          "workflow_proof"
         ]
       },
       "class_method_dispositions": [
@@ -6389,7 +6397,7 @@
               "module": "test_workflow_installed_lock.py",
               "class_name": "InstalledLockTests",
               "method": "test_complete_accepted_graph_rejects_wrong_transitive_with_direct_pins_intact",
-              "line": 50,
+              "line": 93,
               "body_ast_sha256": "d949a60b07d9a7dc8b21ca1c557f20761ee9353d8bcaa2f29af8c1d893807a6b"
             }
           ],
@@ -6410,7 +6418,7 @@
               "module": "test_workflow_installed_lock.py",
               "class_name": "InstalledLockTests",
               "method": "test_exact_set_rejects_missing_and_extra_distribution",
-              "line": 63,
+              "line": 106,
               "body_ast_sha256": "ca833eef6bc53005e1d3dde6a38509dd0a4ec1fc41be72b76eb58947e1ce6aff"
             }
           ],
@@ -6431,7 +6439,7 @@
               "module": "test_workflow_installed_lock.py",
               "class_name": "InstalledLockTests",
               "method": "test_marker_exclusion_does_not_drop_other_transitives",
-              "line": 70,
+              "line": 113,
               "body_ast_sha256": "095369e7730ff7ffb3d4e31aceb04a00b98c7b46d19c86af5367bcc46fc20f10"
             }
           ],
@@ -6452,7 +6460,7 @@
               "module": "test_workflow_installed_lock.py",
               "class_name": "InstalledLockTests",
               "method": "test_frozen_export_hash_or_transitive_omission_refuses",
-              "line": 77,
+              "line": 120,
               "body_ast_sha256": "702e0368b7d851d2699b34c8942d9c812658bd9a1c2015ded52a51e53b4f293a"
             }
           ],
@@ -6473,7 +6481,7 @@
               "module": "test_workflow_installed_lock.py",
               "class_name": "InstalledLockTests",
               "method": "test_inventory_checks_exact_files_and_bytes",
-              "line": 85,
+              "line": 128,
               "body_ast_sha256": "c43e9783e02dbf156602cad19fe6c388b2f50fc7285b05a6d7f8c6b90982220f"
             }
           ],
@@ -6494,7 +6502,7 @@
               "module": "test_workflow_installed_lock.py",
               "class_name": "InstalledLockTests",
               "method": "test_package_inventory_includes_py_typed_and_all_data_and_excludes_caches",
-              "line": 99,
+              "line": 142,
               "body_ast_sha256": "1dd93ae25bf43f4ac955aad973865f1d5877d08db7007e84004a3f684392b3b5"
             }
           ],
@@ -9213,16 +9221,19 @@
       ]
     },
     "test_release_upgrade.py": {
-      "sha256": "9ecca61883ee60ddf624ea7c2487e5359ab4e7383744bd3004fd353e6cb4bc7c",
+      "sha256": "9332a8562ec729f731b69bbc1f440b5f8ff800aeea959435d0bc11946ce8b0e4",
       "test_methods": [
         "ReleaseUpgradeTests.test_selected_installed_release_runs_independent_native_verifier",
+        "ReleaseUpgradeTests.test_installed_adapter_rejects_real_wrong_transitive_with_direct_pins_intact",
         "ReleaseUpgradeTests.test_installed_b_workflow_continues_a_origin_pending_and_repairs"
       ],
       "imports": [
+        "json",
         "locked_proof",
         "network_guard",
         "os",
         "pathlib",
+        "sec_edgar_ingest.runtime",
         "shutil",
         "support_release",
         "tempfile",
@@ -9687,8 +9698,11 @@
       ]
     },
     "test_workflow_installed_lock.py": {
-      "sha256": "843f2889f8de71b8bf39106e7657dd581bcf4be0370f6358a489ac4355cee94a",
+      "sha256": "ea831f6c0798bf9bf406f400ade9dba241da8bb2248eb5fb3212d48e3dadd54e",
       "test_methods": [
+        "InstalledProofArgumentsTests.test_obsolete_artifact_options_refuse_before_proofs_or_output",
+        "InstalledProofArgumentsTests.test_installed_python_api_accepts_only_its_actual_output_target",
+        "InstalledProofArgumentsTests.test_installed_cli_needs_only_output_for_current_proofs",
         "InstalledLockTests.test_complete_accepted_graph_rejects_wrong_transitive_with_direct_pins_intact",
         "InstalledLockTests.test_exact_set_rejects_missing_and_extra_distribution",
         "InstalledLockTests.test_marker_exclusion_does_not_drop_other_transitives",
@@ -9697,13 +9711,18 @@
         "InstalledLockTests.test_package_inventory_includes_py_typed_and_all_data_and_excludes_caches"
       ],
       "imports": [
+        "contextlib",
+        "inspect",
+        "io",
         "locked_proof",
         "network_guard",
         "pathlib",
         "sec_edgar_ingest.models",
         "subprocess",
         "tempfile",
-        "unittest"
+        "unittest",
+        "unittest.mock",
+        "workflow_proof"
       ]
     },
     "test_workflow_legacy.py": {
@@ -10961,7 +10980,6 @@
       "test_workspace.CliTests.test_module_and_console_invocations",
       "test_workspace.WorkspaceTests.test_only_ingest_is_a_workspace_member"
     ],
-    "matches_current_module_inventory": true,
     "snapshot_files": 257,
     "snapshot_sha256": "e51d2c4d56b195b0cf194c82d60de5694160538191a766ec095442779bc5638d",
     "snapshot_changed_files": [],
@@ -10984,6 +11002,83 @@
       }
     },
     "l12": "not_run",
-    "network_guard": "retained; authorized selected loopback only; no genuine SEC HTTP"
+    "network_guard": "retained; authorized selected loopback only; no genuine SEC HTTP",
+    "verified_commit": "55d3951041fb5f987eba42b2dd85f4df76015c5a",
+    "scope": "Historical pre-review full gate. Current proof-support/test fixes have separate focused verification; this log/snapshot is not a current complete-suite claim.",
+    "matches_inventory_at_verified_commit": true
+  },
+  "review_fix_verification": {
+    "round": 1,
+    "status": "covering_gates_passed",
+    "historical_full_gate_commit": "55d3951041fb5f987eba42b2dd85f4df76015c5a",
+    "current_ast_methods": 878,
+    "production_files_changed": 0,
+    "complete_current_suite": "not_rerun; controller authorized covering tests for test/proof-only corrections",
+    "covering_tests": [
+      {
+        "log": "/private/tmp/task10-fix1-args-final.log",
+        "sha256": "6475194afb813eeaf1f378c1bdb521d2751d4c13cf299b58bd697ca4af28f464",
+        "tests": 9,
+        "seconds": 0.126,
+        "exit": 0,
+        "method_ids": [
+          "test_workflow_installed_lock.InstalledLockTests.test_complete_accepted_graph_rejects_wrong_transitive_with_direct_pins_intact",
+          "test_workflow_installed_lock.InstalledLockTests.test_exact_set_rejects_missing_and_extra_distribution",
+          "test_workflow_installed_lock.InstalledLockTests.test_frozen_export_hash_or_transitive_omission_refuses",
+          "test_workflow_installed_lock.InstalledLockTests.test_inventory_checks_exact_files_and_bytes",
+          "test_workflow_installed_lock.InstalledLockTests.test_marker_exclusion_does_not_drop_other_transitives",
+          "test_workflow_installed_lock.InstalledLockTests.test_package_inventory_includes_py_typed_and_all_data_and_excludes_caches",
+          "test_workflow_installed_lock.InstalledProofArgumentsTests.test_installed_cli_needs_only_output_for_current_proofs",
+          "test_workflow_installed_lock.InstalledProofArgumentsTests.test_installed_python_api_accepts_only_its_actual_output_target",
+          "test_workflow_installed_lock.InstalledProofArgumentsTests.test_obsolete_artifact_options_refuse_before_proofs_or_output"
+        ]
+      },
+      {
+        "log": "/private/tmp/task10-fix1-upgrade-final.log",
+        "sha256": "3b2aa4983a167641e0213467ceaae7524fc3d62f9b75d63d87751f32a45c40a2",
+        "tests": 3,
+        "seconds": 241.235,
+        "exit": 0,
+        "method_ids": [
+          "test_release_upgrade.ReleaseUpgradeTests.test_installed_adapter_rejects_real_wrong_transitive_with_direct_pins_intact",
+          "test_release_upgrade.ReleaseUpgradeTests.test_installed_b_workflow_continues_a_origin_pending_and_repairs",
+          "test_release_upgrade.ReleaseUpgradeTests.test_selected_installed_release_runs_independent_native_verifier"
+        ]
+      }
+    ],
+    "obsolete_cli": {
+      "exit": 2,
+      "output_created": false,
+      "log": "/private/tmp/task10-fix1-obsolete-cli.log"
+    },
+    "real_wrong_transitive": {
+      "outcome": "refused",
+      "release_id": "284523d25b5da40e0dc83f24410e2255183d84656b207d9755a6c73a06393c4e",
+      "expected": "2.8.0",
+      "actual": "0.0.0",
+      "direct_pins": {
+        "pyarrow": "25.0.1",
+        "requests": "2.34.2"
+      },
+      "inventory_probe_exit": 1,
+      "native_verifier_exit": 1,
+      "evidence": "/private/tmp/task10-fix1-final-installed-evidence/wrong-transitive/report.json",
+      "evidence_sha256": "71771938d371ae2b1d1d022cdb6153eb8a7ff512984430df2dc07ad799cf0760"
+    },
+    "accepted_release_content_unchanged": {
+      "284523d25b5da40e0dc83f24410e2255183d84656b207d9755a6c73a06393c4e": {
+        "files": 1912,
+        "inventory_sha256": "95d62b786d3fc77bd472e8b56cd054e29601c8ec0b886ff897bd6dc1220145d8"
+      },
+      "e9b5a144b84b3a939eeb5834f735dd2587548e7aeb7aa6ae0bbd0fa17a54396f": {
+        "files": 1914,
+        "inventory_sha256": "304b5c121b7f4ee4250c4a15a7a77e4551aeb186eca4796ccb9242d5098d2d18"
+      }
+    },
+    "accepted_inventory_evidence": "/private/tmp/task10-fix1-final-installed-evidence/accepted-content-inventories.json",
+    "accepted_inventory_evidence_sha256": "3dd5efd194c3df9f578f21a9748d5f16bc8f881a895b5c77fbf14abb8eb73a60",
+    "focused_snapshot_changed": [],
+    "l12": "not_run",
+    "review": "controller scoped re-review pending"
   }
 }

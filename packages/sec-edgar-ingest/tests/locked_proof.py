@@ -260,3 +260,71 @@ print(json.dumps({'exit':0,'pid':os.getpid(),'python':sys.executable,'import_roo
         report = json.loads(done.stdout)
         (evidence / 'report.json').write_text(json.dumps(report, sort_keys=True, indent=2) + '\n')
         return report
+
+
+def verify_wrong_transitive(verified, harness, evidence):
+    """Reject real transitive drift in a fresh disposable retained-artifact installation."""
+    import shutil
+    import subprocess
+    import tempfile
+    from sec_edgar_ingest.release import reconstruct_release
+    from sec_edgar_ingest.runtime import isolated_environment, native_python_argv, preflight
+    harness, evidence = Path(harness).absolute(), Path(evidence).absolute()
+    if harness != Path(__file__).absolute().parent:
+        raise ValueError('transitive probe requires the explicit test-only harness directory')
+    evidence.mkdir(parents=True, exist_ok=False)
+    with tempfile.TemporaryDirectory(prefix='sec-wrong-transitive-') as directory:
+        outside = Path(directory)
+        rebuilt = reconstruct_release(verified.directory / 'release.json', outside / 'releases',
+                                      python=Path(sys.executable))
+        disposable = preflight(rebuilt / 'release.json')
+        site = next((rebuilt / 'venv/lib').glob('python*/site-packages'))
+        metadata = next(site.glob('urllib3-*.dist-info/METADATA'))
+        before = digest(metadata)
+        original = metadata.read_bytes()
+        altered, count = re.subn(rb'(?m)^Version: [^\r\n]+', b'Version: 0.0.0', original)
+        if count != 1 or altered == original:
+            raise AssertionError('probe must change exactly one transitive distribution version')
+        metadata.write_bytes(altered)
+        after = digest(metadata)
+        copied = outside / 'harness'
+        copied.mkdir()
+        for name in ('network_guard.py', 'locked_proof.py'):
+            shutil.copy2(harness / name, copied / name)
+        code = ('import sys;sys.path.insert(0,' + repr(str(copied)) + ');'
+                'from network_guard import install;install();'
+                'import json,pathlib;from locked_proof import installed_inventory,assert_inventory;'
+                'actual=installed_inventory();print(json.dumps(actual,sort_keys=True),flush=True);'
+                'release=json.loads(pathlib.Path(sys.argv[1]).read_text());'
+                'expected={item["name"]:item["version"] for item in release["identity"]["dependencies"]};'
+                'assert_inventory(expected,actual,release["identity"]["application"]["version"])')
+        argv = [*native_python_argv(disposable.python), '-c', code, str(rebuilt / 'release.json')]
+        done = subprocess.run(argv, cwd=outside, env=isolated_environment(),
+                              capture_output=True, text=True, timeout=60)
+        probe = {'argv': argv, 'cwd': str(outside), 'exit': done.returncode,
+                 'stdout': done.stdout, 'stderr': done.stderr}
+        (evidence / 'inventory-command.json').write_text(json.dumps(probe, indent=2) + '\n')
+        actual = json.loads(done.stdout)
+        expected = {item['name']: item['version'] for item in verified.manifest['identity']['dependencies']}
+        wanted = {**expected, 'sec-edgar-ingest': verified.manifest['identity']['application']['version']}
+        if (done.returncode == 0 or 'installed dependency set differs' not in done.stderr
+                or actual != {**wanted, 'urllib3': '0.0.0'}):
+            raise AssertionError('isolated installed inventory did not reject only transitive drift')
+        direct = {name: actual[name] for name in ('requests', 'pyarrow')}
+        if direct != {'requests': '2.34.2', 'pyarrow': '25.0.1'}:
+            raise AssertionError('wrong-transitive probe changed a required direct pin')
+        try:
+            verify_native_release(disposable, harness, evidence / 'native-verifier')
+        except RuntimeError:
+            native = json.loads((evidence / 'native-verifier/command.json').read_text())
+        else:
+            raise AssertionError('native verifier accepted the wrong installed transitive version')
+        if native['exit'] == 0 or 'installed dependency inventory differs' not in native['stderr']:
+            raise AssertionError('native verifier failed for a reason other than transitive inventory drift')
+        report = {'exit': 0, 'outcome': 'refused', 'release_id': verified.release_id,
+                  'disposable_python': str(disposable.python), 'metadata': str(metadata),
+                  'metadata_before': before, 'metadata_after': after, 'direct_pins': direct,
+                  'expected_transitive': expected['urllib3'], 'actual_transitive': actual['urllib3'],
+                  'actual_inventory': actual, 'inventory_probe': probe, 'native_verifier': native}
+        (evidence / 'report.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
+        return report
