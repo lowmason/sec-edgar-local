@@ -27,6 +27,70 @@ from pathlib import Path
 from unittest.mock import patch
 from sec_edgar_ingest.etl.parser import ParseError, iter_observations, supported_parser
 
+
+class RetainedSpecimenResolverTests(unittest.TestCase):
+    evidence = 'specs/evidence/sec-filing-index-ingestion/stage-1'
+
+    def resolver(self):
+        import etl_proof
+        self.assertTrue(callable(getattr(etl_proof, 'specimen_path', None)),
+                        'optional scanner must resolve the shipped mapped listing identities')
+        return etl_proof.specimen_path
+
+    def receipts(self):
+        from support import retained_path
+        matrix = json.loads(retained_path(self.evidence + '/specimens/matrix.json').read_text())
+        return [(item, json.loads(retained_path(self.evidence + '/' + item['inspection']).read_text()))
+                for item in matrix['matrix']]
+
+    def test_all_ten_original_receipts_resolve_without_new_aliases(self):
+        from support import retained_path
+        resolve = self.resolver()
+        receipts = self.receipts()
+        self.assertEqual(len(receipts), 10)
+        for item, inspection in receipts:
+            with self.subTest(evidence_id=item['evidence_id']):
+                path = resolve(self.evidence, item, inspection)
+                self.assertEqual(path, retained_path(self.evidence + '/listings/' + item['evidence_id'] + '.body'))
+                self.assertEqual(path.stat().st_size, item['original_bytes'])
+                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), inspection['original_sha256'])
+
+    def test_matrix_inspection_hash_bytes_and_identity_must_agree(self):
+        resolve = self.resolver()
+        item, inspection = self.receipts()[0]
+        for field, value in (('original_bytes', 0), ('original_sha256', '0' * 64),
+                             ('evidence_id', 'different'), ('url', 'different')):
+            for side in ('matrix', 'inspection'):
+                changed_item = {**item, field: value} if side == 'matrix' else item
+                changed_inspection = {**inspection, field: value} if side == 'inspection' else inspection
+                with self.subTest(field=field, side=side), self.assertRaises((ValueError, KeyError)):
+                    resolve(self.evidence, changed_item, changed_inspection)
+
+    def test_present_historical_alias_requires_exact_listing_byte_equality(self):
+        from support import retained_path
+        resolve = self.resolver()
+        item, inspection = self.receipts()[0]
+        historical = self.evidence + '/' + inspection['original_path']
+        with tempfile.TemporaryDirectory() as directory:
+            different = Path(directory) / 'different'
+            different.write_bytes(b'other retained content')
+            def mapped(path):
+                return different if path == historical else retained_path(path)
+            with patch('etl_proof.retained_path', side_effect=mapped), self.assertRaises(ValueError):
+                resolve(self.evidence, item, inspection)
+
+    def test_alias_metadata_errors_are_not_treated_as_absent_aliases(self):
+        from support import retained_path
+        resolve = self.resolver()
+        item, inspection = self.receipts()[0]
+        historical = self.evidence + '/' + inspection['original_path']
+        def malformed(path):
+            if path == historical:
+                raise KeyError('sha256')
+            return retained_path(path)
+        with patch('etl_proof.retained_path', side_effect=malformed), self.assertRaises(KeyError):
+            resolve(self.evidence, item, inspection)
+
 FIXTURES = Path(__file__).parent / 'fixtures/etl'
 VERSIONS = dict(parser_version='fixture-index-parser-v1', schema_version='sec-index-v1')
 

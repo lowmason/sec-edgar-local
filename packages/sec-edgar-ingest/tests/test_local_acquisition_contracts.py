@@ -1,6 +1,12 @@
 """Pure strict local acquisition codecs and provenance regressions."""
 import unittest
 from dataclasses import fields, replace
+from datetime import timedelta
+from pathlib import Path
+import multiprocessing
+import os
+import tempfile
+import hashlib
 
 from support import fixture_context, fixture_settings, fixture_snapshot, fixture_source, fixture_workset
 from sec_edgar_ingest.models import CommandResult, RunContext, canonical_json, parse_json
@@ -9,6 +15,263 @@ from sec_edgar_ingest.state import attempt_key
 from sec_edgar_ingest.worksets import (
     decode_snapshot_workset, decode_source_workset, encode_workset, make_snapshot_workset,
 )
+
+
+def admission_process(root, mapping, intent, barrier=None, results=None, crash=False):
+    """Exercise independent local stores; synchronize the first immutable write."""
+    from support import store_bundle
+    from sec_edgar_ingest.cli import _existing_context, _existing_etl_context
+    from sec_edgar_ingest.state import AcquisitionState
+    from sec_edgar_ingest.storage.contracts import Conflict
+    store, objects, leases = store_bundle(Path(root))
+    state = AcquisitionState(store)
+    context = RunContext.from_mapping(mapping)
+    if barrier is not None:
+        original_get, original_scan = store.get, store.scan
+        looked_up = False
+        def rendezvous(kind):
+            nonlocal looked_up
+            if kind == 'Attempt' and not looked_up:
+                looked_up = True
+                barrier.wait(timeout=30)
+        def get(kind, key):
+            row = original_get(kind, key)
+            rendezvous(kind)
+            return row
+        def scan(kind, filters):
+            rows = list(original_scan(kind, filters))
+            rendezvous(kind)
+            return iter(rows)
+        store.get, store.scan = get, scan
+        original = objects.put_once
+        first = True
+        def synchronized(path, body):
+            nonlocal first
+            if first:
+                first = False
+                barrier.wait(timeout=30)
+            return original(path, body)
+        objects.put_once = synchronized
+    if crash:
+        state.begin_attempt = lambda context: os._exit(74)
+    try:
+        reader = _existing_etl_context if context.command in ('transform', 'publish') else _existing_context
+        admitted, _ = reader(context, state, objects, intent, False)
+        if results is not None:
+            results.put(('admitted', admitted.to_mapping(), intent))
+    except Conflict as error:
+        if results is not None:
+            results.put(('conflict', str(error)))
+        else:
+            raise
+    finally:
+        leases.close()
+        store.close()
+
+
+class AttemptAdmissionTests(unittest.TestCase):
+    def stop_child(self, child):
+        if child.is_alive():
+            child.terminate()
+            child.join(timeout=10)
+
+    def bundle(self, command='discover'):
+        from support import store_bundle
+        from sec_edgar_ingest.state import AcquisitionState
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        store, objects, leases = store_bundle(root)
+        self.addCleanup(store.close)
+        self.addCleanup(leases.close)
+        context = fixture_context(command=command, settings=fixture_settings(root=root))
+        intent = ({'command': command, 'today': None, 'workset': 'input', 'force': False}
+                  if command in ('transform', 'publish') else
+                  {'command': command, 'today': None, 'fixture_sha256': '1' * 64,
+                   'mode': 'quarterly', 'discovery_id': 'probe', 'refresh': False, 'workset': None})
+        return root, AcquisitionState(store), objects, context, intent
+
+    def admit(self, context, state, objects, intent):
+        from sec_edgar_ingest.cli import _existing_context, _existing_etl_context
+        reader = _existing_etl_context if context.command in ('transform', 'publish') else _existing_context
+        return reader(context, state, objects, intent, False)
+
+    def snapshot(self, state, objects):
+        return ([row.to_mapping() for row in state.store.scan('Attempt', {})],
+                {str(path.relative_to(objects.directory)): path.read_bytes()
+                 for path in objects.directory.rglob('*') if path.is_file()})
+
+    def variants(self, original, intent):
+        settings = fixture_settings(root=Path(original.effective_config['storage']['root']))
+        return (
+            ('execution', replace(original, execution_id='replacement'), intent),
+            ('runtime', fixture_context(command=original.command, settings=fixture_settings(
+                root=Path(settings.storage.root), runtime={'fixture_id': 'replacement'})), intent),
+            ('config', fixture_context(command=original.command, settings=fixture_settings(
+                root=Path(settings.storage.root), sec={'requests_per_second': 1})), intent),
+            ('deadline', replace(original, deadline=original.deadline - timedelta(seconds=1)), intent),
+            ('intent', original, {**intent, 'today': '2026-10-06'}),
+        )
+
+    def test_pre_discovery_crash_rejects_substitutions_without_mutation(self):
+        from sec_edgar_ingest.storage.contracts import Conflict
+        _, state, objects, original, intent = self.bundle()
+        self.admit(original, state, objects, intent)
+        self.assertIsNone(state.discovery_session('probe'))
+        before = self.snapshot(state, objects)
+        for label, current, inputs in self.variants(original, intent):
+            with self.subTest(label=label), self.assertRaises(Conflict):
+                self.admit(current, state, objects, inputs)
+            self.assertEqual(self.snapshot(state, objects), before)
+        later = replace(original, started_at=original.started_at + timedelta(seconds=10))
+        self.assertEqual(self.admit(later, state, objects, intent), (original, None))
+        self.assertEqual(self.snapshot(state, objects), before)
+
+    def test_legacy_attempt_without_admission_rejects_before_claiming(self):
+        from sec_edgar_ingest.results import result_path
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for command in ('discover', 'collect', 'transform', 'publish'):
+            _, state, objects, original, intent = self.bundle(command)
+            state.begin_attempt(original)
+            command_path = result_path(original).rsplit('/', 1)[0] + '/command.json'
+            body = canonical_json({'context': original.to_mapping(), 'intent': intent}
+                                  if command in ('transform', 'publish') else intent)
+            objects.put_once(command_path, body)
+            before = self.snapshot(state, objects)
+            for label, current, inputs in self.variants(original, intent):
+                with self.subTest(command=command, label=label), self.assertRaises(Conflict):
+                    self.admit(current, state, objects, inputs)
+                self.assertEqual(self.snapshot(state, objects), before)
+            self.assertEqual(self.admit(original, state, objects, intent), (original, None))
+            self.assertEqual(objects.read(command_path), body)
+            self.assertEqual(self.snapshot(state, objects)[0], before[0])
+
+    def test_process_death_after_admission_before_attempt_keeps_original_authority(self):
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for command in ('discover', 'transform'):
+            root, state, objects, original, intent = self.bundle(command)
+            child = multiprocessing.get_context('spawn').Process(target=admission_process,
+                args=(str(root), original.to_mapping(), intent, None, None, True))
+            child.start()
+            self.addCleanup(self.stop_child, child)
+            child.join(timeout=30)
+            self.assertFalse(child.is_alive())
+            self.assertEqual(child.exitcode, 74)
+            self.assertEqual(tuple(state.store.scan('Attempt', {})), ())
+            before = self.snapshot(state, objects)
+            for label, current, inputs in self.variants(original, intent):
+                with self.subTest(command=command, label=label), self.assertRaises(Conflict):
+                    self.admit(current, state, objects, inputs)
+                self.assertEqual(self.snapshot(state, objects), before)
+            self.assertEqual(self.admit(original, state, objects, intent), (original, None))
+            self.assertEqual(len(tuple(state.store.scan('Attempt', {}))), 1)
+            from support import retain_acquisition_proof
+            retain_acquisition_proof('admission-crash-' + command,
+                {'command': command, 'pid': child.pid, 'exit': child.exitcode,
+                 'boundary': 'after immutable admission before Attempt insertion',
+                 'original_context': original.to_mapping(), 'original_intent': intent,
+                 'attempts_at_crash': before[0],
+                 'admission': parse_json(next(objects.directory.rglob('admission.json')).read_bytes()),
+                 'attempts_after_exact_retry': [row.to_mapping() for row in state.store.scan('Attempt', {})],
+                 'transport_attempts': [row.to_mapping() for row in state.store.scan('TransportAttempt', {})]})
+
+    def test_independent_first_admissions_choose_one_context_and_intent(self):
+        for command in ('discover', 'transform'):
+            for variation in ('execution', 'runtime', 'intent', 'same'):
+                with self.subTest(command=command, variation=variation):
+                    root, state, objects, original, intent = self.bundle(command)
+                    choices = {label: (current, inputs) for label, current, inputs in self.variants(original, intent)}
+                    contender, inputs = (original, intent) if variation == 'same' else choices[variation]
+                    spawn = multiprocessing.get_context('spawn')
+                    barrier, results = spawn.Barrier(2), spawn.Queue()
+                    children = [spawn.Process(target=admission_process,
+                        args=(str(root), current.to_mapping(), supplied, barrier, results))
+                        for current, supplied in ((original, intent), (contender, inputs))]
+                    for child in children:
+                        child.start()
+                        self.addCleanup(self.stop_child, child)
+                    for child in children:
+                        child.join(timeout=30)
+                        self.assertFalse(child.is_alive())
+                        self.assertEqual(child.exitcode, 0)
+                    outcomes = [results.get(timeout=5), results.get(timeout=5)]
+                    results.close()
+                    self.assertEqual(sorted(value[0] for value in outcomes),
+                        ['admitted', 'admitted'] if variation == 'same' else ['admitted', 'conflict'])
+                    attempts = list(state.store.scan('Attempt', {}))
+                    self.assertEqual(len(attempts), 1)
+                    winner = next(value[1] for value in outcomes if value[0] == 'admitted')
+                    self.assertEqual(attempts[0].to_mapping()['value']['context'], winner)
+                    if variation == 'same':
+                        self.assertEqual(outcomes[0][1], outcomes[1][1])
+                    self.assertEqual(tuple(state.store.scan('TransportAttempt', {})), ())
+                    admissions = list(objects.directory.rglob('admission.json'))
+                    self.assertEqual(len(admissions), 1)
+                    body = admissions[0].read_bytes()
+                    admission = parse_json(body)
+                    self.assertEqual(admission['context'], winner)
+                    self.assertEqual(admission['intent'], next(value[2] for value in outcomes if value[0] == 'admitted'))
+                    from support import retain_acquisition_proof
+                    retain_acquisition_proof('admission-race-' + command + '-' + variation,
+                        {'command': command, 'variation': variation,
+                         'rendezvous': 'both first Attempt lookups complete, then both first immutable writes',
+                         'children': [{'pid': child.pid, 'exit': child.exitcode} for child in children],
+                         'outcomes': outcomes, 'admission': admission,
+                         'admission_sha256': hashlib.sha256(body).hexdigest(),
+                         'attempts': [row.to_mapping() for row in attempts], 'transport_attempts': []})
+
+    def test_legacy_begun_attempt_without_command_preserves_original_context(self):
+        from sec_edgar_ingest.storage.contracts import Conflict
+        _, state, objects, original, intent = self.bundle()
+        state.begin_attempt(original)
+        before = self.snapshot(state, objects)
+        for label, current, inputs in self.variants(original, intent)[:-1]:
+            with self.subTest(label=label), self.assertRaises(Conflict):
+                self.admit(current, state, objects, inputs)
+            self.assertEqual(self.snapshot(state, objects), before)
+        later = replace(original, started_at=original.started_at + timedelta(seconds=10))
+        self.assertEqual(self.admit(later, state, objects, intent), (original, None))
+
+    def test_ambiguous_legacy_attempts_refuse_without_claim_or_mutation(self):
+        from sec_edgar_ingest.storage.contracts import Conflict
+        _, state, objects, original, intent = self.bundle()
+        state.begin_attempt(original)
+        state.begin_attempt(replace(original, execution_id='second'))
+        before = self.snapshot(state, objects)
+        with self.assertRaises(Conflict):
+            self.admit(original, state, objects, intent)
+        self.assertEqual(self.snapshot(state, objects), before)
+
+    def test_admission_real_readers_refuse_foreign_or_inexact_receipts_without_mutation(self):
+        from sec_edgar_ingest.results import result_path
+        from sec_edgar_ingest.storage.contracts import Conflict
+        for command in ('discover', 'transform'):
+            _, state, objects, original, intent = self.bundle(command)
+            path = result_path(original).rsplit('/', 1)[0] + '/admission.json'
+            receipt = {'contract_version': 'sec-local-contract-v1',
+                       'format_version': 'sec-local-attempt-admission-v1',
+                       'context': original.to_mapping(), 'intent': intent}
+            bad_context = {**original.to_mapping(), 'runtime': {}}
+            variants = [canonical_json({k: v for k, v in receipt.items() if k != field})
+                        for field in receipt]
+            variants += [canonical_json({**receipt, 'contract_version': 'foreign'}),
+                         canonical_json({**receipt, 'format_version': 'foreign'}),
+                         canonical_json({**receipt, 'unexpected': True}),
+                         canonical_json({**receipt, 'context': bad_context}),
+                         canonical_json({**receipt, 'context': replace(original, run_id='other').to_mapping()}),
+                         canonical_json({**receipt, 'intent': {**intent, 'unexpected': True}}),
+                         canonical_json(receipt) + b'\n']
+            for number, body in enumerate(variants):
+                with self.subTest(command=command, variation=number):
+                    target = objects.directory / path
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(body)
+                    before = self.snapshot(state, objects)
+                    with self.assertRaises((ValueError, Conflict)):
+                        self.admit(original, state, objects, intent)
+                    self.assertEqual(self.snapshot(state, objects), before)
+            target.write_bytes(canonical_json(receipt))
+            self.assertEqual(self.admit(original, state, objects, intent), (original, None))
 
 
 class LocalAcquisitionContracts(unittest.TestCase):

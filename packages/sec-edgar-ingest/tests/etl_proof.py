@@ -298,6 +298,26 @@ def process_proof(root):
     return {'races': races, 'deaths': deaths}
 
 
+def specimen_path(evidence, item, inspection):
+    """Resolve imported listing bytes without requiring historical specimen aliases."""
+    if any(item[name] != inspection[name] for name in ('evidence_id', 'url', 'original_bytes', 'original_sha256')):
+        raise ValueError('specimen matrix and inspection identities differ')
+    listing = retained_path(evidence + f"/listings/{item['evidence_id']}.body")
+    expected = {'bytes': item['original_bytes'], 'sha256': item['original_sha256']}
+    if digest(listing) != expected:
+        raise ValueError('retained listing differs from the original matrix/inspection bytes')
+    historical_name = evidence + '/' + inspection['original_path']
+    try:
+        historical = retained_path(historical_name)
+    except KeyError as error:
+        if error.args != (historical_name,):
+            raise
+        historical = listing
+    if historical.read_bytes() != listing.read_bytes():
+        raise ValueError('historical specimen alias differs from the mapped listing bytes')
+    return listing
+
+
 def specimens(output):
     """Scan complete original receipts and apply the production duplicate policy."""
     from collections import Counter
@@ -309,7 +329,7 @@ def specimens(output):
     receipts = []
     for item in json.loads(retained_path(evidence + '/specimens/matrix.json').read_text())['matrix']:
         inspection = json.loads(retained_path(evidence + '/' + item['inspection']).read_text())
-        path = retained_path(evidence + '/' + inspection['original_path'])
+        path = specimen_path(evidence, item, inspection)
         actual = digest(path)
         assert actual == {'bytes': item['original_bytes'], 'sha256': item['original_sha256']}
         assert actual == {'bytes': inspection['original_bytes'], 'sha256': inspection['original_sha256']}

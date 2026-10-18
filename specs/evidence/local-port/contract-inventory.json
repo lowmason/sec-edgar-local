@@ -1,6 +1,6 @@
 {
   "contract_version": "sec-local-contract-v1",
-  "module_root": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows",
+  "module_root": "packages/sec-edgar-ingest/src/sec_edgar_ingest",
   "rows": [
     {
       "family": "workflow-result",
@@ -725,6 +725,31 @@
       ],
       "positive_test": "test_workflow_summary.WorkflowSummaryTests.test_milestone_contract_and_referenced_result_refusals_do_not_mutate",
       "negative_test": "test_workflow_summary.WorkflowSummaryTests.test_milestone_contract_and_referenced_result_refusals_do_not_mutate"
+    },
+    {
+      "family": "attempt-admission",
+      "format_version": "sec-local-attempt-admission-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "cli._admit_context"
+      ],
+      "readers": [
+        "cli._read_admission",
+        "cli._admit_context",
+        "cli._existing_context",
+        "cli._existing_etl_context"
+      ],
+      "hash_sites": [
+        "storage.local.LocalObjectStore._write_once",
+        "storage.local.LocalObjectStore.verify"
+      ],
+      "equality_sites": [
+        "cli._read_admission",
+        "cli._matching_context",
+        "cli._admit_context"
+      ],
+      "positive_test": "test_local_acquisition_contracts.AttemptAdmissionTests.test_independent_first_admissions_choose_one_context_and_intent",
+      "negative_test": "test_local_acquisition_contracts.AttemptAdmissionTests.test_admission_real_readers_refuse_foreign_or_inexact_receipts_without_mutation"
     }
   ]
 }

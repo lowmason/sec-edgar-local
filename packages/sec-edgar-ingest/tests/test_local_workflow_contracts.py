@@ -391,7 +391,7 @@ class ContractInventoryTests(unittest.TestCase):
         inventory = json.loads(path.read_text())
         self.assertEqual(inventory['contract_version'], LOCAL)
         rows = inventory['rows']
-        self.assertEqual(len(rows), 34)
+        self.assertEqual(len(rows), 35)
         self.assertEqual(len({row['family'] for row in rows}), len(rows))
         for row in rows:
             self.assertTrue({'family', 'writers', 'readers', 'hash_sites', 'equality_sites',

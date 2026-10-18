@@ -200,6 +200,19 @@ class CliTests(unittest.TestCase):
                 self.assertIn(done.returncode, (2, 9), done.stderr)
                 self.assertNotEqual(json.loads(done.stdout or done.stderr).get('outcome'), 'success')
 
+    def test_invalid_collect_input_cannot_begin_a_second_execution_attempt(self):
+        from sec_edgar_ingest.storage.local import LocalStateStore
+        h = self.harness()
+        reference = 'worksets/sec/source/sha256=' + 'a' * 64 + '/workset.json'
+        self.assertEqual(h.collect(reference).returncode, 9)
+        store = LocalStateStore(h.state_root)
+        self.addCleanup(store.close)
+        before = [row.to_mapping() for row in store.scan('Attempt', {})]
+        self.assertEqual(len(before), 1)
+        self.assertEqual(h.collect(reference, execution='replacement').returncode, 9)
+        self.assertEqual([row.to_mapping() for row in store.scan('Attempt', {})], before)
+        self.assertEqual(tuple(store.scan('TransportAttempt', {})), ())
+
     def test_completed_attempt_cannot_change_config_deadline_mode_refresh_or_workset(self):
         for variation in ('config', 'deadline', 'mode', 'refresh', 'discovery'):
             with self.subTest(variation=variation):

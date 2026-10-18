@@ -39,6 +39,18 @@ def local_mapping(root="../data", *, mode="fixture"):
     }
 
 
+class ShippedFixtureConfigTests(unittest.TestCase):
+    def test_example_supports_etl_and_uses_ignored_output_paths(self):
+        from sec_edgar_ingest.etl.parser import supported_parser
+        root = Path(__file__).resolve().parents[3]
+        settings = load_config(root / 'conf/sec-edgar-local-fixture.json')
+        supported_parser(settings.etl.parser_version, fixture=True)
+        ignored = set((root / '.gitignore').read_text().splitlines())
+        for value, expected in ((settings.storage.root, 'fixture-data'), (settings.logging.root, 'logs')):
+            self.assertEqual(Path(value), root / expected)
+            self.assertIn(expected + '/', ignored)
+
+
 class LocalConfigTests(unittest.TestCase):
     def accepted(self, value=None):
         try:

@@ -43,6 +43,7 @@ from .workflows.summary import emit_summary
 from .worksets import decode_source_workset
 
 SOURCE_REF = re.compile(r'worksets/sec/source/sha256=[0-9a-f]{64}/workset\.json\Z')
+ADMISSION_FORMAT = 'sec-local-attempt-admission-v1'
 
 
 class _ExpiredAttempt(ValueError):
@@ -212,6 +213,50 @@ def _matching_context(saved, current, *, explicit_today) -> RunContext:
     return saved
 
 
+def _read_admission(path, objects, intent):
+    body = objects.read(path)
+    value = parse_json(body)
+    if (not isinstance(value, dict) or set(value) != {
+            'contract_version', 'format_version', 'context', 'intent'}
+            or value['format_version'] != ADMISSION_FORMAT or canonical_json(value) != body):
+        raise Conflict('attempt admission fields, format or canonical bytes differ')
+    require_contract(value)
+    context = RunContext.from_mapping(value['context'])
+    if path != result_path(context).rsplit('/', 1)[0] + '/admission.json' or value['intent'] != intent:
+        raise Conflict('attempt admission differs from its stable command address or frozen inputs')
+    return context
+
+
+def _admit_context(current, state, objects, intent, explicit_today, prior=None):
+    path = result_path(current).rsplit('/', 1)[0] + '/admission.json'
+    try:
+        original = _read_admission(path, objects, intent)
+    except FileNotFoundError:
+        # Historical Attempt keys include execution/runtime. Only a unique original
+        # may seed the new claim; the immutable write, not this scan, chooses a winner.
+        matching = [RunContext.from_mapping(row.to_mapping()['value']['context'])
+                    for row in state.store.scan('Attempt', {})
+                    if all(row.value['context'][name] == getattr(current, name)
+                           for name in ('run_id', 'command', 'attempt_id'))]
+        if len(matching) > 1:
+            raise Conflict('multiple attempts claim the same command path')
+        if matching and prior is not None and matching[0] != prior:
+            raise Conflict('original Attempt differs from frozen command/result context')
+        original = matching[0] if matching else prior if prior is not None else current
+        original = _matching_context(original, current, explicit_today=explicit_today)
+        frozen = canonical_json({'contract_version': LOCAL_CONTRACT, 'format_version': ADMISSION_FORMAT,
+                                 'context': original.to_mapping(), 'intent': intent})
+        try:
+            objects.put_once(path, frozen)
+        except Conflict:
+            # Another first caller may have claimed a different context or inputs.
+            original = _read_admission(path, objects, intent)
+    context = _matching_context(original, current, explicit_today=explicit_today)
+    if prior is not None and prior != context:
+        raise Conflict('attempt admission differs from frozen command/result context')
+    return context
+
+
 def _existing_context(current, state, objects, intent, explicit_today):
     path = result_path(current)
     intent_path = path.rsplit('/', 1)[0] + '/command.json'
@@ -219,19 +264,21 @@ def _existing_context(current, state, objects, intent, explicit_today):
         saved = read_result(path, objects)
     except FileNotFoundError:
         saved = None
-    if saved is not None:
-        context = _matching_context(saved.context, current, explicit_today=explicit_today)
-        if objects.read(intent_path) != canonical_json(intent):
-            raise Conflict('completed attempt command inputs differ from the frozen invocation')
-        state.begin_attempt(context)
-        state.finish_attempt(saved)
-        return context, saved
-    row = state.store.get('Attempt', attempt_key(current))
-    context = _matching_context(RunContext.from_mapping(row.to_mapping()['value']['context']), current,
-                                explicit_today=explicit_today) if row is not None else current
+    try:
+        frozen_body = objects.read(intent_path)
+    except FileNotFoundError:
+        if saved is not None:
+            raise Conflict('completed attempt has no command intent')
+        frozen_body = None
+    if frozen_body is not None and frozen_body != canonical_json(intent):
+        raise Conflict('attempt command inputs differ from the frozen invocation')
+    context = _admit_context(current, state, objects, intent, explicit_today,
+                             saved.context if saved is not None else None)
     state.begin_attempt(context)
     objects.put_once(intent_path, canonical_json(intent))
-    return context, None
+    if saved is not None:
+        state.finish_attempt(saved)
+    return context, saved
 
 
 def _existing_etl_context(current, state, objects, intent, explicit_today):
@@ -254,16 +301,10 @@ def _existing_etl_context(current, state, objects, intent, explicit_today):
     else:
         if saved is not None:
             raise Conflict('completed ETL result has no command intent')
-        # Attempt keys include runtime/execution, while immutable command paths do not.
-        # Find an interrupted begin even if the caller now supplies a different key.
-        matching = [RunContext.from_mapping(row.to_mapping()['value']['context'])
-                    for row in state.store.scan('Attempt', {})
-                    if all(row.value['context'][name] == getattr(current, name)
-                           for name in ('run_id', 'command', 'attempt_id'))]
-        if len(matching) > 1:
-            raise Conflict('multiple attempts claim the same command path')
-        prior = matching[0] if matching else current
-    context = _matching_context(prior, current, explicit_today=explicit_today)
+        prior = None
+    if saved is not None and saved.context != prior:
+        raise Conflict('ETL result differs from its frozen command context')
+    context = _admit_context(current, state, objects, intent, explicit_today, prior)
     if saved is not None and saved.context != context:
         raise Conflict('ETL result differs from its frozen command context')
     frozen = canonical_json({'context': context.to_mapping(), 'intent': intent})
@@ -636,7 +677,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             try:
                 workset = decode_source_workset(objects.read(args.workset))
             except (ValueError, OSError):
-                state.begin_attempt(context)
+                context, _ = _existing_context(context, state, objects, _intent(args, pack), bool(args.today))
                 raise
             if args.workset != f'worksets/sec/source/sha256={workset.workset_id}/workset.json':
                 raise Conflict('workset object path differs from its content identity')

@@ -30,10 +30,10 @@
   },
   "storage": {
     "backend": "local",
-    "root": "../data-fixture"
+    "root": "../fixture-data"
   },
   "etl": {
-    "parser_version": "fixture-envelope-v1",
+    "parser_version": "fixture-index-parser-v1",
     "schema_version": "sec-index-v1"
   },
   "reconciliation": {
@@ -47,7 +47,7 @@
     "fixture_id": "sec-edgar-local-fixture-v1"
   },
   "logging": {
-    "root": "../logs-fixture"
+    "root": "../logs"
   },
   "execution": {
     "max_run_seconds": 3600
