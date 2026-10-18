@@ -78,19 +78,33 @@ class LocalModeTests(unittest.TestCase):
         self.invoke_refused(args)
 
     def test_live_refuses_each_fixture_marker_before_stores(self):
+        from support_release import proof_releases
+        project = Path(__file__).resolve().parents[3]
+        release, _ = proof_releases(project, project / 'releases/artifact-cache')
+        refusals = {
+            'pack': 'fixture pack and date override require fixture acquisition',
+            'clock': 'fixture pack and date override require fixture acquisition',
+            'deadline': 'fixture overrides are permitted only for fixture acquisition',
+            'parser': 'live acquisition requires sec-index-parser-v1',
+            'runtime': 'live acquisition requires native runtime',
+        }
         original = json.loads(json.dumps(self.mapping))
         for marker in ('pack', 'clock', 'deadline', 'parser', 'runtime'):
             with self.subTest(marker=marker):
                 self.mapping = json.loads(json.dumps(original))
                 self.mapping['acquisition']['mode'] = 'live'
                 self.mapping.pop('fixture', None)
-                self.native()
+                self.mapping['runtime'] = {'kind': 'native',
+                    'release_manifest': str(release.directory / 'release.json')}
                 args = self.argv(pack=marker == 'pack')
                 if marker == 'clock': args += ['--today', '2026-10-01']
                 elif marker == 'deadline': self.mapping['fixture'] = {'allow_deadline_override': True}
                 elif marker == 'parser': self.mapping['etl']['parser_version'] = 'fixture-index-parser-v1'
                 elif marker == 'runtime': self.mapping['runtime'] = original['runtime']
-                self.invoke_refused(args)
+                with patch('sec_edgar_ingest.cli.preflight_current', return_value=release) as preflight:
+                    error = json.loads(self.invoke_refused(args))
+                self.assertEqual(error['error'], refusals[marker])
+                preflight.assert_not_called()
 
     def test_probe_failure_is_a_configuration_refusal_before_stores(self):
         import subprocess
