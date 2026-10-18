@@ -163,6 +163,51 @@ class InstalledLockTests(unittest.TestCase):
 
 
 class ProofInputsTests(unittest.TestCase):
+    def test_explicit_verifier_harness_wins_over_conflicting_inherited_catalog(self):
+        import json
+        import shutil
+        import subprocess
+        from locked_proof import inventory
+        from sec_edgar_ingest.runtime import isolated_environment, native_python_argv
+        from support_release import proof_releases
+        from workflow_proof import harness_files
+        project = Path(__file__).resolve().parents[3]
+        a, b = proof_releases(project, project / 'releases/artifact-cache')
+        accepted_before = inventory(a.directory)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = Path(__file__).parent
+            for name in ('explicit', 'catalog'):
+                harness = root / name
+                for path in harness_files():
+                    target = harness / path.relative_to(source)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
+                with (harness / 'workflow_proof.py').open('a') as stream:
+                    stream.write('\ndef sequence(output, *, release_manifest=None):\n'
+                        '    return ' + repr({'exit': 0, 'harness_probe': name}) + '\n')
+                with (harness / 'network_guard.py').open('a') as stream:
+                    stream.write('\n_original_install = install\ndef install():\n'
+                        '    _original_install()\n    from pathlib import Path\n'
+                        '    with Path(' + repr(str(root / (name + '-guard.log'))) + ').open("a") as stream:\n'
+                        '        stream.write("guard installed\\n")\n')
+            catalog = root / 'catalog.json'
+            catalog.write_text(json.dumps({'format_version': 'sec-local-proof-catalog-v1',
+                'a_manifest': str(a.directory / 'release.json'), 'b_manifest': str(b.directory / 'release.json'),
+                'harness': str(root / 'catalog')}))
+            evidence = root / 'evidence'
+            environment = dict(isolated_environment(), SEC_LOCAL_PROOF_CATALOG=str(catalog))
+            done = subprocess.run([*native_python_argv(a.python), str(project / 'scripts/verify-native-release.py'),
+                '--release', str(a.directory), '--harness', str(root / 'explicit'), '--evidence', str(evidence)],
+                cwd=root, env=environment, capture_output=True, text=True, timeout=60)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            report = json.loads((evidence / 'report.json').read_text())
+            self.assertEqual(report['sequence']['harness_probe'], 'explicit',
+                             'inherited catalog silently replaced the declared verifier harness')
+            self.assertTrue((root / 'explicit-guard.log').is_file())
+            self.assertFalse((root / 'catalog-guard.log').exists(), 'guard and executed harness must agree')
+        self.assertEqual(inventory(a.directory), accepted_before)
+
     def test_upgrade_missing_runtime_probe_uses_disposable_release_paths(self):
         import json
         import subprocess

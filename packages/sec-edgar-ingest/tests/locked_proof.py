@@ -40,8 +40,15 @@ def proof_catalog():
 
 
 def proof_harness(default):
+    """Select the catalog harness at a factory or proof-driver boundary."""
     catalog = proof_catalog()
     harness = Path(catalog['harness']) if catalog else Path(default)
+    return explicit_proof_harness(harness)
+
+
+def explicit_proof_harness(harness):
+    """Validate an already selected harness without consulting the environment."""
+    harness = Path(harness)
     if not harness.is_absolute() or not harness.is_dir():
         raise ValueError('proof harness must be an existing absolute directory')
     return harness
@@ -244,7 +251,7 @@ def verify_native_release(verified, harness, evidence):
     import tempfile
     from workflow_proof import harness_files
     from sec_edgar_ingest.runtime import isolated_environment, native_python_argv
-    harness, evidence = proof_harness(harness), Path(evidence)
+    harness, evidence = explicit_proof_harness(harness), Path(evidence)
     if not evidence.is_absolute():
         raise ValueError('native verifier evidence must be absolute')
     evidence.mkdir(parents=True, exist_ok=False)
@@ -315,7 +322,7 @@ def verify_wrong_transitive(verified, harness, evidence):
     import tempfile
     from sec_edgar_ingest.release import reconstruct_release
     from sec_edgar_ingest.runtime import isolated_environment, native_python_argv, preflight
-    harness, evidence = proof_harness(harness), Path(evidence)
+    harness, evidence = explicit_proof_harness(harness), Path(evidence)
     if not evidence.is_absolute():
         raise ValueError('transitive probe evidence must be absolute')
     evidence.mkdir(parents=True, exist_ok=False)
