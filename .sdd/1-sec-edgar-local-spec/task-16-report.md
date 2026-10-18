@@ -131,3 +131,134 @@ The original explicit fixture classifier remains false and cannot satisfy L12. T
 Fresh static checks parse both harness scripts, the new analyzer and the test module; `git diff --check` passes. Corrected driver SHA256 is `6700ea7470ad1ee3b1e774fd03014ddd23d3b458e6c19450bfc43a7a7a37101e`; supplemental analyzer SHA256 is `0a1d6b5b5aa218fc4d8ac09084c54e78fa05d8776ab79891aac306bf025649ab`. The default config remains byte-identical. No production file, dependency, lock or installed release was changed; no full default suite was repeated.
 
 **Review gate remains closed for actual adjudication.** The actual evidence directory still has no `adjudications/` output. After scoped review accepts the corrected reader and analyzer, the controller can run the separately versioned offline command against the original selection/report/verification and save a supplemental record. The original run and original verification remain incomplete regardless of any later supplemental analysis status. Observed 17 launches, 21 publications/captured reads and 73 unselected pending sources describe this bounded attempt; they do not establish historical coverage.
+
+
+## Actual bounded SEC attempt and final evidence record
+
+The preceding gate was subsequently closed by independent review: commit `782e40a` received Approved/no findings in `task-16-adjudication-review.md`. Only then did the controller execute the separate actual offline adjudication, session 48446. It completed exit **0**, independent status **pass**, reasons `[]`, at `2026-10-18T23:46:17.559239+00:00`. Supplemental SHA256 is `1e1eff2c426235212c976b047aeb3799be317b067da730bfe9f2f0d3930af252`. The earlier paragraph saying no adjudication output exists describes the earlier review checkpoint and is superseded by this actual result.
+
+**L12 passes on the reviewed supplemental analysis of the original genuine acquisition.** Original run session 45878 and original verification session 53307 both remain incomplete, exit 12. Their bytes/status/watchdog were retained unchanged. No second HTTP attempt, selection, window reset, parser relaxation, production change or workflow rerun occurred during correction/adjudication/final evidence assembly. The supplement independently derives all three selected native sources and 21 qualified nonempty published reads under unchanged bounds. Final Task16 evidence review remains pending. No historical completeness or overall final-readiness claim is made here.
+
+The controller's exact retained command record is `/private/tmp/sec-local-task16-acceptance-20261018/controller-commands.json`, SHA256 `e966ff6f4b809b09a497b4103575ec0cda94de3d726dcad6abcc7cdba8f94596`. Shell invocations used the relative release executable with repository cwd; these equivalent absolute argv arrays are recorded there. Low-level per-child argv/result/stream receipts remain the strongest individual launch evidence.
+
+```json
+{
+  "name": "prepare",
+  "argv": [
+    "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/venv/bin/python",
+    "-I",
+    "-B",
+    "-X",
+    "pycache_prefix=/dev/null",
+    "/Users/lowell/Projects/sec-edgar-local/scripts/accept-sec-native.py",
+    "prepare",
+    "--release",
+    "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json",
+    "--root",
+    "/Users/lowell/Projects/sec-edgar-local/data",
+    "--evidence",
+    "/private/tmp/sec-local-task16-acceptance-20261018",
+    "--config",
+    "/private/tmp/sec-local-task15-renewal/candidate-config.json",
+    "--sole-issuer-confirmed"
+  ],
+  "observed_exit": 0,
+  "exec_session": null
+}
+```
+
+```json
+{
+  "name": "run",
+  "argv": [
+    "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/venv/bin/python",
+    "-I",
+    "-B",
+    "-X",
+    "pycache_prefix=/dev/null",
+    "/Users/lowell/Projects/sec-edgar-local/scripts/accept-sec-native.py",
+    "run",
+    "--selection",
+    "/private/tmp/sec-local-task16-acceptance-20261018/selection.json"
+  ],
+  "observed_exit": 12,
+  "exec_session": 45878
+}
+```
+
+```json
+{
+  "name": "original_verify",
+  "argv": [
+    "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/venv/bin/python",
+    "-I",
+    "-B",
+    "-X",
+    "pycache_prefix=/dev/null",
+    "/Users/lowell/Projects/sec-edgar-local/scripts/accept-sec-native.py",
+    "verify",
+    "--selection",
+    "/private/tmp/sec-local-task16-acceptance-20261018/selection.json"
+  ],
+  "observed_exit": 12,
+  "exec_session": 53307
+}
+```
+
+```json
+{
+  "name": "offline_adjudication",
+  "argv": [
+    "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/venv/bin/python",
+    "-I",
+    "-B",
+    "-X",
+    "pycache_prefix=/dev/null",
+    "/Users/lowell/Projects/sec-edgar-local/scripts/verify-sec-native-adjudication.py",
+    "--selection",
+    "/private/tmp/sec-local-task16-acceptance-20261018/selection.json",
+    "--report",
+    "/private/tmp/sec-local-task16-acceptance-20261018/run-b0bfc28dcc7d48e686b12b5253d8a414.json",
+    "--original-verification",
+    "/private/tmp/sec-local-task16-acceptance-20261018/verification-7fee6a8a509a482d949f9cd78cec9a79.json",
+    "--output",
+    "/private/tmp/sec-local-task16-acceptance-20261018/adjudications/reviewed-native-runtime.json"
+  ],
+  "observed_exit": 0,
+  "exec_session": 48446
+}
+```
+
+The original UTC window remained `2026-10-18T23:23:15.020920+00:00` to `23:38:15.020920+00:00`. The watchdog records positive drain, completed outcome, original returncode 12, monotonic elapsed 602.3843270420039 within 883.374256 remaining seconds, ending `23:33:34.032853+00:00` (619.011933 seconds from selection start). All 17 native low-level launches drained. There were 14 frozen calls including three exact fresh-process collect replays. Native bootstrap/cache/import policy and owner-confirmed sole-issuer operating declaration remained effective.
+
+Observed global consumption: 10 charged admissions, 10 actual socket starts, 10 distinct canonical URLs (seven listings/three bodies), ordinal 1 for every request, zero retries and zero charged-but-unsent admissions. Received bytes 4,946,565/134,217,728; expanded validation bytes 102,593,106/1,073,741,824. All 19 reservations (ten received/nine expanded) settled; unchanged per-response ceilings applied. All three body raw hashes and immutable snapshot/replay/reuse links are recorded in the machine evidence. These actual observations do not replace offline conservative-crash/expired-permit coverage.
+
+Quarterly 2024Q1 acquisition/replay/reuse exited 0, transform exited 7 with whole-source quarantine for conflicting duplicate logical key at line 88043, and publish exited 3 for incomplete transformed workset. One durable conflict error is retained; total source conflicts are not enumerated because the parser stops at first conflict. The old retained-fixture count 51 is not this source's count. Daily 2026-10-14 and 2026-10-15 acquired/replayed/reused/transformed/published successfully, producing six and fifteen generations respectively. Their source rows/distinct keys are 3,220/3,182 and 3,652/3,562. All 21 captures were validated nonempty with the exact schema and matching source/generation provenance. There are 16 affected quarters; 9,917 summed rows include repeated generations, while latest per-quarter captured generations total 6,744 rows. No broad historical coverage is inferred.
+
+Preparation inventoried absence of the approved live root; the first operation created that exact root. Quarterly work preceded daily discovery. Previous/current daily quarter listings discovered 75 sources; only the two selected singleton body worksets were collected, leaving 73 pending unselected sources and no failed directories. No daily/backfill runner was used afterward. `daily.start_date` remained the handoff input, not a strict selected-body range. The full initial and ending inventories and pending-source identities are recorded.
+
+The committed selection is an exact byte copy of the original frozen selection, including its historical harness hashes. The machine evidence includes release/wheel/interpreter/dependency identity, absolute normalized configs and separate input-byte hash, all command arrays/results/streams, every admission/ordinal/reservation and hashed transport boundary, all raw/snapshot/observation/publication/capture references, quarantine error reference, preserved default config/spec/plan/lock hashes, and complete observed output inventories. Raw headers stay in retained immutable raw references; their values are omitted from the summary.
+
+Fresh finalization check (read-only hashing/static consistency, not another harness verification or adjudication):
+
+```sh
+python3 /private/tmp/task16-final-static-check.py > .sdd/1-sec-edgar-local-spec/task16-offline-logs/26-actual-evidence-static.log 2>&1
+git diff --check
+```
+
+Retained exact output:
+
+```text
+evidence: 257 files, 6175866 bytes, every retained hash matched
+live_root: 155 files, 12203317 bytes, every retained hash matched
+sec-acceptance-selection.json 38bf7c024e0fd5ac3bd9724e7c05a7f8876308ae90b79e42d4391d592f36b6cc 3884
+sec-acceptance.json 5bae677e97307e5cf7c73b31f6651310b7420aeaafff2fd7ef255bed77bc1de4 586222
+sec-acceptance.md e7ce0e199a58cd480b4d8c9cfb2ad065fda9dd529ca6d5028e4cd3e545c9f42a 10939
+PASS: 422 unique file references/hashes; exact selection/archive/config preserved; 17 launches, 10 sends, 19 settlements, 3 native sources, 21 reads, 73 pending; original exit12/incomplete and separate supplemental pass retained; no cookie values in machine summary
+```
+
+The check parsed the committed JSON, compared every absolute/logical file reference against actual retained SHA256/size, checked complete file-set inventory equality, exact selection/archive/default-config hashes, all actual totals/counts/status distinctions, and absence of cookie values in machine evidence. It returned 0; `git diff --check` returned 0 without output. Inventory is 257 evidence files/6,175,866 bytes and 155 live-root files/12,203,317 bytes. This records observed outputs at finalization; retained evidence/data are not automatically cleaned.
+
+The final source-code verification remains retained log `25-native-adjudication-integration.log`: 36 guarded offline tests passed in 15.719 seconds, zero failures/errors/skips/warnings. No code changed after that gate; this final commit changes evidence/report/log only. No whole default suite or actual analyzer was repeated for documentation. Static checker SHA256 is `def6274f1ceb263a02fb5005b768f9481d72948e007e86d14191db112e95b71a`.
+
+Self-review checked that original incomplete flags were not overwritten, the supplemental pass is separately identified, all three native sources are linked to reviewed analysis, acquisition and ETL statuses stay separate, quarantine/pending outcomes remain visible, exact budgets/ordinals/drain are retained, and row counts distinguish successive reads from latest captured totals. The selected release/payload/spec/plan/lock/default config remain untouched. Final independent Task16 review is the next gate.

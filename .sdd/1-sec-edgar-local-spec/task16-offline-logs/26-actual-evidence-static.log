@@ -1,0 +1,6 @@
+evidence: 257 files, 6175866 bytes, every retained hash matched
+live_root: 155 files, 12203317 bytes, every retained hash matched
+sec-acceptance-selection.json 38bf7c024e0fd5ac3bd9724e7c05a7f8876308ae90b79e42d4391d592f36b6cc 3884
+sec-acceptance.json 5bae677e97307e5cf7c73b31f6651310b7420aeaafff2fd7ef255bed77bc1de4 586222
+sec-acceptance.md e7ce0e199a58cd480b4d8c9cfb2ad065fda9dd529ca6d5028e4cd3e545c9f42a 10939
+PASS: 422 unique file references/hashes; exact selection/archive/config preserved; 17 launches, 10 sends, 19 settlements, 3 native sources, 21 reads, 73 pending; original exit12/incomplete and separate supplemental pass retained; no cookie values in machine summary
