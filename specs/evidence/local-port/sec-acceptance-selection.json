@@ -1,0 +1,30 @@
+{
+  "candidate_config": "/private/tmp/sec-local-task15-renewal/candidate-config.json",
+  "daily_dates": [
+    "2026-10-14",
+    "2026-10-15"
+  ],
+  "effective_configs": null,
+  "executable": false,
+  "format_version": "sec-local-sec-selection-template-v1",
+  "limits": {
+    "attempts": 100,
+    "attempts_per_url": 5,
+    "daily_bodies": 2,
+    "distinct_urls": 20,
+    "expanded_bytes": 1073741824,
+    "quarterly_bodies": 1,
+    "received_bytes": 134217728,
+    "wall_seconds": 900
+  },
+  "quarterly_periods": [
+    "2024Q1"
+  ],
+  "reason": "Independent offline harness review must close before actual prepare/run.",
+  "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json",
+  "root": "/Users/lowell/Projects/sec-edgar-local/data",
+  "selection_sha256": null,
+  "sole_issuer_confirmed_by_owner": true,
+  "status": "not_prepared",
+  "utc_window": null
+}
