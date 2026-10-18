@@ -28,12 +28,15 @@ def argv(*args):
     return [sys.executable, '-I', '-B', '-X', 'pycache_prefix=/dev/null', __file__, *map(str, args)]
 
 
-def child(root):
+def child(root, stubborn=False):
     stopped = threading.Event()
     def stop(signum, frame):
         stopped.set()
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
+    if stubborn:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
     event(root, 'child_started')
     stopped.wait()
     event(root, 'child_drained')
@@ -48,7 +51,7 @@ def engine(root, status, mode):
     signal.signal(signal.SIGTERM, stop)
     event(root, 'engine_started', argv=sys.argv, isolated=sys.flags.isolated,
           no_bytecode=sys.dont_write_bytecode, cache_prefix=sys.pycache_prefix)
-    descendant = subprocess.Popen(argv('child', root), start_new_session=True,
+    descendant = subprocess.Popen(argv('child', root, *(['stubborn'] if mode == 'stubborn_tree' else [])), start_new_session=True,
         stdout=subprocess.DEVNULL if mode == 'orphan' else None,
         stderr=subprocess.DEVNULL if mode == 'orphan' else None)
     until = time.monotonic() + 10
@@ -58,8 +61,8 @@ def engine(root, status, mode):
             raise RuntimeError('child did not acknowledge start')
         time.sleep(0.01)
     event(root, 'ready')
-    if mode in ('wait', 'stubborn', 'orphan'):
-        if mode == 'stubborn':
+    if mode in ('wait', 'stubborn', 'stubborn_tree', 'orphan'):
+        if mode in ('stubborn', 'stubborn_tree'):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
         stopped.wait()
@@ -143,7 +146,7 @@ if __name__ == '__main__':
     role, directory, *options = sys.argv[1:]
     root = Path(directory)
     if role == 'child':
-        child(root)
+        child(root, bool(options))
         raise SystemExit(0)
     if role == 'engine':
         raise SystemExit(engine(root, int(options[0]), options[1]))

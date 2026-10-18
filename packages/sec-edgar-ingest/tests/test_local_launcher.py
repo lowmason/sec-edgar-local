@@ -237,6 +237,17 @@ class LauncherPreparationTests(unittest.TestCase):
             self.launcher._remember_descendants(42, remembered)
         self.assertEqual(remembered, {42: (42, b'old birth')})
 
+    def test_forced_descendant_cleanup_observes_exit_after_kill(self):
+        from itertools import chain, repeat
+        from unittest.mock import call
+        import signal
+        with patch.object(self.launcher, '_process_tree', side_effect=[{42: (1, 42, b'birth')}, {}]) as tree, \
+                patch.object(self.launcher.time, 'monotonic', side_effect=chain((0, 2), repeat(3))), \
+                patch.object(self.launcher.os, 'killpg') as kill:
+            self.assertFalse(self.launcher._cleanup_descendants({42: (42, b'birth')}))
+        self.assertEqual(kill.call_args_list, [call(42, signal.SIGTERM), call(42, signal.SIGKILL)])
+        self.assertEqual(tree.call_count, 2, 'forced cleanup must observe process exit after SIGKILL')
+
 
 class BootstrapTests(unittest.TestCase):
     def setUp(self):

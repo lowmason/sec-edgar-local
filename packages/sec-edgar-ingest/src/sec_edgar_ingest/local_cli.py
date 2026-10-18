@@ -288,6 +288,16 @@ def _cleanup_descendants(descendants: dict[int, tuple[int, bytes]]) -> bool:
             time.sleep(POLL_SECONDS)
     for group in groups:
         _signal_group(group, signal.SIGKILL)
+    until = time.monotonic() + 1
+    while groups and time.monotonic() < until:
+        try:
+            processes = _process_tree()
+        except (OSError, ValueError, subprocess.SubprocessError):
+            break
+        groups = {group for pid, (group, started) in survivors.items()
+                  if pid in processes and processes[pid][1:] == (group, started)}
+        if groups:
+            time.sleep(POLL_SECONDS)
     return False
 
 

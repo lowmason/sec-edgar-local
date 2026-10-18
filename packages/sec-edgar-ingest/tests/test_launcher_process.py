@@ -281,6 +281,22 @@ class LauncherProcessTests(unittest.TestCase):
                 with self.assertRaises(ProcessLookupError):
                     os.kill(item['pid'], 0)
 
+    def test_forced_engine_and_child_exit_are_observed_without_claiming_graceful_drain(self):
+        process = self.start(0, mode='stubborn_tree', timeout=0.8)
+        self.wait_event('tree_observed')
+        stdout, stderr = process.communicate(timeout=20)
+        self.assertEqual(process.returncode, 247, stderr)
+        self.assertEqual(stdout, b'')
+        self.assertIn(b'"event":"shutdown_uncertain"', stderr)
+        self.assertIn(b'"engine_returncode":-9', stderr)
+        self.assertEqual(sum(item['event'] == 'launch' for item in self.events()), 1)
+        self.assertEqual(sum(item['event'] == 'child_drained' for item in self.events()), 0)
+        self.assertFalse((self.root / 'durable-result.json').exists())
+        for item in self.events():
+            if item['event'] in ('engine_started', 'child_started'):
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(item['pid'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()
