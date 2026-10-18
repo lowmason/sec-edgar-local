@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+project_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
+unset PYTHONPATH PYTHONHOME PYTHONSTARTUP PYTHONUSERBASE PYTHONINSPECT PYTHONWARNINGS PYTHONPYCACHEPREFIX PYTHONOPTIMIZE PYTHONBREAKPOINT PYTHONIOENCODING PYTHONSAFEPATH
+python="$project_root/.venv/bin/python"
+if [ ! -x "$python" ]; then
+    printf '%s\n' '{"error":"project Python is missing; perform explicit environment setup before running","outcome":"configuration"}' >&2
+    exit 2
+fi
+exec "$python" -I -B -X pycache_prefix=/dev/null "$script_dir/local-bootstrap.py" "$@"
