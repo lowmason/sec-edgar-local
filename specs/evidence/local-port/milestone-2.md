@@ -248,3 +248,42 @@ Exit0, runtime23/0.011s; release20/8.596s; preflight11/3.593s; all OK, no skips 
 The full guarded default suite was attempted once and interrupted with SIGINT/exit130 after concrete unrelated later-owned failures and sandbox loopback refusal were established; it is not green or complete. `.sdd/1-sec-edgar-local-spec/task-7-full-suite.log` preserves that incomplete run. Isolated later-owned examples: approval activation fails on removed `open_stores(base_path=...)`; Azure coordination case imports absent `azure`. Those tests were not changed or skipped, and no unrelated loopback permission escalation occurred. Task7 scoped checks are green; independent review, Task8 integration, Task14 clean release proof and genuine SEC L12 remain separate gates.
 
 Self-review covered the complete scoped source/test diff and each brief acceptance item. Applied clean-code N1/N4/N7 (effectful setup vs read-only verification names), G30/G34 (cohesive artifact/build/install/verify stages), G19 (explicit identity/inventory variables), G25 (named build/cache constants), F2 (returned validated records), C3 (portable-evidence and isolated-probe intent), and T1/T5/T6 (tamper, partial-install, version/origin, lock and relocation boundaries). No adjacent cleanup was applied. Runtime remains the specified descriptor/manifest/preflight boundary; no unplanned module split was introduced.
+
+
+## Task 7 review fix round 1 - T7-R1 source bytecode integrity (re-review pending)
+
+The review correctly identified that source hashes did not cover code selected from CPython's existing timestamp/size-valid `.pyc` cache. A real forged cache reproduced the bypass, including under `-B` alone. The same regression run found preflight generating a new `__pycache__` during its purported read-only check. Both are fixed without deleting or rewriting cache files.
+
+`runtime.native_python_argv(python: Path) -> list[str]` is the concrete native startup interface:
+
+```python
+[str(python), '-I', '-B', '-X', 'pycache_prefix=/dev/null']
+```
+
+On the supported native Mac, `/dev/null` is a character device, never a cache directory. The prefix makes ordinary source-cache reads unaddressable, while `-B` separately disables writes. This establishes execution from inventoried `.py` source rather than from ignored ordinary caches. Valid caches, including ordinary optimization levels 0/1/2, and even altered ignored cache bytes remain untouched. Legacy sourceless `.pyc`/`.pyo` files outside `__pycache__` are now uninventoried application payload and are refused before the probe runs; prefix redirection is not claimed to block a sourceless loader.
+
+`_preflight` uses the helper for the isolated installed self-check, including builder receipt issuance. The structured probe evidence carries isolation/write/cache-prefix policy and validates it along with interpreter/version/origin/inventory evidence. `preflight_current` requires effective `sys.flags.isolated`, `sys.dont_write_bytecode is True`, and `sys.pycache_prefix == os.devnull` before proceeding.
+
+**Task 8/9/16 startup obligation:** establish the policy BEFORE ANY application import. Native launchers use `native_python_argv`; an equivalent stdlib-only bootstrap under the fixed `[python, '-I', absolute_child_script, ...]` shape sets `sys.dont_write_bytecode = True` and `sys.pycache_prefix = os.devnull` before importing the application. The actual fixed-script shape is tested. A child must not import application runtime merely to obtain the helper before establishing its own policy. `preflight_current` validates effective settings and cannot retroactively undo unverified code executed by a caller that enabled them too late. This is a concrete downstream integration contract; the safety of future native startup depends on consuming it before imports.
+
+Review-fix RED, same offline/guarded invocation as the required gate with `-p test_runtime_preflight.py -v`: 14 tests, failures3/errors0. The timestamp-valid forged cache executed a marker during old preflight; cold-cache preflight created bytecode; ordinary cache-enabled installed startup was accepted. The additional legacy-sourceless case produced focused RED1/failure1 (`ValueError not raised`) before the inventory change. Seven new regressions cover these failures plus altered submodule cache, valid optimization caches, and equivalent pre-import effective settings. No cleanup is used by production preflight.
+
+Final required gate after executable changes, with `UV_CACHE_DIR=/private/tmp/sec-edgar-local-uv-cache`, `UV_PYTHON_DOWNLOADS=never`, `UV_OFFLINE=1`, and `network_guard`, saved to `.sdd/1-sec-edgar-local-spec/task-7-fix1-focused-green.log`:
+
+```text
+Ran 23 tests in 0.012s
+OK
+Ran 20 tests in 9.181s
+OK
+Ran 18 tests in 6.437s
+OK
+```
+
+Exit0, 61 tests total (runtime23 + release20 + preflight18); no skips, warnings or errors. Historical manifest/producer code was not changed; no broad later-owned test migration or default-suite success claim is added. Fresh actual A/B snapshot builds are required because runtime wheel bytes changed; complete manifests, isolated source-execution evidence and warning-free pinned build logs are saved in `.sdd/1-sec-edgar-local-spec/task-7-fix1-proof-evidence.json`:
+
+| Proof | Actual temporary Git revision | Release ID | Source execution |
+| --- | --- | --- | --- |
+| A | `52fe36a716085698a13ffcfecb585144176105cb` | `47fba743392310085a011d3ec9f1d1bf8fa9a70af97d987388104f97f3a7faa2` | isolated=1, writes disabled, prefix `/dev/null` |
+| B | `8c4d117b8001912d3b61eb39a6facb5d4814d062` | `7bd01705a3845972f8c3bb26e9561e8eaa61d2daa73a1541e3219e439b8e8d89` | isolated=1, writes disabled, prefix `/dev/null` |
+
+Both fresh releases retain application/module version `0.2.0`, the unchanged full runtime graph and `uv_build 0.12.24`; their real installations and exact dependency inventories passed. No original identity/manifest/receipt/config shape, dependency pin, plan/spec, source repository or historical producer semantics changed. Self-review applied C3 (document the pre-import obligation and two independent cache controls), G30/N7 (one focused native argv helper), and T1/T5/T6 (actual executable cache and read-only boundaries). The implementation remains within the Task7 files and requires scoped re-review before acceptance.

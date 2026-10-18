@@ -264,7 +264,9 @@ print(json.dumps({'interpreter': {'implementation': sys.implementation.name,
     'version': platform.python_version(), 'cache_tag': sys.implementation.cache_tag,
     'platform_tag': f'macosx_{major}_{minor}_{platform.machine()}'},
     'inventory': inventory, 'prefix': sys.prefix, 'executable': sys.executable,
-    'origin': sec_edgar_ingest.__file__, 'application_version': sec_edgar_ingest.__version__}))
+    'origin': sec_edgar_ingest.__file__, 'application_version': sec_edgar_ingest.__version__,
+    'source_execution': {'isolated': sys.flags.isolated, 'dont_write_bytecode': sys.dont_write_bytecode,
+                         'pycache_prefix': sys.pycache_prefix}}))
 '''
 
 
@@ -297,6 +299,16 @@ def isolated_environment() -> dict[str, str]:
                    if not key.startswith(('PYTHON', 'UV_')) and key not in {'VIRTUAL_ENV', 'CONDA_PREFIX'}}
     environment.update(UV_OFFLINE='1', UV_PYTHON_DOWNLOADS='never', UV_LINK_MODE='copy')
     return environment
+
+
+def native_python_argv(python: Path) -> list[str]:
+    """Start native Python without reading or writing source bytecode caches.
+
+    /dev/null is a native non-directory: no cache beneath it can be read. -B
+    separately prevents writes. Callers must establish this policy before any
+    application import; -B alone does not prevent reading ordinary caches.
+    """
+    return [str(python), '-I', '-B', '-X', 'pycache_prefix=' + os.devnull]
 
 
 def wheel_payload(wheel: Path) -> list[dict[str, str]]:
@@ -453,7 +465,7 @@ def _verify_payload(directory: Path, identity: Mapping[str, object]) -> Path:
         raise ValueError('application installation escapes the referenced release venv')
     actual = []
     for path in sorted(package.rglob('*')):
-        if '__pycache__' in path.parts or path.suffix in ('.pyc', '.pyo'):
+        if '__pycache__' in path.parts:
             continue
         if path.is_symlink():
             raise ValueError('application payload symlinks are refused')
@@ -465,6 +477,8 @@ def _verify_payload(directory: Path, identity: Mapping[str, object]) -> Path:
 
 
 def _check_evidence(evidence: Mapping[str, object], directory: Path, identity: Mapping[str, object], python: Path) -> None:
+    if evidence['source_execution'] != {'isolated': 1, 'dont_write_bytecode': True, 'pycache_prefix': os.devnull}:
+        raise ValueError('executing interpreter requires isolated source execution without bytecode cache reads/writes')
     if (evidence['interpreter'] != identity['interpreter'] or Path(evidence['prefix']) != directory / 'venv'
             or Path(evidence['executable']).absolute() != python):
         raise ValueError('interpreter does not identify the referenced installation')
@@ -493,7 +507,7 @@ def _preflight(manifest_path: Path, *, executable: Path | None = None, require_r
             raise ValueError('installation receipt differs from release')
     if not (directory / 'setup.json').is_file():
         raise ValueError('release setup evidence is incomplete')
-    result = subprocess.run([str(python), '-I', '-c', INSTALLATION_PROBE], check=True,
+    result = subprocess.run([*native_python_argv(python), '-c', INSTALLATION_PROBE], check=True,
                             capture_output=True, text=True, env=isolated_environment())
     _check_evidence(json.loads(result.stdout), directory, identity, python)
     return VerifiedRelease(manifest['release_id'], manifest, directory, python)
@@ -505,7 +519,15 @@ def preflight(manifest_path: Path, *, executable: Path | None = None) -> Verifie
 
 
 def preflight_current(manifest_path: Path) -> VerifiedRelease:
-    """Also require this process and imported application to be that installation."""
+    """Require this process to be the installation under safe source execution.
+
+    Native launchers must use native_python_argv, or set sys.dont_write_bytecode
+    and sys.pycache_prefix=os.devnull in an isolated stdlib bootstrap BEFORE any
+    application import. This check validates the effective policy; it cannot undo
+    code already executed by a caller that established the policy too late.
+    """
+    if not sys.flags.isolated or sys.dont_write_bytecode is not True or sys.pycache_prefix != os.devnull:
+        raise ValueError('executing interpreter requires isolated source execution without bytecode cache reads/writes')
     verified = preflight(manifest_path)
     major, minor, *_ = platform.mac_ver()[0].split('.')
     inventory = {}
@@ -521,6 +543,8 @@ def preflight_current(manifest_path: Path) -> VerifiedRelease:
         'version': platform.python_version(), 'cache_tag': sys.implementation.cache_tag,
         'platform_tag': f'macosx_{major}_{minor}_{platform.machine()}'},
         'prefix': sys.prefix, 'executable': sys.executable, 'inventory': inventory,
-        'origin': sys.modules[__package__].__file__, 'application_version': sys.modules[__package__].__version__},
+        'origin': sys.modules[__package__].__file__, 'application_version': sys.modules[__package__].__version__,
+        'source_execution': {'isolated': sys.flags.isolated, 'dont_write_bytecode': sys.dont_write_bytecode,
+                             'pycache_prefix': sys.pycache_prefix}},
         verified.directory, verified.manifest['identity'], verified.python)
     return verified

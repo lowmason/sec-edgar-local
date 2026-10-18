@@ -30,7 +30,7 @@ class PreflightTests(unittest.TestCase):
         with patch.dict(os.environ, {'PYTHONPATH': str(self.project / 'packages/sec-edgar-ingest/src')}):
             verified = runtime.preflight(self.a.directory / 'release.json')
         self.assertEqual(verified, self.a)
-        result = subprocess.run([str(self.a.python), '-I', '-c',
+        result = subprocess.run([*runtime.native_python_argv(self.a.python), '-c',
             'import json,sec_edgar_ingest; from sec_edgar_ingest.runtime import preflight_current; '
             'import sys; r=preflight_current(__import__("pathlib").Path(sys.argv[1])); '
             'print(json.dumps({"id":r.release_id,"origin":sec_edgar_ingest.__file__}))', str(self.a.directory / 'release.json')], check=True, capture_output=True, text=True)
@@ -166,3 +166,125 @@ class PreflightTests(unittest.TestCase):
                 finally:
                     target.unlink()
                     outside.rename(target)
+
+    def poisoned_cache(self, module='__init__'):
+        import importlib.util
+        import marshal
+        import struct
+        site = next((self.a.directory / 'venv/lib').glob('python*/site-packages'))
+        source = site / 'sec_edgar_ingest' / (module + '.py')
+        cache = Path(importlib.util.cache_from_source(str(source)))
+        marker = self.a.directory / 'unverified-bytecode-executed'
+        original = cache.read_bytes() if cache.exists() else None
+        cache.parent.mkdir(exist_ok=True)
+        code = compile(source.read_bytes() + ('\nopen(' + repr(str(marker)) + ', "w").write("unverified")\n').encode(), str(source), 'exec')
+        source_stat = source.stat()
+        header = importlib.util.MAGIC_NUMBER + struct.pack('<III', 0, int(source_stat.st_mtime) & 0xffffffff, source_stat.st_size)
+        cache.write_bytes(header + marshal.dumps(code))
+        self.addCleanup(marker.unlink, missing_ok=True)
+        if original is None:
+            self.addCleanup(cache.unlink, missing_ok=True)
+        else:
+            self.addCleanup(cache.write_bytes, original)
+        return cache, marker
+
+    def test_timestamp_valid_bytecode_cannot_execute_during_preflight(self):
+        cache, marker = self.poisoned_cache()
+        # Control: -B alone still reads the timestamp/size-valid altered code.
+        subprocess.run([str(self.a.python), '-I', '-B', '-c', 'import sec_edgar_ingest'], check=True)
+        self.assertEqual(marker.read_text(), 'unverified')
+        marker.unlink()
+        cached_body = cache.read_bytes()
+        self.assertEqual(runtime.preflight(self.a.directory / 'release.json').release_id, self.a.release_id)
+        self.assertFalse(marker.exists(), 'preflight executed bytecode outside the hashed application payload')
+        self.assertEqual(cache.read_bytes(), cached_body, 'read-only preflight must preserve even ignored cache bytes')
+
+    def test_preflight_does_not_generate_missing_application_caches(self):
+        import hashlib
+        import shutil
+        site = next((self.a.directory / 'venv/lib').glob('python*/site-packages'))
+        package = site / 'sec_edgar_ingest'
+        cache = package / '__pycache__'
+        backup = self.a.directory / 'preflight-cache-backup'
+        if cache.exists():
+            cache.rename(backup)
+        def snapshot():
+            return {path.relative_to(package).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                    if path.is_file() else 'directory' for path in package.rglob('*')}
+        before = snapshot()
+        try:
+            runtime.preflight(self.a.directory / 'release.json')
+            self.assertEqual(snapshot(), before, 'read-only preflight created application bytecode')
+        finally:
+            if cache.exists():
+                shutil.rmtree(cache)
+            if backup.exists():
+                backup.rename(cache)
+
+    def test_current_process_refuses_cache_enabled_startup(self):
+        code = ('from pathlib import Path; from sec_edgar_ingest.runtime import preflight_current; '
+                'import sys\ntry: preflight_current(Path(sys.argv[1]))\n'
+                'except ValueError: print("unsafe-startup-refused")\n'
+                'else: print("unsafe-startup-accepted")')
+        result = subprocess.run([str(self.a.python), '-I', '-c', code, str(self.a.directory / 'release.json')],
+                                check=True, capture_output=True, text=True)
+        self.assertEqual(result.stdout.strip(), 'unsafe-startup-refused')
+
+    def test_native_startup_bypasses_altered_submodule_caches_without_writes(self):
+        cache, marker = self.poisoned_cache('models')
+        body = cache.read_bytes()
+        code = ('import sec_edgar_ingest.models; from sec_edgar_ingest.runtime import preflight_current; '
+                'from pathlib import Path; import sys; '
+                'print(preflight_current(Path(sys.argv[1])).release_id)')
+        result = subprocess.run([*runtime.native_python_argv(self.a.python), '-c', code,
+                                 str(self.a.directory / 'release.json')], check=True, capture_output=True, text=True)
+        self.assertEqual(result.stdout.strip(), self.a.release_id)
+        self.assertFalse(marker.exists())
+        self.assertEqual(cache.read_bytes(), body)
+
+    def test_isolated_bootstrap_effective_policy_precedes_application_import(self):
+        cache, marker = self.poisoned_cache()
+        body = cache.read_bytes()
+        # This preserves Task16's fixed -I absolute-script process shape.
+        code = ('import os,sys; sys.dont_write_bytecode=True; sys.pycache_prefix=os.devnull; '
+                'from pathlib import Path; from sec_edgar_ingest.runtime import preflight_current; '
+                'print(preflight_current(Path(sys.argv[1])).release_id)')
+        with tempfile.TemporaryDirectory() as temporary:
+            child = Path(temporary) / 'native-child.py'
+            child.write_text(code)
+            result = subprocess.run([str(self.a.python), '-I', str(child), str(self.a.directory / 'release.json')],
+                                    check=True, capture_output=True, text=True)
+        self.assertEqual(result.stdout.strip(), self.a.release_id)
+        self.assertFalse(marker.exists())
+        self.assertEqual(cache.read_bytes(), body)
+
+    def test_legacy_sourceless_bytecode_is_uninventoried_application_payload(self):
+        cached, marker = self.poisoned_cache()
+        package = cached.parent.parent
+        legacy = package / 'unretained.pyc'
+        legacy.write_bytes(cached.read_bytes())
+        self.addCleanup(legacy.unlink)
+        # A legacy sourceless module has no source path to redirect a cache for.
+        subprocess.run([*runtime.native_python_argv(self.a.python), '-c',
+                        'import sec_edgar_ingest.unretained'], check=True)
+        self.assertTrue(marker.exists())
+        marker.unlink()
+        with patch.object(runtime.subprocess, 'run', wraps=subprocess.run) as run:
+            with self.assertRaisesRegex(ValueError, 'payload'):
+                runtime.preflight(self.a.directory / 'release.json')
+        run.assert_not_called()
+
+    def test_ordinary_valid_optimization_caches_are_preserved(self):
+        site = next((self.a.directory / 'venv/lib').glob('python*/site-packages'))
+        package = site / 'sec_edgar_ingest'
+        code = ('import py_compile,sys; from pathlib import Path; '
+                '[py_compile.compile(str(Path(sys.argv[1])/"__init__.py"),optimize=level,doraise=True) '
+                'for level in (0,1,2)]')
+        subprocess.run([str(self.a.python), '-I', '-c', code, str(package)], check=True)
+        def caches():
+            return {path.relative_to(package).as_posix(): path.read_bytes() for path in package.rglob('*.pyc')}
+        before = caches()
+        self.assertTrue(any('.opt-1.pyc' in name for name in before))
+        self.assertTrue(any('.opt-2.pyc' in name for name in before))
+        self.assertEqual(runtime.preflight(self.a.directory / 'release.json').release_id, self.a.release_id)
+        self.assertEqual(caches(), before)
