@@ -65,9 +65,9 @@ def row(number=1, name='Example', day='2026-10-01'):
     return f'123456|{name}|10-K|{day}|edgar/data/123456/0000123456-26-{number:06}.txt\n'.encode()
 
 
-def contexts(closed=False):
-    settings, context = etl_context(command='publish')
-    settings = fixture_settings(etl={'parser_version': context.parser_version}, fixture={'allow_clock_override': True})
+def contexts(root, closed=False):
+    settings, context = etl_context(command='publish', root=root)
+    settings = fixture_settings(root=root, etl={'parser_version': context.parser_version}, fixture={'allow_clock_override': True})
     context = pin_context(settings, replace(context, config_sha256=settings.config_sha256,
                           effective_config={}, pinned_on=None), date(2027, 1, 1) if closed else date(2026, 10, 7))[0]
     return settings, context
@@ -160,7 +160,7 @@ def prove_race(root, initial=False, gate=False):
     store, objects, leases = store_bundle(root / 'store')
     leases.close()
     state = EtlState(store)
-    settings, context = contexts(gate)
+    settings, context = contexts(root / 'store', gate)
     if initial:
         publish_quarter('2026Q4', (seed_observation(objects, state, context, settings, kind='daily', period='2026-10-01'),),
                         context, settings, objects, state)
@@ -245,7 +245,7 @@ def prove_death(root, boundary):
     from support import fixture_source
     from support_etl import seed_snapshot
     root.mkdir(parents=True)
-    settings, context = contexts()
+    settings, context = contexts(root / '.fixture-state')
     config = root / 'config.json'
     save(config, settings.to_mapping())
     body = b'CIK|Company Name|Form Type|Date Filed|File Name\n-----\n' + row(2).replace(b'2026-10-01', b'20261001')
@@ -374,7 +374,7 @@ def sequence(output):
     from sec_edgar_ingest.etl.contracts import decode_transformed
     root = output / 'raw-sequence'
     root.mkdir()
-    settings, context = contexts()
+    settings, context = contexts(root / '.fixture-state')
     config = root / 'config.json'
     save(config, settings.to_mapping())
     body = b'CIK|Company Name|Form Type|Date Filed|File Name\n-----\n' + (row(1) + row(2, day='2026-09-30')).replace(b'2026-10-01', b'20261001').replace(b'2026-09-30', b'20260930')
@@ -423,13 +423,14 @@ def sequence(output):
     store, objects, leases = store_bundle(membership)
     leases.close()
     state = EtlState(store)
+    settings, context = contexts(membership)
     initial = seed_observation(objects, state, context, settings, rows=row(1) + row(2))
     publish_quarter('2026Q4', (initial,), context, settings, objects, state)
     revised = seed_observation(objects, state, context, settings, rows=row(1), seconds=1)
     assert publish_quarter('2026Q4', (revised,), context, settings, objects, state).outcome == 'published'
     opened = capture_evidence(objects, state)
     assert opened['manifest']['unresolved_absence'] == 1 and len(opened['rows']) == 2
-    closed_settings, closed_context = contexts(True)
+    closed_settings, closed_context = contexts(membership, True)
     gated = publish_quarter('2026Q4', (revised,), closed_context, closed_settings, objects, state)
     assert gated.outcome == 'awaiting_approval'
     assert capture_evidence(objects, state) == opened

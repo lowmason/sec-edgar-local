@@ -56,11 +56,11 @@ class PublicationIntegrationTests(unittest.TestCase):
         leases.close()
         self.addCleanup(self.store.close)
         self.state = EtlState(self.store)
-        self.settings, self.context = etl_context(command='publish')
+        self.settings, self.context = etl_context(command='publish', root=self.root)
         self.pin(date(2026, 10, 7))
 
     def pin(self, day):
-        self.settings = fixture_settings(etl={'parser_version': self.context.parser_version}, fixture={'allow_clock_override': True})
+        self.settings = fixture_settings(etl={'parser_version': self.context.parser_version}, fixture={'allow_clock_override': True}, root=self.root)
         self.context = pin_context(self.settings, replace(self.context, config_sha256=self.settings.config_sha256,
                                   effective_config={}, pinned_on=None), day)[0]
 
@@ -105,7 +105,7 @@ class PublicationIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(read_manifest(self.capture(), self.objects).retained_from_generation)
         self.assertEqual(self.publish(revised).outcome, 'unchanged')
         self.assertEqual(self.state.pointer('2026Q4'), pointer)
-        self.settings, self.context = etl_context('fixture-index-parser-v2', command='publish')
+        self.settings, self.context = etl_context('fixture-index-parser-v2', command='publish', root=self.root)
         self.pin(date(2026, 10, 7))
         self.assertEqual(self.publish(revised).outcome, 'published')
         self.assertEqual(read_manifest(self.capture(), self.objects).parser_version, 'fixture-index-parser-v2')

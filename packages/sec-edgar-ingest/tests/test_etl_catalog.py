@@ -33,11 +33,11 @@ class EtlCatalogTests(unittest.TestCase):
         leases.close()
         self.addCleanup(self.store.close)
         self.state = EtlState(self.store)
-        self.settings, self.context = etl_context()
+        self.settings, self.context = etl_context(root=self.root)
         self.pin(date(2026, 10, 7))
 
     def pin(self, day):
-        self.settings = fixture_settings(etl={"parser_version": self.context.parser_version}, fixture={"allow_clock_override": True})
+        self.settings = fixture_settings(etl={"parser_version": self.context.parser_version}, fixture={"allow_clock_override": True}, root=self.root)
         context = replace(self.context, config_sha256=self.settings.config_sha256, pinned_on=None, effective_config={})
         self.context = pin_context(self.settings, context, day)[0]
 
@@ -189,7 +189,7 @@ class EtlCatalogTests(unittest.TestCase):
         first = self.observation('2026-10-01', 'daily')
         old = self.build([first])
         second = self.observation('2026-10-02', 'daily', row(number=2))
-        self.settings, self.context = etl_context('fixture-index-parser-v2')
+        self.settings, self.context = etl_context('fixture-index-parser-v2', root=self.root)
         self.pin(date(2026, 10, 7))
         with patch.object(catalog, 'transform_member', wraps=transform_member) as replay:
             candidate = self.build([second], old)
@@ -223,7 +223,7 @@ class EtlCatalogTests(unittest.TestCase):
     def test_existing_generation_preserves_producing_image(self):
         ref = self.observation()
         first = self.build([ref])
-        self.settings = fixture_settings(etl={'parser_version': self.context.parser_version}, worker={'image_digest': 'sha256:' + 'b'*64}, fixture={'allow_clock_override': True})
+        self.settings = fixture_settings(etl={'parser_version': self.context.parser_version}, worker={'image_digest': 'sha256:' + 'b'*64}, fixture={'allow_clock_override': True}, root=self.root)
         self.context = replace(self.context, image_digest=self.settings.worker.image_digest,
                                config_sha256=self.settings.config_sha256, pinned_on=None, effective_config={})
         self.context = pin_context(self.settings, self.context, date(2026, 10, 7))[0]

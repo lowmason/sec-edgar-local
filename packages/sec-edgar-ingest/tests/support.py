@@ -62,7 +62,7 @@ def fixture_settings(*, root: Path | None = None, **overrides: object) -> "Setti
     return normalize_paths(Settings.from_mapping(value), FIXTURE_CONFIG.resolve().parent)
 
 
-def spawn_tolerant_settings(**overrides: dict) -> "Settings":
+def spawn_tolerant_settings(*, root: Path | None = None, **overrides: dict) -> "Settings":
     """Fixture settings whose real coordinator windows absorb a slow spawn.
 
     A permit gives its child 1 / requests_per_second to start and exchange_deadline_seconds to finish.
@@ -71,7 +71,7 @@ def spawn_tolerant_settings(**overrides: dict) -> "Settings":
                 "http": {"exchange_deadline_seconds": SPAWN_ALLOWANCE_SECONDS + 0.5}}
     for key, value in overrides.items():
         sections[key] = {**sections.get(key, {}), **value}
-    return fixture_settings(**sections)
+    return fixture_settings(root=root, **sections)
 
 
 def fixture_context(command: str = "collect", priority: str = "backfill", *, settings: "Settings | None" = None) -> "RunContext":
@@ -609,7 +609,14 @@ class DownloadHarness:
         self.root = Path(self.directory.name) if root is None else Path(root)
         self.clock = clock or fixture_clock()
         self.settings = settings or fixture_settings(root=self.root)
-        self.context = context or fixture_context(settings=self.settings)
+        try:
+            if self.settings.storage.root != str(self.root.resolve()):
+                raise ValueError('download fixture settings root differs from the actual store root')
+            self.context = context or fixture_context(settings=self.settings)
+        except ValueError:
+            if self.directory is not None:
+                self.directory.cleanup()
+            raise
         self.store, self.objects, self.leases = store_bundle(self.root, clock=self.clock)
         self.state = AcquisitionState(self.store, clock=self.clock)
         self.coordinator = Coordinator(self.settings, self.store, self.leases, self.clock)
@@ -620,6 +627,20 @@ class DownloadHarness:
         self.sender.clock = self.clock
         self.client = RequestClient(self.settings, self.coordinator, self.sender, self.state, self.clock)
         self.client.jitter = lambda: 1.0
+
+    @property
+    def context(self):
+        return self._context
+
+    @context.setter
+    def context(self, context):
+        from sec_edgar_ingest.config import pin_context
+        if (context.config_sha256 != self.settings.config_sha256
+                or context.to_mapping()['effective_config'] != self.settings.to_mapping()
+                or context.pinned_on is None
+                or pin_context(self.settings, context, context.pinned_on)[0] != context):
+            raise ValueError('download fixture context differs from the actual store settings')
+        self._context = context
 
     def fetch(self, source):
         return self.client.fetch(source.canonical_url, self.context, source)
@@ -859,7 +880,7 @@ def crash_supervisor(root, url, origin, cancellation):
     from sec_edgar_ingest.coordination import Clock, Coordinator
     import gc
     clock = Clock()
-    settings = spawn_tolerant_settings(coordination={"lease_seconds": 2, "renew_every_seconds": 1})
+    settings = spawn_tolerant_settings(root=Path(root) / "state", coordination={"lease_seconds": 2, "renew_every_seconds": 1})
     store, _, leases = store_bundle(Path(root) / "state", clock=clock)
     coordinator = Coordinator(settings, store, leases, clock)
     sender = loopback_sender(settings, clock, origin, spool=Path(root) / "sender")
@@ -1591,9 +1612,9 @@ def acquisition_race_entry(root, company, request_barrier, staged_barrier, bindi
         h.close()
 
 
-def _integrated_settings():
+def _integrated_settings(*, root=None):
     # The lease outlasts both successors' spawn and queueing, so they queue inside the unsafe interval.
-    return spawn_tolerant_settings(coordination={'lease_seconds': 2 * SPAWN_ALLOWANCE_SECONDS,
+    return spawn_tolerant_settings(root=root, coordination={'lease_seconds': 2 * SPAWN_ALLOWANCE_SECONDS,
                                                  'renew_every_seconds': SPAWN_ALLOWANCE_SECONDS,
                                                  'clock_uncertainty_seconds': 0.05})
 
@@ -1612,7 +1633,7 @@ def integrated_old_sender(root, url, origin, cancellation):
     import gc
     from sec_edgar_ingest.coordination import Clock, Coordinator
     root = Path(root)
-    clock, settings = Clock(), _integrated_settings()
+    clock, settings = Clock(), _integrated_settings(root=root / 'state')
     store, objects, leases = store_bundle(root / 'state', clock=clock)
     coordinator = Coordinator(settings, store, leases, clock)
     coordinator.observer = lambda event: _append_process_event(root / 'old-events.jsonl', 'coordinator', value=event)
@@ -1637,7 +1658,7 @@ def integrated_successor(root, priority, servers, ready):
     from sec_edgar_ingest.download import RequestClient
     from sec_edgar_ingest.state import AcquisitionState
     root = Path(root)
-    clock, settings = Clock(), _integrated_settings()
+    clock, settings = Clock(), _integrated_settings(root=root / 'state')
     store, objects, leases = store_bundle(root / 'state', clock=clock)
     state = AcquisitionState(store, clock=clock)
     coordinator = Coordinator(settings, store, leases, clock)

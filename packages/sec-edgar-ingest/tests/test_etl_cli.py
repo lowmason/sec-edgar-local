@@ -25,7 +25,7 @@ class EtlCliTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        self.settings, self.context = etl_context()
+        self.settings, self.context = etl_context(root=self.root / '.fixture-state')
         self.config = self.root / 'config.json'
         self.config.write_bytes(canonical_json(self.settings.to_mapping()))
         self.source = fixture_source('2026-10-01', 'daily')

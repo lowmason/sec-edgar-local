@@ -144,3 +144,86 @@ class LocalAcquisitionContracts(unittest.TestCase):
             self.assertEqual(row['provenance']['runtime'], context.to_mapping()['runtime'])
             with self.assertRaises(Conflict):
                 state.run_halt(other)
+
+    def test_download_fixture_rejects_supplied_context_from_another_root(self):
+        import tempfile
+        from pathlib import Path
+        from support import DownloadHarness
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / 'store'
+            harness = None
+            try:
+                with self.assertRaisesRegex(ValueError, 'context'):
+                    harness = DownloadHarness([], root=root, context=fixture_context())
+            finally:
+                if harness is not None:
+                    harness.close()
+            self.assertFalse(root.exists(), 'mismatched provenance must fail before opening stores')
+
+    def test_download_fixture_rejects_later_context_replacement_without_rewriting_it(self):
+        from support import DownloadHarness
+        harness = DownloadHarness([])
+        self.addCleanup(harness.close)
+        original = harness.context
+        wrong = replace(fixture_context(), deadline=fixture_context().started_at.replace(hour=1))
+        with self.assertRaisesRegex(ValueError, 'context'):
+            harness.context = wrong
+        self.assertIs(harness.context, original)
+        self.assertNotEqual(wrong.config_sha256, harness.settings.config_sha256)
+
+    def test_download_fixture_preserves_root_aware_overridden_context(self):
+        import tempfile
+        from datetime import timedelta
+        from pathlib import Path
+        from support import DownloadHarness
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = fixture_settings(root=root)
+            base = fixture_context(settings=settings)
+            context = replace(base, execution_id='deadline-execution', attempt_id='deadline-attempt',
+                              deadline=base.started_at + timedelta(seconds=100))
+            harness = DownloadHarness([], root=root, settings=settings, context=context)
+            try:
+                self.assertIs(harness.context, context)
+                self.assertEqual(harness.context.config_sha256, harness.settings.config_sha256)
+                self.assertEqual(harness.context.effective_config['storage']['root'], str(root.resolve()))
+                self.assertEqual((harness.context.execution_id, harness.context.attempt_id),
+                                 ('deadline-execution', 'deadline-attempt'))
+            finally:
+                harness.close()
+
+    def test_download_fixture_rejects_supplied_settings_for_another_root(self):
+        import tempfile
+        from pathlib import Path
+        from support import DownloadHarness
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / 'store'
+            harness = None
+            try:
+                with self.assertRaisesRegex(ValueError, 'root'):
+                    harness = DownloadHarness([], root=root, settings=fixture_settings())
+            finally:
+                if harness is not None:
+                    harness.close()
+            self.assertFalse(root.exists())
+
+    def test_etl_fixture_context_requires_explicit_actual_store_root(self):
+        from support_etl import etl_context
+        with self.assertRaises(TypeError):
+            etl_context()
+
+    def test_etl_fixture_context_and_seed_snapshot_archive_actual_root(self):
+        import tempfile
+        from pathlib import Path
+        from support_etl import etl_context, seed_snapshot
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings, context = etl_context('fixture-index-parser-v2', attempt='processing-v2', root=root)
+            store, _, workset = seed_snapshot(root, fixture_source(), b'root provenance fixture')
+            self.addCleanup(store.close)
+            for saved in (context, workset.context):
+                self.assertEqual(saved.effective_config['storage']['root'], str(root.resolve()))
+                self.assertEqual(saved.config_sha256,
+                                 type(settings).from_mapping(saved.to_mapping()['effective_config']).config_sha256)
+            self.assertEqual(context.config_sha256, settings.config_sha256)
+            self.assertEqual((context.parser_version, context.attempt_id), ('fixture-index-parser-v2', 'processing-v2'))

@@ -180,8 +180,9 @@ class DownloadTests(unittest.TestCase):
                 self.assertEqual(row.value["outcome"], "pending" if status == 404 else "failed")
 
     def test_server_delay_past_command_deadline_is_durably_deferred(self):
-        context = replace(fixture_context(), deadline=fixture_context().started_at+timedelta(seconds=100))
-        h = self.harness([(429, b"", {"Retry-After": "180"}), (200, b"unreachable", {})], context=context)
+        h = self.harness([(429, b"", {"Retry-After": "180"}), (200, b"unreachable", {})])
+        h.context = replace(h.context, deadline=h.context.started_at + timedelta(seconds=100))
+        context = h.context
         with self.assertRaises(self.download.FetchError) as raised:
             h.fetch_response_only()
         self.assertEqual(raised.exception.error.code, "deferred")
@@ -191,13 +192,14 @@ class DownloadTests(unittest.TestCase):
         self.assertEqual(row.value["retry"]["server_delay_seconds"], 180)
         self.assertEqual(row.value["next_allowed_at"], row.value["retry"]["not_before"])
         h.sender.responses = [self.download.ResponseSpec(200, b"listing", {})]
-        h.context = replace(fixture_context(), execution_id="another-command", attempt_id="fresh", deadline=fixture_context().started_at+timedelta(seconds=1000))
+        h.context = replace(h.context, execution_id="another-command", attempt_id="fresh", deadline=h.context.started_at+timedelta(seconds=1000))
         h.fetch_response_only()
         self.assertGreaterEqual(h.starts[1]-h.starts[0], 180)
 
     def test_server_clock_offset_cannot_sleep_past_command_deadline(self):
-        context = replace(fixture_context(), deadline=fixture_context().started_at+timedelta(seconds=100))
-        h = self.harness([(429, b"", {"Retry-After": "180"}), (200, b"unreachable", {})], context=context)
+        h = self.harness([(429, b"", {"Retry-After": "180"}), (200, b"unreachable", {})])
+        h.context = replace(h.context, deadline=h.context.started_at + timedelta(seconds=100))
+        context = h.context
         class OffsetServerClock:
             precision_seconds = 0
             def now(self):
@@ -454,10 +456,10 @@ class BoundedProcessTests(unittest.TestCase):
         from sec_edgar_ingest.coordination import Clock
         self.clock = Clock()
         # Every child here is a real spawn, so the coordinator's windows must absorb a slow one.
-        self.settings = spawn_tolerant_settings()
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
+        self.settings = spawn_tolerant_settings(root=self.root / "state")
 
     def server(self, *args, **kwargs):
         from support import LoopbackServer
@@ -624,7 +626,7 @@ class BoundedProcessTests(unittest.TestCase):
         retain_process_evidence("truncated-original-prefix", receipt.temporary_path.parent, server, {"receipt": receipt.to_mapping()})
 
     def test_received_cap_refuses_extra_byte_before_spool_write(self):
-        self.settings = spawn_tolerant_settings(http={"max_received_bytes": 4})
+        self.settings = spawn_tolerant_settings(root=self.root / "state", http={"max_received_bytes": 4})
         for mode in ("complete", "unadvertised"):
             with self.subTest(mode=mode):
                 try:
@@ -748,7 +750,7 @@ class BoundedProcessTests(unittest.TestCase):
         import time
         from support import crash_supervisor, loopback_sender, real_context, retain_process_evidence
         from sec_edgar_ingest.coordination import Coordinator
-        self.settings = spawn_tolerant_settings(coordination={"lease_seconds": 2, "renew_every_seconds": 1})
+        self.settings = spawn_tolerant_settings(root=self.root / "state", coordination={"lease_seconds": 2, "renew_every_seconds": 1})
         server = self.server(mode="blocked-headers")
         spawn = multiprocessing.get_context("spawn")
         cancellation = spawn.Event()
@@ -946,7 +948,7 @@ class DurableRequestAuditTests(unittest.TestCase):
                         barrier.wait(2)
                     return self.store.insert(kind, key, value)
             states = [AcquisitionState(RacingStore(store), clock=clock) for store in stores]
-            context, url, results = fixture_context(), fixture_source().canonical_url, []
+            context, url, results = fixture_context(settings=fixture_settings(root=root)), fixture_source().canonical_url, []
             def begin(state, identifier):
                 try:
                     state.begin_request(context, url, None, identifier, 1)

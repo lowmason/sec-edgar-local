@@ -121,7 +121,7 @@ class SupersessionRuleTests(GateFixture):
         self.assertFalse(accounts_for(None, first))
         self.assertFalse(accounts_for(daily, first))
         self.assertFalse(accounts_for(simultaneous, first))
-        settings, context = etl_context('fixture-index-parser-v2', command='publish')
+        settings, context = etl_context('fixture-index-parser-v2', command='publish', root=self.root / '.fixture-state')
         upgraded = transform_member(later.source, later.snapshot, context, settings, self.objects, self.state)
         self.assertFalse(accounts_for(upgraded, first))
 

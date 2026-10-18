@@ -7,7 +7,7 @@ from unittest.mock import patch
 from sec_edgar_ingest.etl.state import EtlState
 from sec_edgar_ingest.etl.transform import transform_workset, read_observations
 from sec_edgar_ingest.state import AcquisitionState
-from support import fixture_source
+from support import fixture_source, fixture_context, fixture_settings
 from support_etl import etl_context, seed_snapshot
 
 HEADER = b'CIK|Company Name|Form Type|Date Filed|File Name\n-----\n'
@@ -21,7 +21,7 @@ class EtlTransformTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.source = fixture_source('2026-09-30', 'daily')
-        self.settings, self.context = etl_context()
+        self.settings, self.context = etl_context(root=self.root)
 
     def seed(self, body=BODY):
         self.store, self.objects, self.origin = seed_snapshot(self.root, self.source, body)
@@ -38,7 +38,7 @@ class EtlTransformTests(unittest.TestCase):
         before = {path: self.objects.read(path) for path in (self.path, source_path, self.origin.snapshots[0].raw_path)}
         first = self.transform()
         again = self.transform()
-        self.settings, self.context = etl_context('fixture-index-parser-v2', attempt='etl2')
+        self.settings, self.context = etl_context('fixture-index-parser-v2', attempt='etl2', root=self.root)
         second = self.transform()
         self.assertTrue(first.complete and second.complete)
         self.assertEqual(first.observations, again.observations)
@@ -128,17 +128,19 @@ class EtlTransformTests(unittest.TestCase):
         source_path = f'worksets/sec/source/sha256={self.origin.source_workset_id}/workset.json'
         from support import fixture_workset
         from sec_edgar_ingest.worksets import encode_workset
-        (self.root / 'objects' / source_path).write_bytes(encode_workset(fixture_workset(())))
+        (self.root / 'objects' / source_path).write_bytes(encode_workset(fixture_workset((), context=fixture_context(settings=fixture_settings(root=self.root)))))
         with self.assertRaises(ValueError):
             self.transform()
 
     def test_malformed_and_invalid_envelope_sources_never_accept(self):
         for body in (HEADER + b'bad row\n', b'<html>access denied</html>', BODY[:-1] + b'|extra\n'):
             with self.subTest(body=body), tempfile.TemporaryDirectory() as directory:
-                store, objects, origin = seed_snapshot(Path(directory), self.source, body)
+                root = Path(directory)
+                settings, context = etl_context(root=root)
+                store, objects, origin = seed_snapshot(root, self.source, body)
                 try:
                     result = transform_workset(f'worksets/sec/snapshot/sha256={origin.workset_id}/workset.json',
-                                               self.context, self.settings, objects, EtlState(store), AcquisitionState(store))
+                                               context, settings, objects, EtlState(store), AcquisitionState(store))
                     self.assertFalse(result.complete)
                     self.assertEqual(list(store.scan('Processing', {})), [])
                 finally:
@@ -189,7 +191,7 @@ class EtlTransformTests(unittest.TestCase):
         self.addCleanup(self.store.close)
         leases.close()
         sources = (self.source, fixture_source('2026-09-29', 'daily'))
-        source_set = fixture_workset(sources)
+        source_set = fixture_workset(sources, context=fixture_context(settings=fixture_settings(root=self.root)))
         snapshots = tuple(fixture_snapshot(source, BODY) for source in sources)
         acquisition = AcquisitionState(self.store)
         for source, snapshot in zip(sources, snapshots):
@@ -221,7 +223,7 @@ class EtlTransformTests(unittest.TestCase):
         self.store, self.objects, leases = store_bundle(self.root)
         self.addCleanup(self.store.close)
         leases.close()
-        source_set = fixture_workset(())
+        source_set = fixture_workset((), context=fixture_context(settings=fixture_settings(root=self.root)))
         self.origin = make_snapshot_workset(source_set, ())
         self.path = f'worksets/sec/snapshot/sha256={self.origin.workset_id}/workset.json'
         self.objects.put_once(self.path, encode_workset(self.origin))
@@ -231,7 +233,7 @@ class EtlTransformTests(unittest.TestCase):
         self.assertEqual(result.observations, ())
         # Give the empty snapshot the nonempty directory evidence from a real member.
         payload = parse_json(self.objects.read(self.path))
-        payload['directories'] = fixture_workset((self.source,)).to_mapping()['directories']
+        payload['directories'] = fixture_workset((self.source,), context=fixture_context(settings=fixture_settings(root=self.root))).to_mapping()['directories']
         import hashlib
         payload['workset_id'] = hashlib.sha256(canonical_json({k: v for k, v in payload.items() if k != 'workset_id'})).hexdigest()
         path = f"worksets/sec/snapshot/sha256={payload['workset_id']}/workset.json"

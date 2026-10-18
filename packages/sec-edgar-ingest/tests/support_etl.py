@@ -6,7 +6,9 @@ from sec_edgar_ingest.config import pin_context
 from support import fixture_context, fixture_settings
 
 
-def etl_context(parser_version='fixture-index-parser-v1', command='transform', attempt='etl1', *, root=None):
+def etl_context(parser_version='fixture-index-parser-v1', command='transform', attempt='etl1', *, root):
+    if root is None:
+        raise ValueError('ETL fixture requires its explicit actual store root')
     settings = fixture_settings(root=root, etl={'parser_version': parser_version})
     started = datetime.now(timezone.utc)
     context = replace(fixture_context(settings=settings), command=command, attempt_id=attempt,

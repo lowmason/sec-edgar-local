@@ -41,7 +41,7 @@ class GateFixture(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.settings, self.context = etl_context(command='publish')
+        self.settings, self.context = etl_context(command='publish', root=self.root / '.fixture-state')
         self.pin(date(2026, 10, 7))
         self.store, self.objects, leases = open_stores(self.settings, base_path=self.root)
         leases.close()
@@ -50,7 +50,7 @@ class GateFixture(unittest.TestCase):
 
     def pin(self, day):
         self.settings = fixture_settings(etl={'parser_version': self.context.parser_version},
-                                         fixture={'allow_clock_override': True})
+                                         fixture={'allow_clock_override': True}, root=self.root / '.fixture-state')
         self.context = pin_context(self.settings, replace(self.context, config_sha256=self.settings.config_sha256,
                                    effective_config={}, pinned_on=None), day)[0]
 
