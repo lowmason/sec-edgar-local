@@ -34,6 +34,7 @@ from .storage import open_stores
 from .storage.contracts import CAS_ATTEMPTS, ClockUncertain, Conflict, OwnershipLost, StoreMissing
 from .workflows.checked import Dispatcher as WorkflowDispatcher, ChildUnfinished
 from .workflows.contracts import WORKFLOW_COMMANDS, WORKFLOW_PRIORITY, workflow_path
+from .workflows.contracts import LOCAL_CONTRACT, require_contract
 from .workflows.results import freeze_workflow, read_workflow_result, write_workflow_result
 from .workflows.runner import run_workflow
 from .workflows.summary import emit_summary
@@ -353,13 +354,15 @@ def _workflow_frozen(path, objects):
     except FileNotFoundError:
         return None
     value = parse_json(body)
-    if (not isinstance(value, dict) or set(value) != {'context', 'intent'}
+    require_contract(value)
+    if (not isinstance(value, dict) or set(value) != {'contract_version', 'context', 'intent'}
             or canonical_json(to_mapping_value(value)) != body):
         raise Conflict('workflow intent is not exact canonical context/intent')
     RunContext.from_mapping(value['context'])
     if (not isinstance(value['intent'], dict)
-            or set(value['intent']) != {'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}):
+            or set(value['intent']) != {'contract_version', 'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}):
         raise Conflict('workflow invocation fields differ')
+    require_contract(value['intent'])
     return value
 
 
@@ -369,19 +372,23 @@ def _workflow_saved(args, store, objects):
     if frozen is not None: return frozen
     # T6 begins its conditional index before writing intent bytes. Reopen that
     # actual durable start/pin if a process died between those two writes.
-    key = hashlib.sha256(canonical_json(to_mapping_value([args.run_id, args.command, args.attempt_id]))).hexdigest()
+    key = hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, args.run_id, args.command, args.attempt_id]))).hexdigest()
     row = store.get('WorkflowAttempt', key)
     if row is None: return None
     value = row.to_mapping()['value']
-    if set(value) != {'context', 'intent', 'selection_ref', 'result_ref'}:
+    require_contract(value)
+    if set(value) != {'contract_version', 'context', 'intent', 'selection_ref', 'result_ref'}:
         raise Conflict('workflow begun index fields differ')
     saved = RunContext.from_mapping(value['context'])
     if (saved.run_id, saved.command, saved.attempt_id) != (args.run_id, args.command, args.attempt_id):
         raise Conflict('workflow begun index correlation differs')
     if not isinstance(value['intent'], dict) or set(value['intent']) != {
-            'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}:
+            'contract_version', 'command', 'today', 'fixture_sha256', 'pinned_end_quarter'}:
         raise Conflict('workflow begun invocation fields differ')
-    return {'context': value['context'], 'intent': value['intent']}
+    require_contract(value['intent'])
+    from .workflows.results import _index
+    _index(saved, value['intent'], store, objects)
+    return {'contract_version': LOCAL_CONTRACT, 'context': value['context'], 'intent': value['intent']}
 
 
 def _workflow_context(args, settings, today, deadline, started, pinned):
@@ -430,7 +437,7 @@ def _workflow_main(args):
         except ValueError as error:
             if saved is None: raise _ExpiredAttempt(str(error)) from error
             raise
-        intent = {'command': args.command, 'today': args.today,
+        intent = {'contract_version': LOCAL_CONTRACT, 'command': args.command, 'today': args.today,
             'fixture_sha256': pack.manifest_sha256 if pack is not None else None,
             'pinned_end_quarter': end}
         context = freeze_workflow(context, intent, store, objects)

@@ -1,3 +1,4 @@
+from .contracts import LOCAL_CONTRACT
 from ..models import to_mapping_value
 import hashlib
 from collections.abc import Mapping
@@ -35,13 +36,14 @@ def _validated_frozen_units(session):
 
 
 def reconstruct_parent(session, store, objects):
+    session = {'contract_version': LOCAL_CONTRACT, **to_mapping_value(session)}
     acquisition = AcquisitionState(store)
     progress = []
     for unit in sorted(_validated_frozen_units(session), key=lambda u: (u['url'].count('/'), u['url'])):
         row = acquisition.directory_progress(session['discovery_id'], unit['url'])
-        progress.append({'unit': unit, 'value': None if row is None else row.to_mapping()['value']})
+        progress.append({'contract_version': LOCAL_CONTRACT, 'unit': unit, 'value': None if row is None else row.to_mapping()['value']})
     parent = rebuild_recovered_parent(session, progress, objects)
-    recovery = {'format_version': RECOVERY_FORMAT, 'parent_ref': source_ref(parent),
+    recovery = {'contract_version': LOCAL_CONTRACT, 'format_version': RECOVERY_FORMAT, 'parent_ref': source_ref(parent),
                 'parent': parent.to_mapping(), 'session': session, 'progress': progress}
     body = canonical_json(to_mapping_value(recovery))
     digest = hashlib.sha256(body).hexdigest()
@@ -56,7 +58,7 @@ def reconstruct_parent(session, store, objects):
         return source_ref(parent)
     objects.put_once(path, body)
     objects.verify(path, digest, len(body))
-    descriptor = {'ref': path, 'sha256': digest, 'bytes': len(body)}
+    descriptor = {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': digest, 'bytes': len(body)}
     validate_parent_recovery(source_ref(parent), descriptor, objects)
     immutable(store, 'WorkflowParentRecovery', parent.workset_id, descriptor)
     read_parent(source_ref(parent), store, objects)

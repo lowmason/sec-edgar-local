@@ -6,10 +6,10 @@ from datetime import date, datetime
 
 from ..etl.history import withdrawal_candidates
 from ..etl.state import EtlState
-from ..models import error_text, quarter_value
+from ..models import canonical_json, error_text, parse_json, quarter_value
 from ..results import exit_code, log_event
 from ..storage.contracts import AlreadyExists, CAS_ATTEMPTS, Conflict, ObjectStore, StateStore
-from .contracts import WorkflowResult, member_status
+from .contracts import LOCAL_CONTRACT, WorkflowResult, member_status, require_contract, workflow_path
 
 MILESTONE_KIND = 'WorkflowMilestone'
 RECONCILE_MILESTONE = 'reconcile'
@@ -37,23 +37,48 @@ def describe(result: WorkflowResult) -> dict[str, object]:
             'oldest_unresolved_period': min(unresolved, key=_period_start, default=None)}
 
 
-def last_successful_reconcile(store: StateStore) -> str | None:
+def _validated_milestone(value, store: StateStore, objects: ObjectStore) -> WorkflowResult:
+    require_contract(value)
+    if set(value) != {'contract_version', 'workflow', 'ended_at', 'result_ref'} or value['workflow'] != RECONCILE_MILESTONE:
+        raise ValueError('reconcile milestone fields differ')
+    reference = value['result_ref']
+    if not isinstance(reference, str):
+        raise ValueError('reconcile milestone reference must be text')
+    from ..models import safe_relative_path
+    safe_relative_path(reference, 'reconcile milestone reference')
+    body = objects.read(reference)
+    decoded = parse_json(body)
+    if canonical_json(decoded) != body:
+        raise ValueError('reconcile milestone result bytes are not canonical')
+    result = WorkflowResult.from_mapping(decoded)
+    if (workflow_path(result.context) != reference or result.context.command != 'reconcile'
+            or exit_code(result.outcome) != 0 or result.ended_at != value['ended_at']):
+        raise ValueError('reconcile milestone differs from successful local result')
+    from .results import _validate_report
+    _validate_report(result, store, objects)
+    return result
+
+
+def last_successful_reconcile(store: StateStore, objects: ObjectStore) -> str | None:
     row = store.get(MILESTONE_KIND, RECONCILE_MILESTONE)
-    return None if row is None else row.value['ended_at']
+    return None if row is None else _validated_milestone(row.to_mapping()['value'], store, objects).ended_at
 
 
-def record_reconcile_success(result: WorkflowResult, reference: str, store: StateStore) -> None:
-    """Advance the reconcile milestone to an exit-0 reconcile result. It only moves forward and can be
-    rebuilt from results."""
+def record_reconcile_success(result: WorkflowResult, reference: str, store: StateStore, objects: ObjectStore) -> None:
+    """Advance the milestone only after validating its exact local result authority."""
     if result.context.command != 'reconcile' or exit_code(result.outcome) != 0:
         return
-    value = {'workflow': RECONCILE_MILESTONE, 'ended_at': result.ended_at, 'result_ref': reference}
+    value = {'contract_version': LOCAL_CONTRACT, 'workflow': RECONCILE_MILESTONE,
+             'ended_at': result.ended_at, 'result_ref': reference}
+    if _validated_milestone(value, store, objects) != result:
+        raise ValueError('reconcile milestone proposed result differs from immutable authority')
     for _ in range(CAS_ATTEMPTS):
         current = store.get(MILESTONE_KIND, RECONCILE_MILESTONE)
+        previous = None if current is None else _validated_milestone(current.to_mapping()['value'], store, objects)
         try:
             if current is None:
                 store.insert(MILESTONE_KIND, RECONCILE_MILESTONE, value)
-            elif datetime.fromisoformat(current.value['ended_at']) < datetime.fromisoformat(result.ended_at):
+            elif datetime.fromisoformat(previous.ended_at) < datetime.fromisoformat(result.ended_at):
                 store.replace(MILESTONE_KIND, RECONCILE_MILESTONE, value, current.version)
             return
         except (AlreadyExists, Conflict):
@@ -70,8 +95,8 @@ def emit_summary(result: WorkflowResult, reference: str, objects: ObjectStore, s
               'last_successful_reconcile_at': None, 'summary_error': None}
     try:
         fields.update(describe(result))
-        record_reconcile_success(result, reference, store)
-        fields['last_successful_reconcile_at'] = last_successful_reconcile(store)
+        record_reconcile_success(result, reference, store, objects)
+        fields['last_successful_reconcile_at'] = last_successful_reconcile(store, objects)
         fields['pending_approvals'] = sum(entry['status'] == 'pending'
                                           for entry in withdrawal_candidates(objects, EtlState(store)))
     except Exception as error:

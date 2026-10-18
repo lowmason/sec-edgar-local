@@ -1,3 +1,4 @@
+from .contracts import LOCAL_CONTRACT
 from collections.abc import Mapping
 from ..config import Settings
 from ..models import RunContext, to_mapping_value
@@ -85,7 +86,7 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
             if saved_context != context or evidence['member'] != value:
                 raise Conflict('saved member receipt changes frozen context/projection')
             descriptor = registry._descriptor(result, context, body)
-            key = hashlib.sha256(canonical_json(to_mapping_value([context.run_id, context.command,
+            key = hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, context.run_id, context.command,
                 context.attempt_id, result.member_id, result.parser_version, result.schema_version]))).hexdigest()
             # Frozen provenance and the checked receipt authorize historical index repair.
             immutable(store, 'WorkflowMemberResult', key, descriptor)
@@ -124,15 +125,15 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
         if evidence['completion'] is not None:
             captures.append(evidence['completion'])
         resolutions.extend(evidence['resolutions'])
-    report_intent = {'invocation': dict(intent),
-        'selection': {'ref': selection_path, 'sha256': hashlib.sha256(selection_body).hexdigest(), 'bytes': len(selection_body)},
+    report_intent = {'contract_version': LOCAL_CONTRACT, 'invocation': dict(intent),
+        'selection': {'contract_version': LOCAL_CONTRACT, 'ref': selection_path, 'sha256': hashlib.sha256(selection_body).hexdigest(), 'bytes': len(selection_body)},
         'discovered_sources': selection['discovered_sources'], 'unresolved_before': selection['unresolved_before'],
         'already_complete_sources': list(already), 'member_receipts': receipt_descriptors,
         'completion_captures': captures, 'child_calls': child_calls, 'repair_resolutions': resolutions}
-    return WorkflowResult('sec-workflow-result-v1', context, report_intent, selection['parent_ref'],
+    return WorkflowResult('sec-local-workflow-result-v1', context, report_intent, selection['parent_ref'],
         tuple(selection['requested_quarters']), tuple(selection['directories']), tuple(results), tuple(gaps),
         selection['boundary_before'], after.isoformat() if after else None, outcome, counts,
-        max(context.started_at, datetime.now(timezone.utc)).isoformat())
+        max(context.started_at, datetime.now(timezone.utc)).isoformat(), contract_version=LOCAL_CONTRACT)
 
 def select_work(context: RunContext, settings: Settings, intent: Mapping, dispatcher: Dispatcher,
                 store, objects) -> Mapping:
@@ -224,14 +225,14 @@ def select_work(context: RunContext, settings: Settings, intent: Mapping, dispat
             gaps.append(Error('baseline_source_missing', 'requested quarter has no validated source', True,
                               None, {'quarter': quarter}))
     session_row = acquisition.discovery_session('workflow-' + context.command + '-' + context.run_id)
-    session = None if session_row is None else session_row.to_mapping()['value']
+    session = None if session_row is None else {'contract_version': LOCAL_CONTRACT, **session_row.to_mapping()['value']}
     parent_provenance = None if parent_ref is None else capture_parent_provenance(parent_ref, store, objects)
     if parent_provenance is not None:
         session = parent_provenance['discovery']['session']
     required = [] if session is None else session['frozen']['units']
     values = sorted(selected, key=lambda v: (v['source']['period'], v['source']['source_id'], v['member_id']))
-    return {'format_version': 'sec-workflow-selection-v2', 'context': context.to_mapping(),
-        'invocation': dict(intent), 'members': values, 'jobs': [{'member': value, 'aliases': [value]} for value in selected],
+    return {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-selection-v1', 'context': context.to_mapping(),
+        'invocation': dict(intent), 'members': values, 'jobs': [{'contract_version': LOCAL_CONTRACT, 'member': value, 'aliases': [value]} for value in selected],
         'member_provenance': [capture_member_provenance(value, store, objects) for value in values],
         'already_complete': complete,
         'superseded': sorted(superseded, key=lambda entry: (entry['member']['source']['period'],

@@ -1,3 +1,4 @@
+from .contracts import LOCAL_CONTRACT, require_contract
 from ..models import to_mapping_value
 import hashlib
 from dataclasses import replace
@@ -26,11 +27,13 @@ def read_source(ref, objects):
         raise Conflict('source reference or canonical bytes differ')
     return workset
 
-RECOVERY_FORMAT = 'sec-workflow-parent-recovery-v1'
+RECOVERY_FORMAT = 'sec-local-workflow-parent-recovery-v1'
 
 def rebuild_recovered_parent(session, progress, objects):
     from datetime import date
     from ..models import DirectoryOutcome, Error
+    from .completion import validate_discovery_session
+    validate_discovery_session(session)
     frozen = session['frozen']
     if session['discovery_id'] == '' or set(frozen) != {
             'context', 'today', 'end', 'mode', 'acquisition_mode', 'units', 'overlap_from'}:
@@ -48,7 +51,8 @@ def rebuild_recovered_parent(session, progress, objects):
         raise Conflict('recovery omits or reorders required units')
     entries, members, outcomes = {}, {}, []
     for captured in progress:
-        if set(captured) != {'unit', 'value'}:
+        require_contract(captured)
+        if set(captured) != {'contract_version', 'unit', 'value'}:
             raise Conflict('recovery progress fields differ')
         unit, value = captured['unit'], captured['value']
         if set(unit) not in ({'url', 'period', 'role'}, {'url', 'period', 'role', 'bridge_period'}):
@@ -93,8 +97,9 @@ def rebuild_recovered_parent(session, progress, objects):
 
 def validate_parent_recovery(parent_ref, descriptor, objects):
     from ..models import parse_json, require_hash
-    if set(descriptor) != {'ref', 'sha256', 'bytes'}:
+    if set(descriptor) != {'contract_version', 'ref', 'sha256', 'bytes'}:
         raise Conflict('recovery descriptor fields differ')
+    require_contract(descriptor)
     require_hash(descriptor['sha256'], 'recovery digest')
     expected_path = 'worksets/sec/workflow-parent-recovery/sha256=' + descriptor['sha256'] + '/recovery.json'
     if descriptor['ref'] != expected_path:
@@ -102,7 +107,8 @@ def validate_parent_recovery(parent_ref, descriptor, objects):
     objects.verify(descriptor['ref'], descriptor['sha256'], descriptor['bytes'])
     body = objects.read(descriptor['ref'])
     saved = parse_json(body)
-    if canonical_json(to_mapping_value(saved)) != body or set(saved) != {'format_version', 'parent_ref', 'parent', 'session', 'progress'}:
+    require_contract(saved)
+    if canonical_json(to_mapping_value(saved)) != body or set(saved) != {'contract_version', 'format_version', 'parent_ref', 'parent', 'session', 'progress'}:
         raise Conflict('recovery bytes/schema differ')
     if saved['format_version'] != RECOVERY_FORMAT or saved['parent_ref'] != parent_ref:
         raise Conflict('recovery version/original parent differs')
@@ -110,7 +116,7 @@ def validate_parent_recovery(parent_ref, descriptor, objects):
     rebuilt = rebuild_recovered_parent(saved['session'], saved['progress'], objects)
     if rebuilt != parent or saved['parent'] != parent.to_mapping():
         raise Conflict('recovery changes exact reconstructed original parent')
-    return {'session': saved['session'], 'progress': saved['progress']}
+    return {'contract_version': LOCAL_CONTRACT, 'session': saved['session'], 'progress': saved['progress']}
 
 
 def read_parent(ref, store, objects):
@@ -173,7 +179,7 @@ def projection(parent, source_id):
     if len(selected) != 1 or len(directories) != 1 or directories[0].outcome == 'discovery_failed':
         raise Conflict('projection needs exact successful immediate member')
     directory = replace(directories[0], source_ids=(source_id,))
-    unit = hashlib.sha256(canonical_json(to_mapping_value([parent.workset_id, source_id]))).hexdigest()
+    unit = hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, parent.workset_id, source_id]))).hexdigest()
     return make_source_workset(parent.context, parent.pinned_end_quarter, 'member-' + unit,
                                selected, (directory,), parent.overlap_from,
                                acquisition_mode=parent.acquisition_mode)
@@ -187,13 +193,14 @@ def project_member(parent_ref, source_id, store, objects):
     ref = source_ref(member)
     objects.put_once(ref, body)
     objects.verify(ref, hashlib.sha256(body).hexdigest(), len(body))
-    value = {'member_id': member.workset_id, 'source': member.members[0].to_mapping(),
+    value = {'contract_version': LOCAL_CONTRACT, 'member_id': member.workset_id, 'source': member.members[0].to_mapping(),
              'parent_ref': parent_ref, 'member_ref': ref}
     immutable(store, 'WorkflowMember', member.workset_id, value)
     return value
 
 def read_member(value, store, objects):
-    if set(value) != {'member_id', 'source', 'parent_ref', 'member_ref'}:
+    require_contract(value)
+    if set(value) != {'contract_version', 'member_id', 'source', 'parent_ref', 'member_ref'}:
         raise Conflict('member record fields differ')
     row = store.get('WorkflowMember', value['member_id'])
     if row is None or canonical_json(to_mapping_value(row.to_mapping()['value'])) != canonical_json(to_mapping_value(dict(value))):

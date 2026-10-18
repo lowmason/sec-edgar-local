@@ -1,3 +1,4 @@
+from .contracts import LOCAL_CONTRACT, require_contract
 import hashlib
 from collections.abc import Iterable, Mapping
 from datetime import datetime
@@ -46,7 +47,7 @@ class WorkflowMembers:
         return workflow_path(context).rsplit('/', 1)[0] + '/members/' + member_id + '/result.json'
 
     def _descriptor(self, result, context, body):
-        return {'ref': self._path(result.member_id, context),
+        return {'contract_version': LOCAL_CONTRACT, 'ref': self._path(result.member_id, context),
                 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body),
                 'member_id': result.member_id, 'parser_version': result.parser_version,
                 'schema_version': result.schema_version}
@@ -55,9 +56,10 @@ class WorkflowMembers:
         from .processing import validate_member_evidence
         body = self.objects.read(path)
         receipt = parse_json(body)
-        if (not isinstance(receipt, dict) or set(receipt) != {'format_version', 'context', 'result', 'evidence'}
+        require_contract(receipt)
+        if (not isinstance(receipt, dict) or set(receipt) != {'contract_version', 'format_version', 'context', 'result', 'evidence'}
                 or canonical_json(to_mapping_value(receipt)) != body
-                or receipt['format_version'] != 'sec-workflow-member-receipt-v1'):
+                or receipt['format_version'] != 'sec-local-workflow-member-receipt-v1'):
             raise Conflict('member receipt canonical bytes/schema differ')
         result = MemberResult.from_mapping(receipt['result'])
         context = RunContext.from_mapping(receipt['context'])
@@ -103,13 +105,13 @@ class WorkflowMembers:
             if actual.to_mapping() != retained['context'] or [g.to_mapping() for g in gaps] != terminal['gaps']:
                 raise Conflict('member terminal capture differs from persisted Attempt')
         path = self._path(result.member_id, context)
-        receipt = {'format_version': 'sec-workflow-member-receipt-v1', 'context': context.to_mapping(),
+        receipt = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-member-receipt-v1', 'context': context.to_mapping(),
                    'result': result.to_mapping(), 'evidence': evidence}
         body = canonical_json(to_mapping_value(receipt))
         self.objects.put_once(path, body)
         index = self._descriptor(result, context, body)
         self.objects.verify(path, index['sha256'], index['bytes'])
-        key = hashlib.sha256(canonical_json(to_mapping_value([context.run_id, context.command, context.attempt_id,
+        key = hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, context.run_id, context.command, context.attempt_id,
             result.member_id, result.parser_version, result.schema_version]))).hexdigest()
         immutable(self.store, 'WorkflowMemberResult', key, index)
         return index
@@ -137,7 +139,8 @@ class WorkflowMembers:
         for row in self.store.scan('WorkflowMemberResult', {'member_id': value['member_id'],
                 'parser_version': parser_version, 'schema_version': schema_version}):
             descriptor = row.to_mapping()['value']
-            if set(descriptor) != {'ref', 'sha256', 'bytes', 'member_id', 'parser_version', 'schema_version'}:
+            require_contract(descriptor)
+            if set(descriptor) != {'contract_version', 'ref', 'sha256', 'bytes', 'member_id', 'parser_version', 'schema_version'}:
                 raise Conflict('member receipt descriptor fields differ')
             self.objects.verify(descriptor['ref'], descriptor['sha256'], descriptor['bytes'])
             result, context, evidence, body = self._read_receipt(descriptor['ref'])
@@ -233,7 +236,7 @@ class SourceDownloads:
         (served_at, served_by), (later, by) = max(served, key=_order), completed
         if later <= served_at:
             return None
-        return {'member': value, 'by': by, 'served_by': served_by, 'downloaded_at': served_at.isoformat(),
+        return {'contract_version': LOCAL_CONTRACT, 'member': value, 'by': by, 'served_by': served_by, 'downloaded_at': served_at.isoformat(),
                 'by_downloaded_at': later.isoformat()}
 
 

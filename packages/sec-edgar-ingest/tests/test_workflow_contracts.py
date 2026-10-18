@@ -12,6 +12,7 @@ from sec_edgar_ingest.etl.contracts import PublicationResult
 from sec_edgar_ingest.models import Error
 from sec_edgar_ingest.results import EXIT_CODES
 from sec_edgar_ingest.workflows.contracts import (
+    LOCAL_CONTRACT,
     MemberResult, WorkflowResult, member_status, summarize, workflow_path,
 )
 
@@ -74,8 +75,8 @@ class CoverageTests(unittest.TestCase):
         outcome, counts = summarize(members, gaps, 1, 0, context.command)
         directory = fixture_workset((fixture_source(),)).directories[0]
         values = dict(
-            format_version='sec-workflow-result-v1', context=context,
-            intent={'invocation': {'start_quarter': '2015Q1', 'end_quarter': '2015Q2'},
+            contract_version=LOCAL_CONTRACT, format_version='sec-local-workflow-result-v1', context=context,
+            intent={'contract_version': LOCAL_CONTRACT, 'invocation': {'start_quarter': '2015Q1', 'end_quarter': '2015Q2'},
                     'discovered_sources': 1, 'unresolved_before': 0,
                     'already_complete_sources': []},
             source_workset_ref='worksets/sec/source/sha256=' + 'b' * 64 + '/workset.json',
@@ -288,7 +289,7 @@ class CoverageTests(unittest.TestCase):
     def test_workflow_rejects_invalid_identity_time_ordering_and_outcome(self):
         result = self.workflow()
         cases = (
-            {'format_version': 'unsupported'}, {'members': result.members * 2},
+            {'contract_version': LOCAL_CONTRACT, 'format_version': 'unsupported'}, {'members': result.members * 2},
             {'source_workset_ref': result.members[0].snapshot_ref}, {'outcome': 'success'},
             {'ended_at': '2026-10-06T00:00:01'},
             {'ended_at': '2026-10-06T00:00:01+01:00'},
@@ -354,7 +355,7 @@ class CoverageTests(unittest.TestCase):
         result = self.workflow(
             members=(first, second), gaps=gaps,
             context=fixture_context(command='backfill'),
-            intent={'invocation': {}, 'discovered_sources': 2, 'unresolved_before': 0,
+            intent={'contract_version': LOCAL_CONTRACT, 'invocation': {}, 'discovered_sources': 2, 'unresolved_before': 0,
                     'already_complete_sources': []}, outcome=outcome, counts=counts,
         )
         self.assertEqual(result.gaps, gaps)

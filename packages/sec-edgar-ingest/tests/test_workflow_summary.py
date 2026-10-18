@@ -7,15 +7,15 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from support_approval import operator_cli
 from support_reconcile import sha
 from support_scenario import BASE_Q3, GATED_Q3, scenario_pack, scenario_settings
 from support_workflows import CommandHarness
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
+from sec_edgar_ingest.workflows.results import read_workflow_result
 from sec_edgar_ingest.workflows.summary import (MILESTONE_KIND, RECONCILE_MILESTONE, SUMMARY_FIELDS,
                                                 last_successful_reconcile, record_reconcile_success)
 
@@ -63,9 +63,9 @@ class WorkflowSummaryTests(unittest.TestCase):
 
     def test_a_successful_reconcile_advances_the_milestone_that_every_summary_reports(self):
         self.gate()
-        listing = operator_cli('candidates', '--config', str(self.h.config), '--state-dir', str(self.root))[1]
+        listing = operator_cli('candidates', '--config', str(self.h.config))[1]
         request, = listing['candidates']
-        approved = operator_cli('approve', '--config', str(self.h.config), '--state-dir', str(self.root),
+        approved = operator_cli('approve', '--config', str(self.h.config),
                                 '--quarter', '2026Q3', '--generation', request['generation_id'],
                                 '--quarterly-sha256', sha(GATED_Q3), '--approver', 'Lowell Mason')
         self.assertEqual(approved[0], 0)
@@ -74,26 +74,24 @@ class WorkflowSummaryTests(unittest.TestCase):
         ended_at = json.loads(self.h.objects.read(reference))['ended_at']
         self.assertEqual(self.summary()['last_successful_reconcile_at'], ended_at)
         self.assertEqual(dict(self.h.store.get(MILESTONE_KIND, RECONCILE_MILESTONE).value),
-                         {'workflow': 'reconcile', 'ended_at': ended_at, 'result_ref': reference})
+                         {'contract_version': LOCAL_CONTRACT, 'workflow': 'reconcile', 'ended_at': ended_at, 'result_ref': reference})
         self.assertEqual(self.h.invoke('daily', run='day2')[0], 0)
         self.assertEqual(self.summary()['last_successful_reconcile_at'], ended_at)
 
     def test_the_milestone_only_moves_forward_on_an_exit_zero_reconcile(self):
-        now = datetime.now(timezone.utc)
-
-        def result(command, outcome, at):
-            return SimpleNamespace(context=SimpleNamespace(command=command), outcome=outcome, ended_at=at.isoformat())
-        record_reconcile_success(result('reconcile', 'unchanged', now), 'runs/sec/a/reconcile/a/result.json',
-                                 self.h.store)
-        for ignored in (result('reconcile', 'unchanged', now - timedelta(days=1)),
-                        result('reconcile', 'awaiting_approval', now + timedelta(days=1)),
-                        result('daily', 'success', now + timedelta(days=1))):
-            record_reconcile_success(ignored, 'runs/sec/b/reconcile/a/result.json', self.h.store)
-        self.assertEqual(last_successful_reconcile(self.h.store), now.isoformat())
-        later = now + timedelta(days=2)
-        record_reconcile_success(result('reconcile', 'success', later), 'runs/sec/c/reconcile/a/result.json',
-                                 self.h.store)
-        self.assertEqual(last_successful_reconcile(self.h.store), later.isoformat())
+        reports = []
+        for run in ('first', 'later'):
+            self.assertEqual(self.h.invoke('reconcile', run=run)[0], 0)
+            reference = self.h.calls[-1]['stdout']['result_ref']
+            reports.append((read_workflow_result(reference, self.h.store, self.h.objects), reference))
+        first, later = reports
+        record_reconcile_success(first[0], first[1], self.h.store, self.h.objects)
+        self.assertEqual(last_successful_reconcile(self.h.store, self.h.objects), later[0].ended_at)
+        self.assertEqual(self.h.invoke('daily', run='ignored-daily')[0], 0)
+        reference = self.h.calls[-1]['stdout']['result_ref']
+        daily = read_workflow_result(reference, self.h.store, self.h.objects)
+        record_reconcile_success(daily, reference, self.h.store, self.h.objects)
+        self.assertEqual(last_successful_reconcile(self.h.store, self.h.objects), later[0].ended_at)
 
     def test_a_failed_extra_is_reported_without_changing_the_outcome(self):
         with patch('sec_edgar_ingest.workflows.summary.withdrawal_candidates',
@@ -115,23 +113,82 @@ class WorkflowSummaryTests(unittest.TestCase):
         self.assertEqual(rows, 0)
         self.assertFalse((self.h.objects.directory / 'approvals').exists())
 
-    def test_milestone_rows_route_to_source_state_on_azure(self):
-        from azure.core.credentials import AzureSasCredential
-        from azure.data.tables import TableServiceClient
-        from sec_edgar_ingest.storage.azure import AzureStateStore
+    def test_milestone_contract_and_referenced_result_refusals_do_not_mutate(self):
+        from dataclasses import replace
+        from test_local_workflow_contracts import durable_snapshot
+        from sec_edgar_ingest.models import Error, canonical_json, parse_json
+        from sec_edgar_ingest.workflows.contracts import summarize
+        from sec_edgar_ingest.workflows.summary import emit_summary
+        self.assertEqual(self.h.invoke('reconcile', run='milestone-authority')[0], 0)
+        reference = self.h.calls[-1]['stdout']['result_ref']
+        result = read_workflow_result(reference, self.h.store, self.h.objects)
+        row = self.h.store.get(MILESTONE_KIND, RECONCILE_MILESTONE)
+        original = row.to_mapping()['value']
+        self.assertEqual(last_successful_reconcile(self.h.store, self.h.objects), result.ended_at)
+        # Summary validation must not repair an engine index before refusing a corrupt milestone.
+        from sec_edgar_ingest.storage.contracts import identity, table_for
+        from sec_edgar_ingest.workflows.results import workflow_key
+        key = workflow_key(result.context)
+        partition, _ = identity('WorkflowAttempt', key)
+        with closing(sqlite3.connect(self.h.store.database)) as database:
+            database.execute('DELETE FROM records WHERE table_name=? AND partition=? AND key=?',
+                             (table_for('WorkflowAttempt'), partition, key))
+            database.commit()
+        variants = [{k: v for k, v in original.items() if k != 'contract_version'},
+                    {**original, 'contract_version': 'foreign'}, {**original, 'unknown': True},
+                    {**original, 'workflow': 'daily'}, {**original, 'ended_at': result.context.started_at.isoformat()},
+                    {**original, 'result_ref': '../outside'},
+                    {**original, 'result_ref': 'runs/sec/missing/reconcile/a/result.json'},
+                    {**original, 'result_ref': 123}]
+        for changed in variants:
+            current = self.h.store.get(MILESTONE_KIND, RECONCILE_MILESTONE)
+            self.h.store.replace(MILESTONE_KIND, RECONCILE_MILESTONE, changed, current.version)
+            with self.subTest(milestone=changed):
+                before = durable_snapshot(self.h.store, self.h.objects)
+                with self.assertRaises((ValueError, OSError)):
+                    last_successful_reconcile(self.h.store, self.h.objects)
+                with self.assertRaises((ValueError, OSError)):
+                    record_reconcile_success(result, reference, self.h.store, self.h.objects)
+                with patch('sec_edgar_ingest.workflows.summary.log_event') as logged:
+                    emit_summary(result, reference, self.h.objects, self.h.store)
+                self.assertIsNotNone(logged.call_args.args[2]['summary_error'])
+                self.assertEqual(durable_snapshot(self.h.store, self.h.objects), before)
+        current = self.h.store.get(MILESTONE_KIND, RECONCILE_MILESTONE)
+        self.h.store.replace(MILESTONE_KIND, RECONCILE_MILESTONE, original, current.version)
+        target = self.h.objects.directory / reference
+        body = target.read_bytes()
+        gap = Error('publication_pending', 'not complete', True, None, {})
+        outcome, counts = summarize(result.members, (gap,), result.intent['discovered_sources'],
+                                    result.intent['unresolved_before'], 'reconcile',
+                                    tuple(result.intent['already_complete_sources']))
+        failed = replace(result, gaps=(gap,), outcome=outcome, counts=counts)
+        daily = replace(result, context=replace(result.context, command='daily'))
+        payload = parse_json(body)
+        variants = [canonical_json({k: v for k, v in payload.items() if k != 'contract_version'}),
+                    canonical_json({**payload, 'contract_version': 'foreign'}),
+                    canonical_json({**payload, 'format_version': 'sec-workflow-result-v1'}),
+                    canonical_json({**payload, 'unknown': True}), body + b' ',
+                    canonical_json(failed.to_mapping()), canonical_json(daily.to_mapping())]
+        for altered in variants:
+            target.write_bytes(altered)
+            try:
+                before = durable_snapshot(self.h.store, self.h.objects)
+                with self.assertRaises(ValueError):
+                    last_successful_reconcile(self.h.store, self.h.objects)
+                with patch('sec_edgar_ingest.workflows.summary.log_event') as logged:
+                    emit_summary(result, reference, self.h.objects, self.h.store)
+                self.assertIsNotNone(logged.call_args.args[2]['summary_error'])
+                self.assertEqual(durable_snapshot(self.h.store, self.h.objects), before)
+            finally:
+                target.write_bytes(body)
+        with self.assertRaises((ValueError, OSError)):
+            record_reconcile_success(result, 'runs/sec/elsewhere/reconcile/a/result.json', self.h.store, self.h.objects)
+
+    def test_milestone_rows_route_to_source_state_locally(self):
         from sec_edgar_ingest.storage.contracts import table_for
-        from test_azure_contracts import RETRY, TABLE_ENDPOINT, ScriptedTransport, table_response
         self.assertEqual(table_for(MILESTONE_KIND), 'SourceState')
-        transport = ScriptedTransport([table_response(201, etag='W/"milestone"')])
-        service = TableServiceClient(TABLE_ENDPOINT, credential=AzureSasCredential('sv=offline&sig=synthetic'),
-                                     api_version='2020-12-06', transport=transport, **RETRY)
-        self.addCleanup(service.close)
-        tables = service.get_table_client
-        store = AzureStateStore(tables('SourceState'), tables('Attempts'), active_client=tables('ActivePointers'),
-                                approval_client=tables('Approvals'))
-        inserted = store.insert(MILESTONE_KIND, RECONCILE_MILESTONE, {'workflow': 'reconcile'})
-        self.assertEqual(inserted.version, 'W/"milestone"')
-        self.assertIn('/SourceState', transport.requests[0].url)
+        self.assertEqual(self.h.invoke('reconcile', run='local-milestone')[0], 0)
+        self.assertIsNotNone(last_successful_reconcile(self.h.store, self.h.objects))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,724 @@
+{
+  "contract_version": "sec-local-contract-v1",
+  "module_root": "packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows",
+  "rows": [
+    {
+      "family": "workflow-result",
+      "format_version": "sec-local-workflow-result-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "contracts.WorkflowResult",
+        "runner.run_workflow",
+        "results.write_workflow_result"
+      ],
+      "readers": [
+        "results.read_workflow_result",
+        "results._validate_report"
+      ],
+      "hash_sites": [
+        "results._descriptor"
+      ],
+      "equality_sites": [
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-selection",
+      "format_version": "sec-local-workflow-selection-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "runner.select_work",
+        "results.freeze_selection"
+      ],
+      "readers": [
+        "results._validate_selection"
+      ],
+      "hash_sites": [
+        "results._descriptor"
+      ],
+      "equality_sites": [
+        "results._validate_selection",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "child-call",
+      "format_version": "sec-local-workflow-child-call-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "checked.make_call",
+        "checked._remember_call"
+      ],
+      "readers": [
+        "checked._validated",
+        "checked._authority",
+        "checked.read_child_capture",
+        "checked.unfinished_child",
+        "checked.Dispatcher.execute"
+      ],
+      "hash_sites": [
+        "checked.child_attempt_id",
+        "checked.call_key",
+        "completion._obligations"
+      ],
+      "equality_sites": [
+        "checked._context_matches",
+        "checked._validate_input_output"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "member-receipt",
+      "format_version": "sec-local-workflow-member-receipt-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "members.WorkflowMembers.record"
+      ],
+      "readers": [
+        "members.WorkflowMembers._read_receipt",
+        "members.WorkflowMembers.completed"
+      ],
+      "hash_sites": [
+        "members.WorkflowMembers._descriptor"
+      ],
+      "equality_sites": [
+        "members.WorkflowMembers._validate_context",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "member-evidence",
+      "format_version": "sec-local-workflow-member-evidence-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "processing.process_member"
+      ],
+      "readers": [
+        "processing.validate_member_evidence"
+      ],
+      "hash_sites": [
+        "members.WorkflowMembers.record"
+      ],
+      "equality_sites": [
+        "processing.validate_member_evidence",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "parent-recovery",
+      "format_version": "sec-local-workflow-parent-recovery-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "legacy.reconstruct_parent"
+      ],
+      "readers": [
+        "provenance.validate_parent_recovery",
+        "provenance.rebuild_recovered_parent",
+        "provenance.read_parent"
+      ],
+      "hash_sites": [
+        "legacy.reconstruct_parent"
+      ],
+      "equality_sites": [
+        "provenance.validate_parent_recovery"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "parent-provenance",
+      "format_version": "sec-local-workflow-parent-provenance-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion.capture_parent_provenance"
+      ],
+      "readers": [
+        "completion.validate_parent_provenance"
+      ],
+      "hash_sites": [
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "completion._validate_discovery"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "member-provenance",
+      "format_version": "sec-local-workflow-member-provenance-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion.capture_member_provenance"
+      ],
+      "readers": [
+        "completion.validate_member_provenance"
+      ],
+      "hash_sites": [
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "completion.validate_member_provenance"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "completion",
+      "format_version": "sec-local-workflow-completion-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion.evaluate_member"
+      ],
+      "readers": [
+        "completion.validate_capture"
+      ],
+      "hash_sites": [
+        "members.WorkflowMembers.record"
+      ],
+      "equality_sites": [
+        "completion.validate_capture",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-obligation",
+      "format_version": "sec-local-workflow-repair-obligation-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._obligations",
+        "completion._document"
+      ],
+      "readers": [
+        "completion._read_document",
+        "completion.read_repair_obligation"
+      ],
+      "hash_sites": [
+        "completion._document",
+        "completion._obligations"
+      ],
+      "equality_sites": [
+        "completion._read_document"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-resolution",
+      "format_version": "sec-local-workflow-repair-resolution-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._write_resolution",
+        "completion._document"
+      ],
+      "readers": [
+        "completion._read_document",
+        "completion.validate_resolution_capture",
+        "completion.validate_resolution"
+      ],
+      "hash_sites": [
+        "completion._document",
+        "completion._write_resolution"
+      ],
+      "equality_sites": [
+        "completion.validate_resolution_capture"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-authority",
+      "format_version": "sec-local-workflow-repair-authority-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._write_repair_authority"
+      ],
+      "readers": [
+        "completion._read_repair_authority"
+      ],
+      "hash_sites": [
+        "completion._repair_authority_ref"
+      ],
+      "equality_sites": [
+        "completion._read_repair_authority"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "legacy-publish",
+      "format_version": "sec-local-workflow-legacy-publish-v1",
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._legacy_publish_call"
+      ],
+      "readers": [
+        "completion.read_legacy_publish",
+        "completion._read_publish_call",
+        "completion._call_context"
+      ],
+      "hash_sites": [
+        "completion._obligations"
+      ],
+      "equality_sites": [
+        "completion.read_legacy_publish"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-attempt",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "results._index"
+      ],
+      "readers": [
+        "results._index",
+        "cli._workflow_saved",
+        "results._validate_report"
+      ],
+      "hash_sites": [
+        "results.workflow_key",
+        "cli._workflow_saved"
+      ],
+      "equality_sites": [
+        "results._index",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-intent",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "results.freeze_workflow"
+      ],
+      "readers": [
+        "results.freeze_workflow",
+        "cli._workflow_frozen"
+      ],
+      "hash_sites": [
+        "results.freeze_workflow"
+      ],
+      "equality_sites": [
+        "results._validate_report",
+        "cli._workflow_frozen"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-invocation",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "cli._workflow_main"
+      ],
+      "readers": [
+        "results.freeze_workflow",
+        "cli._workflow_frozen",
+        "cli._workflow_saved"
+      ],
+      "hash_sites": [
+        "results.freeze_workflow"
+      ],
+      "equality_sites": [
+        "results._validate_selection"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "report-intent",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "runner.run_workflow"
+      ],
+      "readers": [
+        "contracts.WorkflowResult",
+        "results._validate_report"
+      ],
+      "hash_sites": [
+        "results.write_workflow_result"
+      ],
+      "equality_sites": [
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-member",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "provenance.project_member"
+      ],
+      "readers": [
+        "provenance.read_member",
+        "completion.validate_member_provenance",
+        "completion.validate_capture",
+        "processing.validate_member_evidence"
+      ],
+      "hash_sites": [
+        "provenance.projection"
+      ],
+      "equality_sites": [
+        "provenance.immutable",
+        "results._validate_selection"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "member-result-descriptor",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "members.WorkflowMembers._descriptor",
+        "members.WorkflowMembers.record",
+        "runner.run_workflow"
+      ],
+      "readers": [
+        "members.WorkflowMembers.completed",
+        "results._validate_report"
+      ],
+      "hash_sites": [
+        "members.WorkflowMembers.record",
+        "runner.run_workflow"
+      ],
+      "equality_sites": [
+        "members.WorkflowMembers._descriptor",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-document-descriptor",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "results._descriptor",
+        "runner.run_workflow"
+      ],
+      "readers": [
+        "results._index",
+        "results._validate_report"
+      ],
+      "hash_sites": [
+        "results._descriptor"
+      ],
+      "equality_sites": [
+        "results._index",
+        "results._validate_report"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "terminal-capture",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "processing.process_member",
+        "results.freeze_selection"
+      ],
+      "readers": [
+        "processing.validate_member_evidence",
+        "results._capture_or_validate_discovery_failure"
+      ],
+      "hash_sites": [
+        "members.WorkflowMembers.record",
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "processing.validate_member_evidence",
+        "results._capture_or_validate_discovery_failure"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation"
+    },
+    {
+      "family": "child-unfinished-details",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "checked.ChildUnfinished"
+      ],
+      "readers": [
+        "processing.validate_member_evidence",
+        "results._capture_or_validate_discovery_failure"
+      ],
+      "hash_sites": [
+        "members.WorkflowMembers.record",
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "processing.validate_member_evidence"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_terminal_and_ordinary_publish_family_readers_refuse_without_mutation"
+    },
+    {
+      "family": "selection-job",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "runner.select_work"
+      ],
+      "readers": [
+        "results._validate_selection"
+      ],
+      "hash_sites": [
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "results._validate_selection"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "supersession-proof",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "members.SourceDownloads.supersession"
+      ],
+      "readers": [
+        "results._validate_selection"
+      ],
+      "hash_sites": [
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "results._validate_selection",
+        "members.download_times"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_supersession_proof_retains_current_download_semantics",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_supersession_proof_retains_current_download_semantics"
+    },
+    {
+      "family": "repair-descriptor",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._document",
+        "completion.read_repair_obligation"
+      ],
+      "readers": [
+        "completion._read_document",
+        "completion._read_repair_authority"
+      ],
+      "hash_sites": [
+        "completion._document"
+      ],
+      "equality_sites": [
+        "completion._read_document"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-obligation-index",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._obligations"
+      ],
+      "readers": [
+        "completion._obligations"
+      ],
+      "hash_sites": [
+        "completion._obligations"
+      ],
+      "equality_sites": [
+        "completion._obligations",
+        "completion._read_repair_authority"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-resolution-index",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._write_resolution"
+      ],
+      "readers": [
+        "completion._obligations",
+        "completion.validate_resolution_capture"
+      ],
+      "hash_sites": [
+        "completion._write_resolution"
+      ],
+      "equality_sites": [
+        "completion._read_document"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "parent-recovery-descriptor",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "legacy.reconstruct_parent"
+      ],
+      "readers": [
+        "provenance.validate_parent_recovery"
+      ],
+      "hash_sites": [
+        "legacy.reconstruct_parent"
+      ],
+      "equality_sites": [
+        "provenance.read_parent",
+        "completion._validate_discovery"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "discovery-snapshot",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._discovery_snapshot"
+      ],
+      "readers": [
+        "completion._validate_discovery"
+      ],
+      "hash_sites": [
+        "results.freeze_selection",
+        "members.WorkflowMembers.record"
+      ],
+      "equality_sites": [
+        "completion._validate_discovery"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "discovery-session",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._discovery_snapshot",
+        "legacy.reconstruct_parent",
+        "runner.select_work"
+      ],
+      "readers": [
+        "completion.validate_discovery_session",
+        "provenance.rebuild_recovered_parent"
+      ],
+      "hash_sites": [
+        "results.freeze_selection",
+        "legacy.reconstruct_parent"
+      ],
+      "equality_sites": [
+        "results.freeze_selection",
+        "completion._validate_discovery"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "discovery-progress",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._discovery_snapshot",
+        "legacy.reconstruct_parent"
+      ],
+      "readers": [
+        "completion._validate_discovery",
+        "provenance.rebuild_recovered_parent"
+      ],
+      "hash_sites": [
+        "legacy.reconstruct_parent",
+        "results.freeze_selection"
+      ],
+      "equality_sites": [
+        "completion._validate_discovery"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_primary_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-artifacts",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._publication_captures"
+      ],
+      "readers": [
+        "completion.validate_resolution_capture"
+      ],
+      "hash_sites": [
+        "completion._write_resolution"
+      ],
+      "equality_sites": [
+        "completion.validate_resolution_capture"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "repair-artifact-record",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "completion._repair_artifacts",
+        "completion._expected_artifacts"
+      ],
+      "readers": [
+        "completion.validate_resolution_capture"
+      ],
+      "hash_sites": [
+        "completion._write_resolution"
+      ],
+      "equality_sites": [
+        "completion.validate_resolution_capture",
+        "completion.validate_resolution"
+      ],
+      "positive_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation",
+      "negative_test": "test_local_workflow_contracts.EnvelopeFamilyTests.test_repair_and_recovery_family_real_readers_refuse_without_mutation"
+    },
+    {
+      "family": "workflow-milestone",
+      "format_version": null,
+      "contract_version": "sec-local-contract-v1",
+      "writers": [
+        "summary.record_reconcile_success"
+      ],
+      "readers": [
+        "summary.last_successful_reconcile",
+        "summary._validated_milestone"
+      ],
+      "hash_sites": [],
+      "equality_sites": [
+        "summary._validated_milestone",
+        "summary.record_reconcile_success"
+      ],
+      "positive_test": "test_workflow_summary.WorkflowSummaryTests.test_milestone_contract_and_referenced_result_refusals_do_not_mutate",
+      "negative_test": "test_workflow_summary.WorkflowSummaryTests.test_milestone_contract_and_referenced_result_refusals_do_not_mutate"
+    }
+  ]
+}

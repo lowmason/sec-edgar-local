@@ -1,3 +1,4 @@
+from .contracts import LOCAL_CONTRACT, require_contract
 from collections.abc import Mapping
 from dataclasses import dataclass
 from ..config import Settings
@@ -84,7 +85,7 @@ def process_member(value, context, dispatcher, store, objects, observer=None) ->
         actual, retained_gaps = unfinished_child(error.call, store)
         if retained_gaps != error.gaps:
             raise Conflict('terminal error differs from persisted unfinished Attempt')
-        retained = {'context': actual.to_mapping(), 'terminal_error': terminal_error}
+        retained = {'contract_version': LOCAL_CONTRACT, 'context': actual.to_mapping(), 'terminal_error': terminal_error}
         objects.put_once(error.call['result_ref'].rsplit('/', 1)[0] + '/terminal.json',
                          canonical_json(to_mapping_value(retained)))
     result = MemberResult(value['member_id'], source, value['parent_ref'], snapshot_ref,
@@ -93,7 +94,7 @@ def process_member(value, context, dispatcher, store, objects, observer=None) ->
     evaluated = evaluate_member(value, context.parser_version, context.schema_version, store, objects)
     if result.outcome in COMPLETE and not evaluated.complete:
         raise Conflict('child completion lacks all affected quarter/repair evidence')
-    evidence = {'format_version': 'sec-workflow-member-evidence-v1', 'member': dict(value),
+    evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-member-evidence-v1', 'member': dict(value),
         'calls': calls, 'completion': evaluated.capture if result.outcome in COMPLETE else None,
         'resolutions': resolutions, 'terminal_error': terminal_error}
     validate_member_evidence(result, evidence, objects)
@@ -108,16 +109,18 @@ def _member_outcome(child):
 
 def validate_member_evidence(result, evidence, objects) -> None:
     evidence = to_mapping_value(evidence)
+    require_contract(evidence)
     from .contracts import member_status
     from ..results import exit_code
-    fields = {'format_version', 'member', 'calls', 'completion', 'resolutions', 'terminal_error'}
-    if set(evidence) != fields or evidence['format_version'] != 'sec-workflow-member-evidence-v1':
+    fields = {'contract_version', 'format_version', 'member', 'calls', 'completion', 'resolutions', 'terminal_error'}
+    if set(evidence) != fields or evidence['format_version'] != 'sec-local-workflow-member-evidence-v1':
         raise Conflict('member evidence schema differs')
     value = evidence['member']
+    require_contract(value)
     if (result.member_id, result.source.to_mapping(), result.parent_ref) != (
             value['member_id'], value['source'], value['parent_ref']):
         raise Conflict('receipt changes registered member/source/parent')
-    if set(value) != {'member_id', 'source', 'parent_ref', 'member_ref'}:
+    if set(value) != {'contract_version', 'member_id', 'source', 'parent_ref', 'member_ref'}:
         raise Conflict('member projection fields differ')
     parent = read_source(value['parent_ref'], objects)
     projected = read_source(value['member_ref'], objects)
@@ -148,6 +151,10 @@ def validate_member_evidence(result, evidence, objects) -> None:
             missing_calls.append(call)
             retained_body = objects.read(call['result_ref'].rsplit('/', 1)[0] + '/terminal.json')
             retained = parse_json(retained_body)
+            require_contract(retained)
+            require_contract(terminal)
+            if set(retained) != {'contract_version', 'context', 'terminal_error'}:
+                raise Conflict('terminal capture fields differ')
             actual = RunContext.from_mapping(retained['context'])
             _context_matches(template, actual)
             if retained_body != canonical_json(to_mapping_value(retained)) or retained['terminal_error'] != terminal:

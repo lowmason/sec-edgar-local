@@ -1,5 +1,6 @@
 """Validate current completion and retain immutable publication repair evidence."""
 from __future__ import annotations
+from .contracts import LOCAL_CONTRACT, require_contract
 
 import hashlib
 import re
@@ -34,13 +35,14 @@ from .provenance import (
     projection as expected_projection, read_member, read_parent, validate_parent_recovery,
 )
 
-PARENT_PROVENANCE_FORMAT = 'sec-workflow-parent-provenance-v1'
+PARENT_PROVENANCE_FORMAT = 'sec-local-workflow-parent-provenance-v1'
 
 
 def validate_discovery_session(session) -> RunContext:
     session = parse_json(canonical_json(to_mapping_value(session)))
+    require_contract(session)
     if not isinstance(session, dict) or set(session) != {
-            'discovery_id', 'frozen', 'workset_id', 'predecessor_workset_id', 'history', 'registered'}:
+            'contract_version', 'discovery_id', 'frozen', 'workset_id', 'predecessor_workset_id', 'history', 'registered'}:
         raise Conflict('captured discovery session fields differ')
     if not isinstance(session['discovery_id'], str) or not session['discovery_id'] or type(session['registered']) is not bool:
         raise Conflict('captured discovery session identity or registration differs')
@@ -98,7 +100,7 @@ def validate_discovery_session(session) -> RunContext:
 
 def capture_parent_provenance(parent_ref, store, objects) -> Mapping:
     parent = read_parent(parent_ref, store, objects)
-    evidence = {'format_version': PARENT_PROVENANCE_FORMAT, 'parent_ref': parent_ref,
+    evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': PARENT_PROVENANCE_FORMAT, 'parent_ref': parent_ref,
                 'parent': parent.to_mapping(),
                 'discovery': _discovery_snapshot(parent, store, objects)}
     validate_parent_provenance(evidence, objects)
@@ -107,7 +109,8 @@ def capture_parent_provenance(parent_ref, store, objects) -> Mapping:
 
 def validate_parent_provenance(evidence, objects) -> SourceWorkset:
     evidence = parse_json(canonical_json(to_mapping_value(evidence)))
-    if not isinstance(evidence, dict) or set(evidence) != {'format_version', 'parent_ref', 'parent', 'discovery'} or evidence['format_version'] != PARENT_PROVENANCE_FORMAT:
+    require_contract(evidence)
+    if not isinstance(evidence, dict) or set(evidence) != {'contract_version', 'format_version', 'parent_ref', 'parent', 'discovery'} or evidence['format_version'] != PARENT_PROVENANCE_FORMAT:
         raise Conflict('captured parent provenance schema differs')
     parent = _read_set(evidence['parent_ref'], objects)
     if parent.to_mapping() != evidence['parent']:
@@ -116,10 +119,10 @@ def validate_parent_provenance(evidence, objects) -> SourceWorkset:
     _validate_discovery(parent, evidence['discovery'], objects)
     return parent
 
-CAPTURE_FORMAT = 'sec-workflow-completion-v1'
-OBLIGATION_FORMAT = 'sec-workflow-repair-obligation-v1'
-RESOLUTION_FORMAT = 'sec-workflow-repair-resolution-v1'
-PROVENANCE_FORMAT = 'sec-workflow-member-provenance-v1'
+CAPTURE_FORMAT = 'sec-local-workflow-completion-v1'
+OBLIGATION_FORMAT = 'sec-local-workflow-repair-obligation-v1'
+RESOLUTION_FORMAT = 'sec-local-workflow-repair-resolution-v1'
+PROVENANCE_FORMAT = 'sec-local-workflow-member-provenance-v1'
 
 
 def _plain(value):
@@ -141,11 +144,11 @@ def _document(value, format_version, namespace, objects):
     identity = hashlib.sha256(body).hexdigest()
     path = f'worksets/sec/{namespace}/sha256={identity}/evidence.json'
     objects.put_once(path, body)
-    return {'ref': path, 'sha256': identity, 'bytes': len(body), 'format_version': format_version}
+    return {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': identity, 'bytes': len(body), 'format_version': format_version}
 
 
 
-REPAIR_AUTHORITY_FORMAT = 'sec-workflow-repair-authority-v1'
+REPAIR_AUTHORITY_FORMAT = 'sec-local-workflow-repair-authority-v1'
 
 
 def _repair_authority_ref(call_sha256):
@@ -159,19 +162,29 @@ def _read_repair_authority(call_sha256, objects):
     except FileNotFoundError:
         return None
     value = parse_json(body)
+    require_contract(value)
     if (not isinstance(value, dict)
-            or set(value) != {'format_version', 'call_sha256', 'descriptor'}
+            or set(value) != {'contract_version', 'format_version', 'call_sha256', 'descriptor'}
             or value['format_version'] != REPAIR_AUTHORITY_FORMAT
             or value['call_sha256'] != call_sha256
             or canonical_json(to_mapping_value(value)) != body):
         raise Conflict('original repair obligation authority bytes or identity differ')
-    if not isinstance(value['descriptor'], dict):
+    descriptor = value['descriptor']
+    if not isinstance(descriptor, dict):
         raise Conflict('original repair obligation authority descriptor differs')
-    return value['descriptor']
+    require_contract(descriptor)
+    if (set(descriptor) != {'contract_version', 'format_version', 'ref', 'sha256', 'bytes'}
+            or descriptor['format_version'] != OBLIGATION_FORMAT):
+        raise Conflict('original repair obligation authority descriptor fields differ')
+    require_hash(descriptor['sha256'], 'repair authority document digest')
+    require_number(descriptor['bytes'], 'repair authority document bytes', integer=True)
+    if descriptor['ref'] != f"worksets/sec/workflow-repairs/sha256={descriptor['sha256']}/evidence.json":
+        raise Conflict('original repair obligation authority descriptor path differs')
+    return descriptor
 
 
 def _write_repair_authority(call_sha256, descriptor, objects):
-    value = {'format_version': REPAIR_AUTHORITY_FORMAT,
+    value = {'contract_version': LOCAL_CONTRACT, 'format_version': REPAIR_AUTHORITY_FORMAT,
              'call_sha256': call_sha256, 'descriptor': _plain(descriptor)}
     body = canonical_json(to_mapping_value(value))
     path = _repair_authority_ref(call_sha256)
@@ -183,8 +196,9 @@ def _write_repair_authority(call_sha256, descriptor, objects):
 def _read_document(descriptor, format_version, objects):
     if format_version not in (OBLIGATION_FORMAT, RESOLUTION_FORMAT):
         raise Conflict('unsupported repair document format')
-    if not isinstance(descriptor, Mapping) or set(descriptor) != {'ref', 'sha256', 'bytes', 'format_version'}:
+    if not isinstance(descriptor, Mapping) or set(descriptor) != {'contract_version', 'ref', 'sha256', 'bytes', 'format_version'}:
         raise Conflict('repair document descriptor fields differ')
+    require_contract(descriptor)
     require_hash(descriptor['sha256'], 'repair document digest')
     require_number(descriptor['bytes'], 'repair document bytes', integer=True)
     safe_relative_path(descriptor['ref'], 'repair document ref')
@@ -196,14 +210,15 @@ def _read_document(descriptor, format_version, objects):
     objects.verify(descriptor['ref'], descriptor['sha256'], descriptor['bytes'])
     body = objects.read(descriptor['ref'])
     value = parse_json(body)
+    require_contract(value)
     if not isinstance(value, dict) or canonical_json(to_mapping_value(value)) != body or value.get('format_version') != format_version:
         raise Conflict('repair document canonical payload differs')
     if format_version == RESOLUTION_FORMAT:
-        if set(value) != {'format_version', 'obligation', 'call', 'result', 'quarters', 'repair_artifacts'}:
+        if set(value) != {'contract_version', 'format_version', 'obligation', 'call', 'result', 'quarters', 'repair_artifacts'}:
             raise Conflict('repair resolution payload fields differ')
         _read_document(value['obligation'], OBLIGATION_FORMAT, objects)
         return value
-    if set(value) != {'format_version', 'call', 'context', 'transformed_ref', 'sources', 'affected_quarters'}:
+    if set(value) != {'contract_version', 'format_version', 'call', 'context', 'transformed_ref', 'sources', 'affected_quarters'}:
         raise Conflict('repair obligation payload fields differ')
     original_call = value['call']
     actual = RunContext.from_mapping(value['context'])
@@ -212,7 +227,7 @@ def _read_document(descriptor, format_version, objects):
     if original_call.get('format_version') == LEGACY_PUBLISH_FORMAT:
         if _legacy_publish_call(actual, objects) != original_call:
             raise Conflict('repair obligation differs from original legacy command')
-    elif original_call.get('format_version') == 'sec-workflow-child-call-v1':
+    elif original_call.get('format_version') == 'sec-local-workflow-child-call-v1':
         call, template = _authority(original_call, None, objects)
         _context_matches(template, actual)
         command_path = call['result_ref'].rsplit('/', 1)[0] + '/command.json'
@@ -254,7 +269,7 @@ def _read_set(path, objects):
 def _discovery_snapshot(parent, store, objects):
     state = AcquisitionState(store)
     row = state.discovery_session(parent.discovery_id)
-    session = None if row is None else row.to_mapping()['value']
+    session = None if row is None else {'contract_version': LOCAL_CONTRACT, **row.to_mapping()['value']}
     identities = set() if session is None else ({session.get('workset_id'), session.get('predecessor_workset_id')} | {item['workset_id'] for item in session.get('history', ())})
     identities.discard(None)
     if session is None or parent.workset_id not in identities:
@@ -277,18 +292,19 @@ def _discovery_snapshot(parent, store, objects):
             if row is None:
                 raise Conflict('parent has missing successful directory progress')
             value = row.to_mapping()['value']
-        progress.append({'unit': unit, 'value': value})
-    return {'session': session, 'progress': progress, 'recovery': None}
+        progress.append({'contract_version': LOCAL_CONTRACT, 'unit': unit, 'value': value})
+    return {'contract_version': LOCAL_CONTRACT, 'session': session, 'progress': progress, 'recovery': None}
 
 
 def _validate_discovery(parent, evidence, objects):
-    if set(evidence) != {'session', 'progress', 'recovery'}:
+    require_contract(evidence)
+    if set(evidence) != {'contract_version', 'session', 'progress', 'recovery'}:
         raise Conflict('captured discovery evidence schema differs')
     validate_discovery_session(evidence['session'])
     if evidence['recovery'] is not None:
         ref = f'worksets/sec/source/sha256={parent.workset_id}/workset.json'
         validated = validate_parent_recovery(ref, evidence['recovery'], objects)
-        if _plain(validated) != {'session': evidence['session'], 'progress': evidence['progress']}:
+        if _plain(validated) != {'contract_version': LOCAL_CONTRACT, 'session': evidence['session'], 'progress': evidence['progress']}:
             raise Conflict('captured recovered-parent provenance differs')
         return
     session = evidence['session']
@@ -307,6 +323,9 @@ def _validate_discovery(parent, evidence, objects):
     outcomes, members, listings = [], {}, {}
     for unit in sorted(frozen['units'], key=lambda u: (u['url'].count('/'), u['url'])):
         entry = supplied[unit['url']]
+        require_contract(entry)
+        if set(entry) != {'contract_version', 'unit', 'value'}:
+            raise Conflict('captured discovery progress fields differ')
         if entry['unit'] != unit or entry['value']['discovery_id'] != parent.discovery_id:
             raise Conflict('captured directory unit identity differs')
         value = entry['value']
@@ -337,7 +356,7 @@ def _validate_discovery(parent, evidence, objects):
 def capture_member_provenance(value, store, objects) -> Mapping:
     projection = read_member(value, store, objects)
     parent = _read_set(value['parent_ref'], objects)
-    evidence = {'format_version': PROVENANCE_FORMAT, 'member': _plain(value),
+    evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': PROVENANCE_FORMAT, 'member': _plain(value),
                 'parent': parent.to_mapping(), 'projection': projection.to_mapping(),
                 'discovery': _discovery_snapshot(parent, store, objects)}
     validate_member_provenance(evidence, objects)
@@ -346,10 +365,12 @@ def capture_member_provenance(value, store, objects) -> Mapping:
 
 def validate_member_provenance(evidence, objects) -> SourceWorkset:
     evidence = _plain(evidence)
-    if set(evidence) != {'format_version', 'member', 'parent', 'projection', 'discovery'} or evidence['format_version'] != PROVENANCE_FORMAT:
+    require_contract(evidence)
+    if set(evidence) != {'contract_version', 'format_version', 'member', 'parent', 'projection', 'discovery'} or evidence['format_version'] != PROVENANCE_FORMAT:
         raise Conflict('unsupported member provenance capture')
     value = evidence['member']
-    if set(value) != {'member_id', 'source', 'parent_ref', 'member_ref'}:
+    require_contract(value)
+    if set(value) != {'contract_version', 'member_id', 'source', 'parent_ref', 'member_ref'}:
         raise Conflict('captured member registry fields differ')
     parent = _read_set(value['parent_ref'], objects)
     projection = _read_set(value['member_ref'], objects)
@@ -367,12 +388,14 @@ def validate_member_provenance(evidence, objects) -> SourceWorkset:
 
 def validate_capture(capture, objects) -> None:
     capture = _plain(capture)
-    fields = {'format_version', 'member', 'parent', 'projection', 'discovery',
+    require_contract(capture)
+    fields = {'contract_version', 'format_version', 'member', 'parent', 'projection', 'discovery',
               'binding', 'snapshot', 'observation', 'affected_quarters', 'quarters'}
     if set(capture) != fields or capture['format_version'] != CAPTURE_FORMAT:
         raise Conflict('unsupported completion capture shape')
     value = capture['member']
-    if set(value) != {'member_id', 'source', 'parent_ref', 'member_ref'}:
+    require_contract(value)
+    if set(value) != {'contract_version', 'member_id', 'source', 'parent_ref', 'member_ref'}:
         raise Conflict('captured member registry fields differ')
     parent = _read_set(value['parent_ref'], objects)
     projection = _read_set(value['member_ref'], objects)
@@ -422,7 +445,7 @@ def accounts_for(active: ObservationRef | None, ref: ObservationRef) -> bool:
             and active.snapshot.received_at > ref.snapshot.received_at)
 
 
-LEGACY_PUBLISH_FORMAT = 'sec-workflow-legacy-publish-v1'
+LEGACY_PUBLISH_FORMAT = 'sec-local-workflow-legacy-publish-v1'
 
 
 def _legacy_publish_call(context, objects):
@@ -451,12 +474,13 @@ def _legacy_publish_call(context, objects):
     if (workset.context.parser_version, workset.context.schema_version) != (
             context.parser_version, context.schema_version):
         raise Conflict('legacy publish input versions differ')
-    return {'format_version': LEGACY_PUBLISH_FORMAT, 'context': context.to_mapping(),
+    return {'contract_version': LOCAL_CONTRACT, 'format_version': LEGACY_PUBLISH_FORMAT, 'context': context.to_mapping(),
             'intent': intent, 'input_ref': intent['workset'], 'result_ref': path}
 
 
 def read_legacy_publish(call, store, objects):
-    if set(call) != {'format_version', 'context', 'intent', 'input_ref', 'result_ref'} or call['format_version'] != LEGACY_PUBLISH_FORMAT:
+    require_contract(call)
+    if set(call) != {'contract_version', 'format_version', 'context', 'intent', 'input_ref', 'result_ref'} or call['format_version'] != LEGACY_PUBLISH_FORMAT:
         raise Conflict('legacy publication call schema differs')
     context = RunContext.from_mapping(call['context'])
     if _legacy_publish_call(context, objects) != _plain(call):
@@ -569,7 +593,7 @@ def _obligations(source, store, objects):
                 recorded = [q['quarter'] for error in attempt['structured_errors']
                             for q in error.get('details', {}).get('quarters', ())]
                 quarters = sorted(set(recorded) | set(_affected_quarters(workset.observations, objects, store)))
-                payload = {'format_version': OBLIGATION_FORMAT, 'call': call,
+                payload = {'contract_version': LOCAL_CONTRACT, 'format_version': OBLIGATION_FORMAT, 'call': call,
                            'context': attempt['context'], 'transformed_ref': call['input_ref'],
                            'sources': [ref.to_mapping() for ref in workset.observations],
                            'affected_quarters': quarters}
@@ -578,6 +602,9 @@ def _obligations(source, store, objects):
                 _write_repair_authority(call_key, descriptor, objects)
         else:
             indexed = saved.to_mapping()['value']
+            require_contract(indexed)
+            if set(indexed) != {'contract_version', 'call_sha256', 'descriptor'}:
+                raise Conflict('repair obligation index fields differ')
             if indexed['call_sha256'] != call_key:
                 raise Conflict('repair obligation call identity differs')
             descriptor = indexed['descriptor']
@@ -587,7 +614,7 @@ def _obligations(source, store, objects):
             raise Conflict('repair obligation immutable input differs')
         if saved is None:
             _immutable('WorkflowRepairObligation', call_key,
-                       {'call_sha256': call_key, 'descriptor': descriptor}, store)
+                       {'contract_version': LOCAL_CONTRACT, 'call_sha256': call_key, 'descriptor': descriptor}, store)
         resolution_row = store.get('WorkflowRepairResolution', call_key)
         if resolution_row is None:
             try:
@@ -621,7 +648,7 @@ def outstanding_repairs(value, store, objects) -> tuple[Mapping, ...]:
 
 def read_repair_obligation(path, objects):
     body = objects.read(path)
-    descriptor = {'ref': path, 'sha256': hashlib.sha256(body).hexdigest(),
+    descriptor = {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': hashlib.sha256(body).hexdigest(),
                   'bytes': len(body), 'format_version': OBLIGATION_FORMAT}
     _read_document(descriptor, OBLIGATION_FORMAT, objects)
     return descriptor
@@ -645,7 +672,7 @@ def _repair_artifacts(manifest, store):
         value = processing.to_mapping()['value']
         if value['processing_key'] != key or value['observation'] != ref.to_mapping() or value['publications'].get(manifest.quarter, {}).get(manifest.generation_id) != receipt_key:
             raise Conflict('checked publication Processing membership differs')
-        artifacts.append({'receipt_key': receipt_key, 'receipt': expected,
+        artifacts.append({'contract_version': LOCAL_CONTRACT, 'receipt_key': receipt_key, 'receipt': expected,
                           'observation': ref.to_mapping()})
     return artifacts
 
@@ -660,7 +687,7 @@ def _publication_captures(result, store, objects):
                                     hashlib.sha256(body).hexdigest(), len(body))
         manifest = validated_manifest(capture, objects)
         captures.append(capture.to_mapping())
-        artifacts.append({'quarter': quarter.quarter, 'records': _repair_artifacts(manifest, store)})
+        artifacts.append({'contract_version': LOCAL_CONTRACT, 'quarter': quarter.quarter, 'records': _repair_artifacts(manifest, store)})
     return captures, artifacts
 
 
@@ -678,7 +705,7 @@ def _write_resolution(obligation, call, result, captures, artifacts, store, obje
             manifest = validated_manifest(GenerationCapture.from_mapping(captured), objects)
             if next((r for r in manifest.sources if r.source.source_id == ref.source.source_id), None) != ref:
                 raise Conflict('repair resolution silently supersedes unfinished source evidence')
-    payload = {'format_version': RESOLUTION_FORMAT, 'obligation': _plain(obligation),
+    payload = {'contract_version': LOCAL_CONTRACT, 'format_version': RESOLUTION_FORMAT, 'obligation': _plain(obligation),
                'call': _plain(call), 'result': result.to_mapping(),
                'quarters': captures, 'repair_artifacts': artifacts}
     descriptor = _document(payload, RESOLUTION_FORMAT, 'workflow-repair-resolutions', objects)
@@ -706,7 +733,7 @@ def _expected_artifacts(manifest):
         receipt = {'processing_key': key, 'quarter': manifest.quarter,
                    'generation_id': manifest.generation_id,
                    'source_fingerprint': manifest.source_fingerprint}
-        expected.append({'receipt_key': receipt_key, 'receipt': receipt,
+        expected.append({'contract_version': LOCAL_CONTRACT, 'receipt_key': receipt_key, 'receipt': receipt,
                          'observation': ref.to_mapping()})
     return expected
 
@@ -727,6 +754,14 @@ def validate_resolution_capture(resolution, objects) -> None:
     captured = {q['quarter']: q for q in value['quarters']}
     if len(captured) != len(value['quarters']) or set(original['affected_quarters']) - set(captured) or set(quarters) != set(captured):
         raise Conflict('repair resolution quarter set differs')
+    for artifact in value['repair_artifacts']:
+        require_contract(artifact)
+        if set(artifact) != {'contract_version', 'quarter', 'records'}:
+            raise Conflict('repair artifact fields differ')
+        for record in artifact['records']:
+            require_contract(record)
+            if set(record) != {'contract_version', 'receipt_key', 'receipt', 'observation'}:
+                raise Conflict('repair artifact record fields differ')
     artifacts = {v['quarter']: v['records'] for v in value['repair_artifacts']}
     if len(artifacts) != len(value['repair_artifacts']) or set(artifacts) != set(captured):
         raise Conflict('repair resolution artifact coverage differs')
@@ -796,7 +831,7 @@ def evaluate_member(value, parser_version, schema_version, store, objects) -> Co
         if gaps or obligations:
             return CompletionEvaluation(False, None, obligations, tuple(gaps))
         parent = _read_set(value['parent_ref'], objects)
-        capture = {'format_version': CAPTURE_FORMAT, 'member': _plain(value),
+        capture = {'contract_version': LOCAL_CONTRACT, 'format_version': CAPTURE_FORMAT, 'member': _plain(value),
                    'parent': parent.to_mapping(), 'projection': projection.to_mapping(),
                    'discovery': _discovery_snapshot(parent, store, objects), 'binding': binding.to_mapping(),
                    'snapshot': snapshot.to_mapping(), 'observation': ref.to_mapping(),

@@ -1,96 +1,58 @@
-# tests/test_workflow_selection_v1.py
-"""Stored `sec-workflow-selection-v1` selections stay readable (plan 8).
+"""Foreign selection and image contexts refuse without opening historical stores."""
+from network_guard import install
+install()
 
-The plan-5 proof bundle committed under specs/evidence holds real v1 selections, reports and
-the state rows that index them. Every test opens a temporary copy: reading a report repairs
-index rows, and opening the local store sets WAL mode, so the committed bundle must stay untouched.
-"""
-import json
-import shutil
+import hashlib
+import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
 
-from sec_edgar_ingest.config import Settings
-from sec_edgar_ingest.models import RunContext, parse_json
+from support_checked import workflow_fixture
 from sec_edgar_ingest.storage.contracts import Conflict
-from sec_edgar_ingest.storage.local import LocalObjectStore, LocalStateStore
-from sec_edgar_ingest.workflows.results import freeze_selection, read_workflow_result
-from sec_edgar_ingest.workflows.runner import run_workflow
-
-EVIDENCE = (Path(__file__).resolve().parents[3] / 'specs/evidence/sec-filing-index-ingestion/stage-4/plan5-execution'
-            '/final-verification-refresh/installed/installed-sequence/work/.fixture-state')
-V1, V2 = 'sec-workflow-selection-v1', 'sec-workflow-selection-v2'
-# (run, command, outcome the stored report recorded): proof workflows with a member run, a daily
-# overlap, and a repeat whose two members were already complete.
-RUNS = (('proof-baseline', 'backfill', 'success'), ('proof-overlap', 'daily', 'success'),
-        ('proof-repeat', 'backfill', 'unchanged'))
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
+from sec_edgar_ingest.workflows.results import freeze_workflow, freeze_selection, _validate_selection
 
 
-class StoredV1SelectionTests(unittest.TestCase):
-    def setUp(self):
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        root = Path(temp.name) / '.fixture-state'
-        shutil.copytree(EVIDENCE, root)
-        # The saved owner binding names the bundle's original root, so reopen the copy under that binding.
-        binding = json.loads(next((root / 'objects/locks').glob('**/binding.json')).read_bytes())
-        self.store, self.objects = LocalStateStore(root, binding=binding), LocalObjectStore(root, binding=binding)
-        self.addCleanup(self.store.close)
-
-    def stored(self, run, command):
-        base = f'runs/sec/{run}/{command}/a/'
-        intent = parse_json(self.objects.read(base + 'intent.json'))
-        body = self.objects.read(base + 'selection.json')
-        return base, RunContext.from_mapping(intent['context']), intent['intent'], body
-
-    def test_the_bundle_holds_v1_selections_without_superseded(self):
-        for run, command, _ in RUNS:
-            with self.subTest(run=run):
-                selection = parse_json(self.stored(run, command)[3])
-                self.assertEqual(selection['format_version'], V1)
-                self.assertNotIn('superseded', selection)
-
-    def test_stored_v1_reports_are_readable(self):
-        for run, command, outcome in RUNS:
-            with self.subTest(run=run):
-                base = self.stored(run, command)[0]
-                self.assertEqual(read_workflow_result(base + 'result.json', self.store, self.objects).outcome, outcome)
-
-    def test_stored_v1_selection_replays_without_rewriting_it(self):
-        for run, command, outcome in RUNS:
-            with self.subTest(run=run):
-                base, context, intent, body = self.stored(run, command)
-                frozen = freeze_selection(context, parse_json(body), self.store, self.objects)
-                self.assertEqual(frozen, parse_json(body))
-                # Every member already has its receipt (or the selection has none), so nothing dispatches.
-                settings = Settings.from_mapping(context.to_mapping()['effective_config'])
-                replayed = run_workflow(context, settings, intent, None, self.store, self.objects)
-                self.assertEqual(replayed.outcome, outcome)
-                self.assertEqual(self.objects.read(base + 'selection.json'), body)
-
-    def test_a_v1_selection_may_not_carry_superseded(self):
-        base, context, _, body = self.stored('proof-repeat', 'backfill')
-        with self.assertRaisesRegex(Conflict, 'selection differs from frozen workflow intent'):
-            freeze_selection(context, {**parse_json(body), 'superseded': []}, self.store, self.objects)
-        self.assertEqual(self.objects.read(base + 'selection.json'), body)
-
-    def test_a_v2_selection_must_carry_superseded(self):
-        base, context, _, body = self.stored('proof-repeat', 'backfill')
-        with self.assertRaisesRegex(Conflict, 'selection differs from frozen workflow intent'):
-            freeze_selection(context, {**parse_json(body), 'format_version': V2}, self.store, self.objects)
-        self.assertEqual(self.objects.read(base + 'selection.json'), body)
-
-    def test_unknown_formats_are_refused(self):
-        _, context, _, body = self.stored('proof-repeat', 'backfill')
-        for label, version in (('future', 'sec-workflow-selection-v3'), ('not a string', ['v1']), ('missing', None)):
-            with self.subTest(label):
-                selection = {**parse_json(body), 'format_version': version}
-                if version is None:
-                    del selection['format_version']
-                with self.assertRaisesRegex(Conflict, 'selection differs from frozen workflow intent'):
-                    freeze_selection(context, selection, self.store, self.objects)
+def snapshot(store, objects):
+    with closing(sqlite3.connect(store.database)) as database:
+        logical = tuple(database.iterdump())
+    tree = {str(path.relative_to(objects.directory)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in objects.directory.rglob('*') if path.is_file()}
+    return tree, logical
 
 
-if __name__ == '__main__':
-    unittest.main()
+class ForeignSelectionTests(unittest.TestCase):
+    def test_old_selection_versions_and_image_contexts_refuse_without_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            settings, context, pack, store, objects = workflow_fixture(Path(directory))
+            self.addCleanup(store.close)
+            invocation = {'contract_version': LOCAL_CONTRACT, 'command': context.command,
+                          'today': context.pinned_on.isoformat(),
+                          'fixture_sha256': hashlib.sha256(pack.read_bytes()).hexdigest(),
+                          'pinned_end_quarter': '2026Q4'}
+            freeze_workflow(context, invocation, store, objects)
+            base = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-selection-v1',
+                    'context': context.to_mapping(), 'invocation': invocation,
+                    'members': [], 'jobs': [], 'member_provenance': [], 'already_complete': [],
+                    'superseded': [], 'discovery_call': None, 'discovery_error': None,
+                    'parent_ref': None, 'parent_provenance': None, 'discovery_session': None,
+                    'required_units': [], 'halted': True, 'requested_quarters': ['2026Q4'],
+                    'directories': [], 'boundary_before': None,
+                    'gaps': [{'code': 'internal_error', 'message': 'before dispatch', 'retryable': False,
+                              'source_id': None, 'details': {}}],
+                    'discovered_sources': 0, 'unresolved_before': 0}
+            base['discovery_error'] = base['gaps'][0]
+            _validate_selection(base, context, invocation, store, objects)
+            foreign_context = {k: v for k, v in context.to_mapping().items() if k != 'runtime'}
+            foreign_context.update(image_digest='sha256:' + 'f' * 64, format_version='sec-acquisition-v1')
+            for name, changed in [('v1', {**base, 'format_version': 'sec-workflow-selection-v1'}),
+                                  ('v2', {**base, 'format_version': 'sec-workflow-selection-v2'}),
+                                  ('image', {**base, 'context': foreign_context}),
+                                  ('missing superseded', {k: v for k, v in base.items() if k != 'superseded'})]:
+                with self.subTest(name=name):
+                    before = snapshot(store, objects)
+                    with self.assertRaises((ValueError, Conflict)):
+                        freeze_selection(context, changed, store, objects)
+                    self.assertEqual(snapshot(store, objects), before)

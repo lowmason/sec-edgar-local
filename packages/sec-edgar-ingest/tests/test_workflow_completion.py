@@ -1,3 +1,4 @@
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 from sec_edgar_ingest.models import to_mapping_value
 # tests/test_workflow_completion.py
 import tempfile
@@ -189,7 +190,7 @@ class CompletionTests(unittest.TestCase):
             '--run-id', 'ordinary-legacy-run', '--execution-id', 'ordinary-legacy-execution',
             '--attempt-id', 'ordinary-legacy-publish',
             '--deadline', self.f.workflow.deadline.isoformat(),
-            '--state-dir', str(self.f.root.parent), '--today', '2026-10-06',
+            '--today', '2026-10-06',
             '--workset', transformed]
         with patch.object(EtlState, '_record_membership', fail_once), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()):
             code = main(arguments)
@@ -214,7 +215,7 @@ class CompletionTests(unittest.TestCase):
         self.assertFalse(evaluation.complete)
         self.assertEqual(len(evaluation.obligations), 1)
         payload = parse_json(self.f.objects.read(evaluation.obligations[0]['ref']))
-        self.assertEqual(payload['call']['format_version'], 'sec-workflow-legacy-publish-v1')
+        self.assertEqual(payload['call']['format_version'], 'sec-local-workflow-legacy-publish-v1')
         self.assertEqual(payload['call']['context'], context.to_mapping())
         self.assertEqual(payload['call']['input_ref'], transformed)
         code, fresh_call, repaired = self.f.invoke('publish', transformed)
@@ -277,8 +278,8 @@ class CompletionTests(unittest.TestCase):
             digest = hashlib.sha256(body).hexdigest()
             path = f'worksets/sec/workflow-repairs/sha256={digest}/evidence.json'
             self.f.objects.put_once(path, body)
-            descriptor = {'ref': path, 'sha256': digest, 'bytes': len(body),
-                          'format_version': 'sec-workflow-repair-obligation-v1'}
+            descriptor = {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': digest, 'bytes': len(body),
+                          'format_version': 'sec-local-workflow-repair-obligation-v1'}
             with self.subTest(variant=variant), self.assertRaises((Conflict, ValueError, FileNotFoundError)):
                 resolve_repair(descriptor, fresh_call, self.f.store, self.f.objects)
         self.assertEqual([row.to_mapping() for row in self.f.store.scan('WorkflowRepairResolution', {})],
@@ -457,7 +458,7 @@ class CompletionTests(unittest.TestCase):
         arguments = ['publish', '--config', str(self.f.config),
             '--run-id', 'corrupt-ordinary-run', '--execution-id', 'corrupt-ordinary-execution',
             '--attempt-id', 'corrupt-ordinary-attempt', '--deadline', self.f.workflow.deadline.isoformat(),
-            '--state-dir', str(self.f.root.parent), '--today', '2026-10-06', '--workset', transformed]
+            '--today', '2026-10-06', '--workset', transformed]
         with (patch.object(EtlState, '_record_membership', side_effect=Conflict('ancillary')),
               contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO())):
             self.assertEqual(main(arguments), 9)
@@ -519,8 +520,8 @@ class CompletionTests(unittest.TestCase):
         digest = hashlib.sha256(encoded).hexdigest()
         path = f'worksets/sec/workflow-repairs/sha256={digest}/evidence.json'
         self.f.objects.put_once(path, encoded)
-        forged = {'ref': path, 'sha256': digest, 'bytes': len(encoded),
-                  'format_version': 'sec-workflow-repair-obligation-v1'}
+        forged = {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': digest, 'bytes': len(encoded),
+                  'format_version': 'sec-local-workflow-repair-obligation-v1'}
         before = [r.to_mapping() for r in self.f.store.scan('WorkflowRepairResolution', {})]
         with self.assertRaises((Conflict, ValueError)):
             resolve_repair(forged, fresh_call, self.f.store, self.f.objects)
@@ -570,7 +571,7 @@ class CompletionTests(unittest.TestCase):
         def anchor_before_index(kind, row_key, value):
             if kind == 'WorkflowRepairObligation':
                 authority = parse_json(self.f.objects.read(path))
-                self.assertEqual(authority, {'format_version': 'sec-workflow-repair-authority-v1',
+                self.assertEqual(authority, {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-repair-authority-v1',
                     'call_sha256': key, 'descriptor': value['descriptor']})
                 checked.append(True)
             return insert(kind, row_key, value)

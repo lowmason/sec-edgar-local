@@ -1,3 +1,4 @@
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 from network_guard import install
 install()
 from sec_edgar_ingest.models import to_mapping_value
@@ -243,8 +244,8 @@ class ProvenanceTests(unittest.TestCase):
             h = discovery_harness(Path(directory), {'2026Q4': [listing_response('2026Q4', ['master.20261001.idx'])]})
             try:
                 parent = h.run('daily', date(2026, 10, 7), 'pure-recovery')
-                session = h.state.discovery_session(parent.discovery_id).to_mapping()['value']
-                progress = [{'unit': u, 'value': h.state.directory_progress(parent.discovery_id, u['url']).to_mapping()['value']}
+                session = {'contract_version': LOCAL_CONTRACT, **h.state.discovery_session(parent.discovery_id).to_mapping()['value']}
+                progress = [{'contract_version': LOCAL_CONTRACT, 'unit': u, 'value': h.state.directory_progress(parent.discovery_id, u['url']).to_mapping()['value']}
                             for u in sorted(session['frozen']['units'], key=lambda u: (u['url'].count('/'), u['url']))]
                 before = h.objects.read(h.workset_path(parent))
                 self.assertEqual(rebuild_recovered_parent(session, progress, h.objects), parent)
@@ -318,18 +319,18 @@ class ProvenanceTests(unittest.TestCase):
             try:
                 parent = h.run('daily', date(2026, 10, 7), 'descriptor')
                 session_row = h.state.discovery_session(parent.discovery_id)
-                session = session_row.to_mapping()['value']
-                progress = [{'unit': u, 'value': h.state.directory_progress(parent.discovery_id, u['url']).to_mapping()['value']}
+                session = {'contract_version': LOCAL_CONTRACT, **session_row.to_mapping()['value']}
+                progress = [{'contract_version': LOCAL_CONTRACT, 'unit': u, 'value': h.state.directory_progress(parent.discovery_id, u['url']).to_mapping()['value']}
                             for u in sorted(session['frozen']['units'], key=lambda u: (u['url'].count('/'), u['url']))]
                 ref = h.workset_path(parent)
-                retained = {'format_version': RECOVERY_FORMAT, 'parent_ref': ref, 'parent': parent.to_mapping(),
+                retained = {'contract_version': LOCAL_CONTRACT, 'format_version': RECOVERY_FORMAT, 'parent_ref': ref, 'parent': parent.to_mapping(),
                             'session': session, 'progress': progress}
                 body = canonical_json(to_mapping_value(retained)); digest = hashlib.sha256(body).hexdigest()
-                descriptor = {'ref': 'worksets/sec/workflow-parent-recovery/sha256='+digest+'/recovery.json',
+                descriptor = {'contract_version': LOCAL_CONTRACT, 'ref': 'worksets/sec/workflow-parent-recovery/sha256='+digest+'/recovery.json',
                               'sha256': digest, 'bytes': len(body)}
                 h.objects.put_once(descriptor['ref'], body)
-                self.assertEqual(validate_parent_recovery(ref, descriptor, h.objects), {'session': session, 'progress': progress})
-                absent = deepcopy(session); absent['workset_id'] = None; absent['predecessor_workset_id'] = None; absent['history'] = []
+                self.assertEqual(validate_parent_recovery(ref, descriptor, h.objects), {'contract_version': LOCAL_CONTRACT, 'session': session, 'progress': progress})
+                absent = {k: v for k, v in deepcopy(session).items() if k != 'contract_version'}; absent['workset_id'] = None; absent['predecessor_workset_id'] = None; absent['history'] = []
                 h.store.replace('DiscoverySession', hashlib.sha256(parent.discovery_id.encode()).hexdigest(), absent, session_row.version)
                 with self.assertRaises(Conflict):
                     read_parent(ref, h.store, h.objects)

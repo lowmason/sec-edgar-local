@@ -1,3 +1,5 @@
+from sec_edgar_ingest.runtime import configured_descriptor
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 from network_guard import install
 install()
 from sec_edgar_ingest.models import to_mapping_value
@@ -30,9 +32,9 @@ class ProcessingTests(unittest.TestCase):
             try:
                 now = datetime.now(timezone.utc)
                 context = RunContext('processing', 'manual', 'daily', 'a',
-                    h.settings.worker.image_digest, h.settings.etl.parser_version,
+                    h.settings.etl.parser_version,
                     h.settings.etl.schema_version, h.settings.config_sha256,
-                    now, now + timedelta(seconds=1800), 'daily')
+                    now, now + timedelta(seconds=1800), 'daily', runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
                 context = pin_context(h.settings, context, date(2026, 10, 7))[0]
                 dispatcher = Dispatcher(context, h.settings, pack, root, h.store, h.objects)
                 discovered = dispatcher.execute('discover', 'discover', h.settings,
@@ -58,9 +60,9 @@ class ProcessingTests(unittest.TestCase):
         h = CommandHarness(root, pack)
         now = datetime.now(timezone.utc)
         context = RunContext('processing', 'manual', 'daily', 'a',
-            h.settings.worker.image_digest, h.settings.etl.parser_version,
+            h.settings.etl.parser_version,
             h.settings.etl.schema_version, h.settings.config_sha256,
-            now, now + timedelta(seconds=1800), 'daily')
+            now, now + timedelta(seconds=1800), 'daily', runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
         context = pin_context(h.settings, context, date(2026, 10, 7))[0]
         dispatcher = Dispatcher(context, h.settings, h.pack, root, h.store, h.objects)
         found = dispatcher.execute('discover', 'discover', h.settings,
@@ -216,7 +218,7 @@ class ProcessingTests(unittest.TestCase):
                 row = next(h.store.scan('WorkflowMemberResult', {}))
                 corrupted = dict(first, bytes=first['bytes'] + 1)
                 import hashlib
-                key = hashlib.sha256(canonical_json(to_mapping_value([context.run_id, context.command,
+                key = hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, context.run_id, context.command,
                     context.attempt_id, value['member_id'], context.parser_version, context.schema_version]))).hexdigest()
                 h.store.replace('WorkflowMemberResult', key, corrupted, row.version)
                 with self.assertRaises((Conflict, OSError, ValueError)):

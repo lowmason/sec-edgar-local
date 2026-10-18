@@ -1,3 +1,5 @@
+from sec_edgar_ingest.runtime import configured_descriptor
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 # tests/test_workflow_results.py
 import hashlib
 from contextlib import closing
@@ -37,7 +39,7 @@ class WorkflowResultTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.f = EvidenceFixture(Path(self.temp.name) / '.fixture-state', command='backfill')
         self.addCleanup(self.f.close)
-        self.invocation = {'command': 'backfill', 'today': '2026-10-06',
+        self.invocation = {'contract_version': LOCAL_CONTRACT, 'command': 'backfill', 'today': '2026-10-06',
                            'fixture_sha256': hashlib.sha256(self.f.pack.read_bytes()).hexdigest(),
                            'pinned_end_quarter': '2026Q4'}
         self.f.discovery_call = to_mapping_value(self.f.discovery_call)
@@ -67,13 +69,13 @@ class WorkflowResultTests(unittest.TestCase):
 
     def selection(self, *, skipped=False):
         parent = decode_source_workset(self.f.objects.read(self.f.parent_ref))
-        session = AcquisitionState(self.f.store).discovery_session(parent.discovery_id).to_mapping()['value']
+        session = {'contract_version': LOCAL_CONTRACT, **AcquisitionState(self.f.store).discovery_session(parent.discovery_id).to_mapping()['value']}
         members = [] if skipped else [self.f.value]
         parent_provenance = capture_parent_provenance(self.f.parent_ref, self.f.store, self.f.objects)
-        return {'format_version': 'sec-workflow-selection-v2',
+        return {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-selection-v1',
                 'context': self.context.to_mapping(), 'invocation': self.invocation,
                 'members': members,
-                'jobs': [{'member': value, 'aliases': [value]} for value in members],
+                'jobs': [{'contract_version': LOCAL_CONTRACT, 'member': value, 'aliases': [value]} for value in members],
                 'member_provenance': [capture_member_provenance(value, self.f.store, self.f.objects)
                                       for value in members],
                 'already_complete': [self.capture] if skipped else [],
@@ -93,7 +95,7 @@ class WorkflowResultTests(unittest.TestCase):
                                      self.f.store, self.f.objects)
         selection_path = workflow_path(self.context).rsplit('/', 1)[0] + '/selection.json'
         body = self.f.objects.read(selection_path)
-        descriptor = {'ref': selection_path, 'sha256': hashlib.sha256(body).hexdigest(),
+        descriptor = {'contract_version': LOCAL_CONTRACT, 'ref': selection_path, 'sha256': hashlib.sha256(body).hexdigest(),
                       'bytes': len(body)}
         members = () if skipped else (MemberResult(
             self.f.value['member_id'], Source.from_mapping(self.f.value['source']),
@@ -107,11 +109,11 @@ class WorkflowResultTests(unittest.TestCase):
         from sec_edgar_ingest.workflows.members import WorkflowMembers
         receipts = []
         if members:
-            evidence = {'format_version': 'sec-workflow-member-evidence-v1', 'member': self.f.value,
+            evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-member-evidence-v1', 'member': self.f.value,
                         'calls': [self.collect_call, self.transform_call, self.publish_call],
                         'completion': self.capture, 'resolutions': [], 'terminal_error': None}
             receipts.append(WorkflowMembers(self.f.store, self.f.objects).record(members[0], self.context, evidence))
-        intent = {'invocation': self.invocation, 'selection': descriptor,
+        intent = {'contract_version': LOCAL_CONTRACT, 'invocation': self.invocation, 'selection': descriptor,
                   'member_receipts': receipts,
                   'child_calls': [self.f.discovery_call] + ([] if skipped else
                                   [self.collect_call, self.transform_call, self.publish_call]),
@@ -120,7 +122,7 @@ class WorkflowResultTests(unittest.TestCase):
                   'discovered_sources': 1, 'unresolved_before': 0}
         return WorkflowResult(FORMAT_VERSION, self.context, intent, self.f.parent_ref,
             ('2026Q3', '2026Q4'), tuple(selection['directories']), members, gaps,
-            None, None, outcome, counts, self.published.ended_at.isoformat())
+            None, None, outcome, counts, self.published.ended_at.isoformat(), contract_version=LOCAL_CONTRACT)
 
     def delete_index(self, kind, key):
         # Test-only isolated corruption. Production has no state deletion API.
@@ -204,7 +206,7 @@ class WorkflowResultTests(unittest.TestCase):
             clock.now.return_value = after
             self.assertEqual(freeze_workflow(self.context, self.invocation, self.f.store, self.f.objects), self.context)
         before = self.f.objects.read(path)
-        changes = {'execution_id': 'other', 'image_digest': 'sha256:' + 'f' * 64,
+        changes = {'execution_id': 'other', 'runtime': {'format_version': 'sec-fixture-runtime-v1', 'kind': 'fixture', 'fixture_sha256': 'f' * 64},
                    'parser_version': 'fixture-index-parser-v2',
                    'deadline': self.context.deadline + timedelta(seconds=1)}
         for field, value in changes.items():
@@ -252,15 +254,15 @@ class WorkflowResultTests(unittest.TestCase):
 
     def test_a_new_selection_cannot_be_frozen_in_the_legacy_v1_format(self):
         path = workflow_path(self.context).rsplit('/', 1)[0] + '/selection.json'
-        legacy = {**self.selection(), 'format_version': 'sec-workflow-selection-v1'}
+        legacy = {'contract_version': LOCAL_CONTRACT, **self.selection(), 'format_version': 'sec-workflow-selection-v1'}
         del legacy['superseded']
         with self.assertRaisesRegex(Conflict, 'new selection must use the current format'):
             freeze_selection(self.context, legacy, self.f.store, self.f.objects)
         with self.assertRaises(FileNotFoundError):
             self.f.objects.read(path)
         frozen = freeze_selection(self.context, self.selection(), self.f.store, self.f.objects)
-        self.assertEqual(frozen['format_version'], 'sec-workflow-selection-v2')
-        self.assertEqual(parse_json(self.f.objects.read(path))['format_version'], 'sec-workflow-selection-v2')
+        self.assertEqual(frozen['format_version'], 'sec-local-workflow-selection-v1')
+        self.assertEqual(parse_json(self.f.objects.read(path))['format_version'], 'sec-local-workflow-selection-v1')
 
     def test_fatal_discovery_without_result_preserves_frozen_prior_jobs(self):
         dispatcher = Dispatcher(self.context, self.f.settings, self.f.pack,
@@ -280,21 +282,21 @@ class WorkflowResultTests(unittest.TestCase):
         freeze_selection(self.context, selection, self.f.store, self.f.objects)
         path = workflow_path(self.context).rsplit('/', 1)[0] + '/selection.json'
         body = self.f.objects.read(path)
-        descriptor = {'ref': path, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)}
+        descriptor = {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)}
         member = MemberResult(self.f.value['member_id'], self.f.source, self.f.value['parent_ref'],
                               None, None, (), 'pending', False, False, False, (),
                               (Error('workflow_deferred', 'halt/deadline left source undispatched', True,
                                      self.f.source.source_id, {}),), self.context.parser_version, self.context.schema_version)
         gaps = tuple(Error.from_mapping(value) for value in selection['gaps']) + member.gaps
         outcome, counts = summarize((member,), gaps, 0, 1, 'backfill', ())
-        intent = {'invocation': self.invocation, 'selection': descriptor,
+        intent = {'contract_version': LOCAL_CONTRACT, 'invocation': self.invocation, 'selection': descriptor,
                   'member_receipts': [None],
                   'child_calls': [failed.exception.call], 'completion_captures': [],
                   'repair_resolutions': [], 'already_complete_sources': [],
                   'discovered_sources': 0, 'unresolved_before': 1}
         result = WorkflowResult(FORMAT_VERSION, self.context, intent, None,
             ('2026Q3', '2026Q4'), (), (member,), gaps, None, None,
-            outcome, counts, self.published.ended_at.isoformat())
+            outcome, counts, self.published.ended_at.isoformat(), contract_version=LOCAL_CONTRACT)
         result_path = write_workflow_result(result, self.f.store, self.f.objects)
         self.assertEqual(read_workflow_result(result_path, self.f.store, self.f.objects), result)
         self.assertEqual(result.outcome, 'ownership_lost')
@@ -313,10 +315,10 @@ class WorkflowResultTests(unittest.TestCase):
             try:
                 now = datetime.now(timezone.utc)
                 context = RunContext('empty-parent-workflow', 'empty-parent-execution', 'backfill', 'empty-parent-attempt',
-                    h.settings.worker.image_digest, h.settings.etl.parser_version, h.settings.etl.schema_version,
-                    h.settings.config_sha256, now, now + timedelta(seconds=1800), 'backfill')
+                    h.settings.etl.parser_version, h.settings.etl.schema_version,
+                    h.settings.config_sha256, now, now + timedelta(seconds=1800), 'backfill', runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
                 context = pin_context(h.settings, context, date(2026, 10, 7))[0]
-                invocation = {'command': 'backfill', 'today': '2026-10-07',
+                invocation = {'contract_version': LOCAL_CONTRACT, 'command': 'backfill', 'today': '2026-10-07',
                               'fixture_sha256': hashlib.sha256(h.pack.read_bytes()).hexdigest(),
                               'pinned_end_quarter': '2026Q4'}
                 context = freeze_workflow(context, invocation, h.store, h.objects)
@@ -332,7 +334,7 @@ class WorkflowResultTests(unittest.TestCase):
                 gaps = [Error('baseline_source_missing', 'valid empty listing leaves baseline source unresolved',
                               True, None, {'quarter': quarter}).to_mapping()
                         for quarter in ('2026Q3', '2026Q4')]
-                selection = {'format_version': 'sec-workflow-selection-v2', 'context': context.to_mapping(),
+                selection = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-selection-v1', 'context': context.to_mapping(),
                     'invocation': invocation, 'members': [], 'jobs': [], 'member_provenance': [],
                     'already_complete': [], 'superseded': [], 'discovery_call': child.call, 'discovery_error': None,
                     'parent_ref': child.result.source_workset_ref, 'parent_provenance': proof,
@@ -396,7 +398,7 @@ class WorkflowResultTests(unittest.TestCase):
             with self.assertRaises(ChildUnfinished) as failed:
                 dispatcher.execute('discover', 'begun-fatal-discovery', self.f.settings,
                     ('--mode', 'quarterly', '--discovery-id', 'begun-fatal-session'))
-        session = AcquisitionState(self.f.store).discovery_session('begun-fatal-session').to_mapping()['value']
+        session = {'contract_version': LOCAL_CONTRACT, **AcquisitionState(self.f.store).discovery_session('begun-fatal-session').to_mapping()['value']}
         self.assertTrue(session['registered'])
         self.assertIsNone(session['workset_id'])
         self.assertTrue(session['frozen']['units'])
@@ -409,8 +411,11 @@ class WorkflowResultTests(unittest.TestCase):
             gaps=[error.to_mapping()] + [gap.to_mapping() for gap in failed.exception.gaps],
             discovered_sources=0, unresolved_before=1)
         omitted_both = {**selection, 'discovery_session': None, 'required_units': []}
+        from test_workflow_selection_v1 import snapshot
+        before_refusal = snapshot(self.f.store, self.f.objects)
         with self.assertRaises(Conflict):
             freeze_selection(self.context, omitted_both, self.f.store, self.f.objects)
+        self.assertEqual(snapshot(self.f.store, self.f.objects), before_refusal)
         frozen = freeze_selection(self.context, selection, self.f.store, self.f.objects)
         self.assertEqual(frozen['required_units'], session['frozen']['units'])
         self.assertIsNone(frozen['parent_ref'])
@@ -436,7 +441,7 @@ class WorkflowResultTests(unittest.TestCase):
             parser_version=settings.etl.parser_version, config_sha256=settings.config_sha256,
             effective_config={}, pinned_on=None), self.context.pinned_on)[0]
         pack = simple_pack(self.f.root.parent / 'v2-empty-pack', empty=True)
-        invocation = {'command': 'backfill', 'today': self.context.pinned_on.isoformat(),
+        invocation = {'contract_version': LOCAL_CONTRACT, 'command': 'backfill', 'today': self.context.pinned_on.isoformat(),
                       'fixture_sha256': hashlib.sha256(pack.read_bytes()).hexdigest(),
                       'pinned_end_quarter': '2026Q4'}
         context = freeze_workflow(context, invocation, self.f.store, self.f.objects)
@@ -491,7 +496,7 @@ class WorkflowResultTests(unittest.TestCase):
         frozen = freeze_selection(self.context, selection, self.f.store, self.f.objects)
         self.assertEqual(frozen, selection)
         descriptor = self.f.store.get('WorkflowAttempt', workflow_key(self.context)).to_mapping()['value']['selection_ref']
-        self.assertEqual(set(descriptor), {'ref', 'sha256', 'bytes'})
+        self.assertEqual(set(descriptor), {'contract_version', 'ref', 'sha256', 'bytes'})
         with self.assertRaises(Conflict):
             freeze_selection(self.context, {**selection, 'unresolved_before': 1}, self.f.store, self.f.objects)
 
@@ -523,11 +528,11 @@ class WorkflowResultTests(unittest.TestCase):
         gaps = tuple(Error.from_mapping(value) for value in selection['gaps']) + processed.result.gaps
         outcome, counts = summarize((processed.result,), gaps, 1, 0, context.command, ())
         evidence = to_mapping_value(processed.evidence)
-        intent = {'invocation': self.invocation, 'selection': {'ref': path, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)},
+        intent = {'contract_version': LOCAL_CONTRACT, 'invocation': self.invocation, 'selection': {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)},
             'member_receipts': [receipt], 'child_calls': evidence['calls'], 'completion_captures': [],
             'repair_resolutions': [], 'already_complete_sources': [], 'discovered_sources': 1, 'unresolved_before': 0}
         report = WorkflowResult(FORMAT_VERSION, context, intent, None, ('2026Q3', '2026Q4'), (),
-            (processed.result,), gaps, None, None, outcome, counts, self.published.ended_at.isoformat())
+            (processed.result,), gaps, None, None, outcome, counts, self.published.ended_at.isoformat(), contract_version=LOCAL_CONTRACT)
         result_ref = write_workflow_result(report, self.f.store, self.f.objects)
         self.delete_index('WorkflowAttempt', workflow_key(context))
         self.assertEqual(read_workflow_result(result_ref, self.f.store, self.f.objects), report)
@@ -562,13 +567,13 @@ class WorkflowResultTests(unittest.TestCase):
         body = self.f.objects.read(path)
         gaps = (self.baseline_gap,) + processed.result.gaps
         outcome, counts = summarize((processed.result,), gaps, 1, 0, self.context.command, ())
-        intent = {'invocation': self.invocation, 'selection': {'ref': path, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)},
+        intent = {'contract_version': LOCAL_CONTRACT, 'invocation': self.invocation, 'selection': {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)},
             'member_receipts': [receipt], 'child_calls': [self.f.discovery_call] + evidence['calls'],
             'completion_captures': [evidence['completion']], 'repair_resolutions': evidence['resolutions'],
             'already_complete_sources': [], 'discovered_sources': 1, 'unresolved_before': 0}
         report = WorkflowResult(FORMAT_VERSION, self.context, intent, self.f.parent_ref,
             ('2026Q3', '2026Q4'), tuple(selection['directories']), (processed.result,), gaps,
-            None, None, outcome, counts, self.published.ended_at.isoformat())
+            None, None, outcome, counts, self.published.ended_at.isoformat(), contract_version=LOCAL_CONTRACT)
         result_ref = write_workflow_result(report, self.f.store, self.f.objects)
         self.delete_index('WorkflowAttempt', workflow_key(self.context))
         for row in tuple(self.f.store.scan('WorkflowRepairObligation', {})):
@@ -616,11 +621,11 @@ class WorkflowResultTests(unittest.TestCase):
         receipt_ref = workflow_path(context).rsplit('/', 1)[0] + '/members/' + original.members[0].member_id + '/result.json'
         body = canonical_json(receipt)
         self.f.objects.put_once(receipt_ref, body)
-        descriptor = {**old_descriptor, 'ref': receipt_ref, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)}
+        descriptor = {'contract_version': LOCAL_CONTRACT, **old_descriptor, 'ref': receipt_ref, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body)}
         selection_ref = workflow_path(context).rsplit('/', 1)[0] + '/selection.json'
         selection_body = self.f.objects.read(selection_ref)
         intent = original.to_mapping()['intent']
-        intent.update(selection={'ref': selection_ref, 'sha256': hashlib.sha256(selection_body).hexdigest(), 'bytes': len(selection_body)},
+        intent.update(selection={'contract_version': LOCAL_CONTRACT, 'ref': selection_ref, 'sha256': hashlib.sha256(selection_body).hexdigest(), 'bytes': len(selection_body)},
             member_receipts=[descriptor], child_calls=receipt['evidence']['calls'], discovered_sources=0)
         gaps = tuple(Error.from_mapping(value) for value in selection['gaps'])
         outcome, counts = summarize(original.members, gaps, 0, 0, context.command, ())

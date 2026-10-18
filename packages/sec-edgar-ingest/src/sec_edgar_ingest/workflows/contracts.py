@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from ..etl.commands import validate_workset_ref
@@ -18,7 +18,15 @@ from ..results import exit_code
 COMPLETE = frozenset(('success', 'unchanged', 'no_new_sources'))
 PENDING = frozenset(('pending', 'deferred', 'throttled', 'awaiting_approval'))
 FATAL = ('access_blocked', 'ownership_lost', 'state_conflict', 'internal_error')
-FORMAT_VERSION = 'sec-workflow-result-v1'
+LOCAL_CONTRACT = 'sec-local-contract-v1'
+
+
+def require_contract(value: Mapping[str, object]) -> None:
+    if value.get('contract_version') != LOCAL_CONTRACT:
+        raise ValueError('unsupported local workflow contract')
+
+
+FORMAT_VERSION = 'sec-local-workflow-result-v1'
 WORKFLOW_COMMANDS = ('backfill', 'daily', 'reconcile')
 WORKFLOW_PRIORITY = {'backfill': 'backfill', 'daily': 'daily', 'reconcile': 'reconciliation'}
 SUPPORTED_PARSERS = frozenset((
@@ -86,6 +94,7 @@ class MemberResult(Record):
 
 @dataclass(frozen=True, slots=True)
 class WorkflowResult(Record):
+    contract_version: str = field(kw_only=True)
     format_version: str
     context: RunContext
     intent: Mapping[str, object]
@@ -102,6 +111,8 @@ class WorkflowResult(Record):
 
     def __post_init__(self):
         validate_record_fields(self)
+        require_contract(self.to_mapping())
+        require_contract(self.intent)
         if self.format_version != FORMAT_VERSION:
             raise ValueError('unsupported workflow result version')
         workflow_path(self.context)

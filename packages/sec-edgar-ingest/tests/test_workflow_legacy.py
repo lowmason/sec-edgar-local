@@ -1,3 +1,4 @@
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
 from network_guard import install
 install()
 from sec_edgar_ingest.models import to_mapping_value
@@ -220,7 +221,7 @@ class LegacyTests(unittest.TestCase):
                         path = 'worksets/sec/workflow-parent-recovery/sha256=' + digest + '/recovery.json'
                         h.objects.put_once(path, body)
                         with self.assertRaises((Conflict, ValueError, OSError, KeyError)):
-                            validate_parent_recovery(ref, {'ref': path, 'sha256': digest, 'bytes': len(body)}, h.objects)
+                            validate_parent_recovery(ref, {'contract_version': LOCAL_CONTRACT, 'ref': path, 'sha256': digest, 'bytes': len(body)}, h.objects)
                 for altered in ({**descriptor, 'ref': descriptor['ref'] + '.other'},
                                 {**descriptor, 'sha256': '0' * 64},
                                 {**descriptor, 'bytes': descriptor['bytes'] + 1}):

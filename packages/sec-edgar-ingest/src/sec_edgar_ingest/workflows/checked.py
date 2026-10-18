@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .contracts import LOCAL_CONTRACT, require_contract
 
 import argparse
 import hashlib
@@ -45,6 +46,7 @@ class CheckedChild(Record):
 
 
 class ChildCall(TypedDict):
+    contract_version: str
     format_version: str
     workflow_command: str
     workflow_attempt_id: str
@@ -72,7 +74,7 @@ def child_attempt_id(run_id, workflow_command, workflow_attempt_id, step_id, com
     if workflow_command not in WORKFLOW_COMMANDS or command not in CHILD_COMMANDS:
         raise ValueError('unsupported workflow/child command')
     return 'wf-' + hashlib.sha256(canonical_json(
-        to_mapping_value([run_id, workflow_command, workflow_attempt_id, step_id, command]))).hexdigest()[:40]
+        to_mapping_value([LOCAL_CONTRACT, run_id, workflow_command, workflow_attempt_id, step_id, command]))).hexdigest()[:40]
 
 
 def make_call(context, command, attempt_id, input_ref, fixture_sha256=None, *,
@@ -117,7 +119,7 @@ def make_call(context, command, attempt_id, input_ref, fixture_sha256=None, *,
             'workset': input_ref if command == 'collect' else None}
     if settings.acquisition.mode == 'live' and today is not None:
         raise ValueError('live acquisition cannot carry date override')
-    return {'format_version': 'sec-workflow-child-call-v1', 'workflow_command': workflow_command,
+    return {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-child-call-v1', 'workflow_command': workflow_command,
         'workflow_attempt_id': workflow_attempt_id, 'step_id': step_id,
         'context': child.to_mapping(), 'intent': intent, 'input_ref': input_ref,
         'result_ref': result_path(child)}
@@ -126,6 +128,7 @@ def make_call(context, command, attempt_id, input_ref, fixture_sha256=None, *,
 def _validated(call):
     if not isinstance(call, Mapping) or set(call) != CALL_FIELDS:
         raise Conflict('child call must have its exact versioned fields')
+    require_contract(call)
     value = parse_json(canonical_json(to_mapping_value(call)))
     context = RunContext.from_mapping(value['context'])
     intent = value['intent']
@@ -160,7 +163,7 @@ def call_ref(call):
 
 def call_key(call):
     value, context = _validated(call)
-    return hashlib.sha256(canonical_json(to_mapping_value([context.run_id, value['workflow_command'],
+    return hashlib.sha256(canonical_json(to_mapping_value([LOCAL_CONTRACT, context.run_id, value['workflow_command'],
         value['workflow_attempt_id'], context.attempt_id]))).hexdigest()
 
 
@@ -363,7 +366,7 @@ class ChildUnfinished(RuntimeError):
         self.repair_pending = any(gap.retryable and gap.details.get('type') == 'PublicationRepairPending'
                                   for gap in gaps)
         self.resumable = self.repair_pending or call['context']['command'] == 'publish'
-        self.details = {'call': to_mapping_value(call), 'outcome': outcome, 'exit': code, 'stdout': stdout,
+        self.details = {'contract_version': LOCAL_CONTRACT, 'call': to_mapping_value(call), 'outcome': outcome, 'exit': code, 'stdout': stdout,
                         'stderr': stderr, 'gaps': [gap.to_mapping() for gap in gaps],
                         'repair_pending': self.repair_pending, 'resumable': self.resumable}
 
