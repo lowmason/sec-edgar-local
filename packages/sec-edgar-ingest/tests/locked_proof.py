@@ -182,3 +182,19 @@ def package_inventory(source_root):
     return {path.relative_to(source_root).as_posix(): digest(path)
         for path in sorted(package.rglob('*'))
         if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc'}
+
+
+def assert_release_inventory(verified):
+    """Independently compare a real installation with the full accepted lock graph."""
+    import subprocess
+    identity = verified.manifest['identity']
+    expected = locked_requirements((verified.directory / 'uv.lock').read_bytes(),
+        (verified.directory / 'runtime-requirements.txt').read_text(), marker_environment())
+    code = ('import importlib.metadata as m,json,re; '
+            'print(json.dumps({re.sub(r"[-_.]+","-",d.metadata["Name"]).lower():d.version '
+            'for d in m.distributions()}))')
+    result = subprocess.run([str(verified.python), '-I', '-c', code], check=True, capture_output=True, text=True)
+    assert_inventory(expected, json.loads(result.stdout), identity['application']['version'])
+    declared = {item['name']: item['version'] for item in identity['dependencies']}
+    if declared != expected:
+        raise ValueError('release artifact inventory differs from full transitive lock graph')

@@ -171,3 +171,80 @@ done
 Initial RED: local10 tests/failures9 (four old format values, old observation acceptance, missing explicit producer APIs); contracts11/errors1 (independent local-format workset hash mismatch against old constant); transform21 and catalog31 already OK after preserving/migrating runtime oracles. Expanded local native-cache tests then RED12/failures11 in0.413s, still intentional contract/API failures. The shell loop returns the last command's status; earlier per-file failures establish RED. Final required GREEN: local12/0.536s; contracts11/0.032s; transform21/2.380s; catalog31/30.740s, all OK (75 tests). Additional same guarded invocations: owned ETL CLI42/6.764s and runtime23/0.006s, all OK (140 tests total). CLI fixture migration removes its old `--state-dir` arguments and worker-image mutations, uses the local result version, and archives actual-root source-workset contexts; production CLI needed no change. `git diff --check` passes.
 
 Self-review checked the scoped production/test diff, strict shape/canonical/hash/address validation, historical producer read-only behavior, validation-before-retention, immutable repeat/collision handling and actual native cache/generation behavior. Clean-code N1/N4, G30, F2, T1/T5/T6 and C3 applied within scope. No source repository mutation, HTTP, dependency/backend/lock change, release install or broad cleanup. Tools remain uv0.13.1 and CPython3.14.0. Full commands/output, no-op file rationale, self-review and limits are in `.sdd/1-sec-edgar-local-spec/task-5-report.md`. Independent review remains; Task6 workflow markers, Task7 installed preflight, Task8 retention hook, full-suite Milestone3, genuine SEC L12 and historical T1-M1 are not claimed complete.
+
+
+## Task 7 - immutable native release setup and installed preflight (review pending)
+
+Base `62f0701507011600499299ca90e9e127c406c8e4`, branch `codex/local-design`. Explicit `release.prepare_artifact_cache`, `build_release`, and `reconstruct_release` now separate network setup from read-only runtime verification. `runtime.preflight` validates portable artifacts and installed bytes, then runs the referenced Python with `-I` and a sanitized offline/no-download environment. `preflight_current` also requires the executing prefix, executable, actual imported module version/origin, exact distribution inventory, and full interpreter identity to match. The frozen `VerifiedRelease` carries the manifest, release ID, final directory and Python address. Historical `validate_producer` remains manifest-only and independent of current application/interpreter versions; the 12 local ETL producer/cache tests remain green.
+
+The builder refuses tracked, staged, untracked and uncommitted source changes, checks the existing local lock offline, and builds/exports in an external temporary setup directory. It validates the original wheel basename, distribution/version/filename-vs-WHEEL tags, duplicate/escaping ZIP members, and sorted full package bytes including `py.typed` and resources. The identity includes the application wheel, committed source revision, payload, lock, every selected transitive runtime wheel, and CPython implementation/full patch/cache/platform identity. Installation paths, mtimes, setup logs and build tools are outside that identity. The release directory is created exclusively; complete matching installations are verified and reused without installing, and partial/conflicting installations are refused without overwrite or cleanup. Failed installation attempts retain evidence and receive no usable receipt.
+
+Installation executes the three specified argv operations: `uv venv --python PYTHON FINAL/venv`; offline/no-index/find-links/require-hashes external requirements installation; and offline/no-deps application-wheel installation under its retained valid basename. All retained artifact hashes are rechecked before installation, and the app wheel is independently rehashed after dependency installation. The isolated self-check must succeed before `installation.json` is written. Reconstruction reads retained identity/artifacts independently of the old executable and creates a fresh venv directly at its new final address, preserving release identity and valid launcher paths. It never moves an existing venv.
+
+### Contract-family reader/writer/hash/equality inventory
+
+This closes the Tasks 2-7 implementation inventory; prior scoped gate evidence above remains the evidence for earlier families. Task 7 adds installed execution checks without making old producers depend on old executable availability.
+
+| Family | Writer/reader | Hash and equality boundaries | Evidence |
+| --- | --- | --- | --- |
+| Runtime fixture/native descriptor | `fixture_descriptor` / `native_descriptor` / `validate_descriptor` | canonical fixture identity, strict variant fields and hashes | `test_runtime.py` 23 tests |
+| Native manifest and retained producer | `build_release`, `retain_manifest` / `validate_manifest`, `validate_producer`, `retained_release` | canonical release digest; exact saved producer address; historical app versions independent of current | runtime23; local ETL12; release/preflight tests |
+| Config and durable store binding | `Settings`, config normalization, `deployment_binding` / strict config and local-store open | effective config hash vs original input hash; exact normalized root/mode/issuer/policy/storage binding; no release/parser/range/ID coupling | Task3 config/storage/operator gates above |
+| Run context, acquisition worksets and command results | strict models, workset/result writers and readers | independent local formats; exact runtime/context/attempt/result/workset hash/equality checks | Task4 acquisition/worksets/config gates above |
+| Observation, transformed workset, generation and ETL result | Task5 strict codecs/writers/readers | independent local formats and canonical hashes; unchanged processing/fingerprint/generation identity; original producer preserved during cache/no-op reuse | Task5 gates above; local ETL12 rerun after Task7 |
+| Workflow and child/completion/process evidence (all 34 inventoried families) | exact per-family readers/writers in `contract-inventory.json` | exact per-family hash/equality sites in that inventory; independent local contract marker | Task6 scoped review/gates; inventory unchanged by Task7 |
+| Runtime artifact cache and external requirements | explicit `prepare_artifact_cache` / `_cache_inventory`, `verify_requirements` | lock/interpreter identity; sorted declared role/name/URL/hash inventory; exact complete applicable lock graph and exported hashes | release20 and preflight11 |
+| Native installed execution and receipt | `_install` after isolated self-verification / `preflight`, `preflight_current` | retained wheel/lock/payload hashes; exact installed distribution set; noneditable origin inside resolved release venv; full interpreter identity; directory/receipt agreement | release20 and preflight11 |
+
+Production-source audit `image_digest|IMAGE_PATTERN|settings\.worker|settings\.jobs|settings\.orchestration` has no matches. No image alias, cloud dependency/fallback, parser/schema change, SEC request, old-store import or automatic release cleanup was added. Existing approval/activation/rollback shapes remain unchanged.
+
+### Explicit setup inventory and backend warning resolution
+
+`releases/artifact-cache/artifacts.json` was prepared explicitly with public PyPI network access after a sandbox DNS refusal; no SEC access or Python download occurred. It records `sec-native-artifact-cache-v1`, the lock hash and full interpreter identity, and seven path-sorted declared artifacts (six runtime, one build). Every downloaded/cached wheel was SHA-256 checked, and the separate `uv-build` cache was populated from the verified build wheel. Later tests ran with `UV_OFFLINE=1`, `UV_PYTHON_DOWNLOADS=never` and `network_guard`; an absent cache is an explicit setup error.
+
+Lock SHA-256: `e3d3dac9971ed75bdc5864ebd8c422c2e34bd24236a9a77bbadb6a87cddf1bbb`. Interpreter: `{"cache_tag": "cpython-314", "implementation": "cpython", "platform_tag": "macosx_26_6_arm64", "version": "3.14.0"}`. Tools: `uv 0.13.1 (Homebrew 2026-10-14 aarch64-apple-darwin)`, CPython `3.14.0`, backend `uv_build 0.12.24`. Existing Requests `2.34.2`, PyArrow `25.0.1`, the complete locked graph and required `uv_build>=0.12.15,<0.13.0` metadata are unchanged; `uv lock --check --offline` succeeds. No dependency upgrade or new lock resolution was needed.
+
+| Role | Retained artifact | SHA-256 |
+| --- | --- | --- |
+| build | `uv_build-0.12.24-py3-none-macosx_11_0_arm64.whl` | `7a0f45941530c468e9b354e6f0f8e83668b6960a331bf3c311d7232ac33888ea` |
+| runtime | `certifi-2026.7.22-py3-none-any.whl` | `62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775` |
+| runtime | `charset_normalizer-3.5.2-cp314-cp314-macosx_10_15_universal2.whl` | `fcff63213e8e6e47770541a4607175404f47cbb3ebea7b6058cc82d524a0e424` |
+| runtime | `idna-3.20-py3-none-any.whl` | `ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c` |
+| runtime | `pyarrow-25.0.1-cp314-cp314-macosx_12_0_arm64.whl` | `bf0b672390cdcb640d7288f96b826d71ff4e9abb254a86c89890baf51a29cee6` |
+| runtime | `requests-2.34.2-py3-none-any.whl` | `2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0` |
+| runtime | `urllib3-2.8.0-py3-none-any.whl` | `0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3` |
+
+Historical Minor T1-M1 is resolved for this explicit native release path. `uv build --offline --package sec-edgar-ingest --wheel --sdist` is retained with `--force-pep517`, `--python`, an external `--out-dir`, `--no-create-gitignore`, `--no-index --find-links CACHE/build`, and SHA-256-constrained `uv_build==0.12.24` via `--build-constraints --require-build-hashes`. `--preview-features build-dependency-hashes` explicitly enables uv0.13.1's named hash-checking feature and removes its experimental-feature warning. Captured A/B build logs contain neither the incompatible native-fast-path warning nor any other warning; no backend range was relaxed or backend silently upgraded. `setup.json` records actual argv/tool/backend/interpreter/build output separately from runtime identity.
+
+### Genuine offline proof environments and verification
+
+`tests.support_release.proof_releases(project, cache)` exports tracked and untracked nonignored implementation/metadata into an independent temporary Git repository, excluding stores/caches/evidence. It commits A, builds A at its final location, adds/commits only a harmless included resource for B, and builds B there. Both have real installed wheels/dependencies and independently checked full lock inventory. The factory caches its result per session/snapshot and can instead validate an explicit real proof catalog. Temporary proof repositories/environments are test support and are cleaned when that test session exits; this is not the accepted fork release or Task14's fresh acceptance build.
+
+Actual final proof capture (complete manifests, isolated installed evidence and build/tool logs are in `.sdd/1-sec-edgar-local-spec/task-7-proof-evidence.json`):
+
+| Proof | Actual temporary Git revision | Release ID | Module/distribution |
+| --- | --- | --- | --- |
+| A | `0c9e0e411ebe7000210766f38d26a2ea20eef82f` | `8bdf0c73f887df97ecbd50440297efcfca541adfc5b8f558a629e4abf2fb8d37` | `0.2.0` / `0.2.0` |
+| B | `59fbdbe3fc3ba6ebd986c1cf2dc4d1ef56554131` | `ef4988f9c6930cd00e86e08f854e6597bfb4b7c9b5d07d5cfa0a4c96d3d61529` | `0.2.0` / `0.2.0` |
+
+The actual A/B dependency inventories are exactly certifi 2026.7.22, charset-normalizer 3.5.2, idna 3.20, pyarrow 25.0.1, requests 2.34.2 and urllib3 2.8.0 plus sec-edgar-ingest 0.2.0. The build backend is absent from runtime inventory. B contains `sec_edgar_ingest/proof_resource.txt`; parser and schema remain unchanged. Rebuilding the same committed snapshot after changing source mtime and installation path produces the same identity; reconstruction also preserves identity while creating a new final venv/prefix/launcher.
+
+Initial focused RED before production implementation: release9/failures9 (`Task 7 release builder absent` or `Task 7 requires explicit immutable release setup`), preflight7/failures7 (`Task 7 requires read-only native installed preflight`); runtime23 already green. Additional clean REDs caught filename-vs-WHEEL tag mismatch, escaped installed-origin containment, module/distribution version mismatch, and the uv experimental warning; all were corrected and rerun. One oracle correction changed a launcher-path assertion to inspect uv's long-path shell trampoline rather than assuming a direct short Python shebang.
+
+Final required guarded gate, after all production changes:
+
+```sh
+export UV_CACHE_DIR=/private/tmp/sec-edgar-local-uv-cache
+export UV_PYTHON_DOWNLOADS=never
+export UV_OFFLINE=1
+set -e
+for test_file in test_runtime.py test_release.py test_runtime_preflight.py; do
+  uv run --offline --locked --package sec-edgar-ingest python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests -p "$test_file" -v
+done
+```
+
+Exit0, runtime23/0.011s; release20/8.596s; preflight11/3.593s; all OK, no skips or warnings (54 tests). Complete output: `.sdd/1-sec-edgar-local-spec/task-7-focused-green.log`. Additional historical local ETL12/0.630s is green. ZIP fixtures, subprocess boundaries, actual clean/stale committed source, actual installed inventory/tampering, exact install argv, failure evidence retention, offline cache integrity and cross-location reconstruction are all covered. `git diff --check` passes.
+
+The full guarded default suite was attempted once and interrupted with SIGINT/exit130 after concrete unrelated later-owned failures and sandbox loopback refusal were established; it is not green or complete. `.sdd/1-sec-edgar-local-spec/task-7-full-suite.log` preserves that incomplete run. Isolated later-owned examples: approval activation fails on removed `open_stores(base_path=...)`; Azure coordination case imports absent `azure`. Those tests were not changed or skipped, and no unrelated loopback permission escalation occurred. Task7 scoped checks are green; independent review, Task8 integration, Task14 clean release proof and genuine SEC L12 remain separate gates.
+
+Self-review covered the complete scoped source/test diff and each brief acceptance item. Applied clean-code N1/N4/N7 (effectful setup vs read-only verification names), G30/G34 (cohesive artifact/build/install/verify stages), G19 (explicit identity/inventory variables), G25 (named build/cache constants), F2 (returned validated records), C3 (portable-evidence and isolated-probe intent), and T1/T5/T6 (tamper, partial-install, version/origin, lock and relocation boundaries). No adjacent cleanup was applied. Runtime remains the specified descriptor/manifest/preflight boundary; no unplanned module split was introduced.
