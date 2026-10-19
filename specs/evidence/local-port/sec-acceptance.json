@@ -7327,13 +7327,19 @@
       "sha256": "e3d3dac9971ed75bdc5864ebd8c422c2e34bd24236a9a77bbadb6a87cddf1bbb"
     },
     {
+      "baseline_revision": "3c40471ac99df091b7660380f6d7ad98e9849ebb",
       "byte_count": 41564,
-      "path": "/Users/lowell/Projects/sec-edgar-local/specs/sec-edgar-local-spec.md",
+      "original_path": "/Users/lowell/Projects/sec-edgar-local/specs/sec-edgar-local-spec.md",
+      "path": "/Users/lowell/Projects/sec-edgar-local/specs/evidence/local-port/approved-inputs/sec-edgar-local-spec.md",
+      "retired_path": "/Users/lowell/Projects/sec-edgar-local/specs/completed/sec-edgar-local-spec.md",
       "sha256": "052e38a4062714b4f8a1ab601fef3d64be1604c1b675d8b621f975ab2e07c7da"
     },
     {
+      "baseline_revision": "3c40471ac99df091b7660380f6d7ad98e9849ebb",
       "byte_count": 139506,
-      "path": "/Users/lowell/Projects/sec-edgar-local/specs/plans/1-sec-edgar-local-spec.md",
+      "original_path": "/Users/lowell/Projects/sec-edgar-local/specs/plans/1-sec-edgar-local-spec.md",
+      "path": "/Users/lowell/Projects/sec-edgar-local/specs/evidence/local-port/approved-inputs/1-sec-edgar-local-spec.md",
+      "retired_path": "/Users/lowell/Projects/sec-edgar-local/specs/plans/completed/1-sec-edgar-local-spec.md",
       "sha256": "1c1c320f92640970b710f14beaff662eff686392734a76b75b4731dd571348a6"
     }
   ],
