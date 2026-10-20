@@ -1,6 +1,7 @@
 # SEC filing submissions — Findings
 
 **Status:** Exploration findings, 2026-10-19/20. Nothing here was designed, approved, or implemented.
+§4.5 was corrected and §4.6–4.7 were added on 2026-10-20 after a second check of the extracted feed.
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
 **Related:** [Filing-index ingestion spec](sec-filing-index-ingestion-spec.md),
 [completed local design](completed/sec-edgar-local-spec.md) §5.
@@ -65,8 +66,10 @@ Findings:
 - `archive_path` gives the filing location on sec.gov. No component fetches it.
 - One filing can produce more than one index row (one for each CIK). A join on `accession_number`
   alone counts such filings two times.
-- The specs do not explicitly put filing documents in or out of scope. The source code was not
-  checked for a document-fetch path. No such fetch is visible in the store or the run records.
+- The specs do not explicitly put filing documents in or out of scope. The source code has no
+  document-fetch path. The only use of `archive_path` is in
+  `packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/parser.py`, where a regex extracts the
+  accession from the path. No fetch is visible in the store or the run records.
 
 ## 4. SEC daily feed archive, 2026-10-15
 
@@ -95,11 +98,14 @@ https://www.sec.gov/Archives/edgar/Feed/2026/QTR4/20261015.nc.tar.gz
 - 2,628 entries: 2,627 regular files and the `./` directory. There were no absolute paths, no `..`
   components, and no links.
 - Extracted with `--no-same-owner --no-same-permissions` to `/tmp/sec-filings/20261015/`.
-  Unpacked size: **about 19 GB**, approximately 12× the compressed size.
+  Unpacked size: **20,742,318,080 bytes** (about 20.7 GB, or 19.3 GiB), approximately 13× the
+  compressed size. This is the gzip size field plus 4 × 2^32. It agrees with the disk use of the
+  extracted tree.
 
 ### 4.4 Contents
 
-- There is one file, `<accession>.nc`, for each submission. Each file is SGML: a `<SUBMISSION>`
+- There is one file for each submission. The name is `<accession>.nc`, or `<accession>.corrNN` for
+  the 101 submissions in §4.6. Each file is SGML: a `<SUBMISSION>`
   header (accession, type, document count, filing date, subject company, filer or reporting owner
   with CIK, SIC, addresses) followed by one or more `<DOCUMENT><TEXT>` blocks.
 - Structured forms embed XML. The sample `0001950047-26-010251.nc` (6,530 bytes) is a Form 144. It
@@ -136,37 +142,97 @@ The distinct accessions from the store's 2026-10-15 `master.idx` were compared w
 | Index only | 101 |
 | Feed only | 101 |
 
-The 101 differences are a naming difference only. The feed names them `<accession>.corr01.nc`
-(for example `0000000000-23-009731.corr01.nc`); the index has the bare accession. All 101 have the
-`0000000000-` prefix and accession years 2023–2025. After the `.corrNN` suffix is removed, the two
-sets are identical. The document type of these 101 files was not checked.
+The 101 differences are a naming difference only. The feed names them `<accession>.corr01`, with
+no `.nc` extension (for example `0000000000-23-009731.corr01`). The index has the bare accession.
+After the `.corrNN` suffix is removed, the two sets are identical.
+
+The `<ACCESSION-NUMBER>` field in the header of each of the 2,627 files is equal to the accession in
+its filename, after the `.nc` or `.corrNN` part is removed.
+
+### 4.6 The `.corr` submissions
+
+All 101 `.corr01` files have a `<PRIVATE-TO-PUBLIC>` tag after `<TIMESTAMP>` in the header. None of
+the other 2,526 files has this tag. The tag name and the form types suggest that SEC made these
+submissions public on 2026-10-15, after a period when they were not public. SEC documentation was
+not checked to confirm this.
+
+Only 22 of the 101 accessions start with `0000000000-`. The others have a filer or filing-agent
+prefix (for example `0001193125-`, `0000894189-`, `0001104659-`).
+
+| Accession prefix | Form type (first `<TYPE>`) | Count |
+|---|---|---|
+| `0000000000-` | UPLOAD | 22 |
+| Filer or filing agent | CORRESP | 53 |
+| Filer or filing agent | 485APOS | 22 |
+| Filer or filing agent | DRS | 2 |
+| Filer or filing agent | 486APOS | 1 |
+| Filer or filing agent | 485BPOS | 1 |
+
+The accession years are 2021 (32), 2022 (15), 2023 (6), 2024 (2), 2025 (24), and 2026 (22). For
+each of the 101, the year of the header `<FILING-DATE>` is equal to the accession year.
+
+The index row has the original filing date, not the publication date. For example,
+`0000000000-23-009731` (UPLOAD, VanEck ETF Trust) is in the 2026-10-15 index with filing date
+`20230901`. 100 of the 101 have a filing date before 2026-10-01. The exception is the DRS
+`0001193125-26-414760`, with filing date `20261006`.
+
+### 4.7 Back-dated rows in the daily index
+
+The 2026-10-15 `master.idx` has 3,652 data rows. Grouped by filing date:
+
+| Filing date | Rows |
+|---|---|
+| 2026-10-15 | 3,495 |
+| 2026-10-01 to 2026-10-14 | 23 |
+| Before 2026-10-01 | 134 |
+
+The 134 rows before 2026-10-01 come from 109 accessions. 100 are `.corr` submissions from §4.6.
+The other 9 are `.nc` amendments (`TA-1/A`, `MA/A`, `MA-I/A`, `MA-A`) with filing dates from
+2026-08-27 to 2026-09-30.
+
+The back-dated rows fall in 14 filing quarters: 2021Q1–Q4, 2022Q1–Q2, 2023Q3, 2024Q4, 2025Q1–Q4,
+2026Q1, and 2026Q3. The 2026-10-14 index has rows in 2025Q3, 2025Q4, 2026Q1, 2026Q2, 2026Q3, and
+2026Q4. Together, the two daily indexes cover exactly the 16 curated quarters in §2. The quarters
+that both indexes cover (2025Q3, 2025Q4, 2026Q1, 2026Q3, 2026Q4) are exactly the 5 quarters with
+two generations. This agrees with 21 generations for 16 pointers. Which run published each
+generation was not checked in the run records.
 
 ## 5. Implications for any filing-document design
 
 These are constraints that were observed. They are not decisions.
 
-1. **Key normalization.** To get the accession from a feed filename, remove `.nc` and any `.corrNN`
-   suffix. An unnormalized join loses about 4% of a day's submissions.
-2. **Size.** A day is about 0.7–1.6 GB compressed and about 19 GB unpacked for 2026-10-15. Single
+1. **Key normalization.** To get the accession from a feed filename, remove the `.nc` extension or
+   the `.corrNN` suffix. The two do not occur together. An unnormalized join loses 101 of 2,627
+   submissions (3.8%) for 2026-10-15. The header `<ACCESSION-NUMBER>` field gives the accession
+   without a filename rule.
+2. **Size.** A day is about 0.7–1.6 GB compressed and about 20.7 GB unpacked for 2026-10-15. Single
    files can exceed 350 MB. The current HTTP limits (67,108,864 received bytes, 536,870,912 expanded
-   bytes) are for index files. A daily feed archive exceeds the received-byte limit by about 24×.
-   Any design must choose new limits explicitly, or select documents per filing instead of by day.
+   bytes) are for index files. A daily feed archive exceeds the received-byte limit by about 24× and
+   the expanded-byte limit by about 39×. Any design must choose new limits explicitly, or select
+   documents per filing instead of by day.
 3. **Streaming.** Full extraction is wasteful. A reader can stream tar members and filter by form
    type or accession before it writes.
-4. **Granularity.** One document per accession, but possibly more than one index row per
-   accession (one per CIK). Curated filing-document data needs a clear key and a clear relation to
+4. **Granularity.** One feed file per accession, but possibly more than one index row per
+   accession (one per CIK). One feed file can hold more than one `<DOCUMENT>`. Curated filing-document data needs a clear key and a clear relation to
    the `filing_index` rows.
 5. **Untrusted input.** Treat archives as untrusted. Check member paths and types before extraction
    (this session found no problems).
 6. **Policy.** Feed downloads use the same SEC User-Agent and rate budget (3 requests/second, one
    active collector) as index collection.
+7. **Back-dated rows.** A daily index or feed can contain submissions with filing dates in old
+   quarters (§4.7). Data partitioned by filing date gets changes to old partitions from each daily
+   run. The publication date (the feed or index day) and the filing date are different values.
 
 ## 6. Open questions
 
 - Should the pipeline ingest filing documents? If yes, should it use daily feed archives or fetch
   individual `archive_path` URLs?
 - Which form types are in scope?
-- What are the document types and semantics of the `0000000000-…​.corrNN` submissions?
+- Does SEC documentation confirm the meaning of `<PRIVATE-TO-PUBLIC>` and `.corrNN` (§4.6)? Can
+  `NN` be greater than `01`?
+- How can a user tell back-dated rows (§4.7) from rows filed on the index day? Curated rows carry
+  `source_id`, which is a hash (for example `cd8ecb90…` on 2021Q1 rows), not a date. Does the store
+  map `source_id` to the index day, or should `filing_index` have a publication-day column?
 - Is the feed/index match in §4.5 true on other days? Only 2026-10-15 was checked.
 - How should the 2024Q1 quarterly quarantine (`conflicting duplicate logical key`, line 88043) be
   resolved? It is separate from filing documents, but it was observed in the same session.
@@ -182,6 +248,14 @@ tar -tvzf /tmp/sec-filings/20261015.nc.tar.gz | cut -c1 | sort | uniq -c   # ent
 mkdir -p /tmp/sec-filings/20261015
 tar -xzf /tmp/sec-filings/20261015.nc.tar.gz -C /tmp/sec-filings/20261015 \
   --no-same-owner --no-same-permissions
+```
+
+The §4.6 checks read the start of each `.corr01` file (run in `/tmp/sec-filings/20261015/`):
+
+```sh
+for f in *.corr01; do head -c 300 "$f" | grep -c PRIVATE-TO-PUBLIC; done | sort | uniq -c
+for f in *.corr01; do head -c 300 "$f" | grep -m1 -o '<TYPE>[^<]*'; done | sort | uniq -c
+ls *.corr01 | cut -c1-11 | sort | uniq -c   # accession prefixes
 ```
 
 The extracted tree in `/tmp/sec-filings/` is temporary. Delete it when inspection is done.
