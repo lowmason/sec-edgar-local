@@ -85,7 +85,7 @@ $$
 
 where $\mathrm{Tomb}_q(\vec{g})$ holds a tombstone for each submission dated in $q$ every one of
 whose rows the catalog withdrew between the previously pinned vector and $\vec{g}$. The pointer
-$\Pi^{\mathcal{P}}_q$ moves only by conditional replace on its version; a lost replace re-reads,
+$\Pi^{\mathrm{plat}}_q$ moves only by conditional replace on its version; a lost replace re-reads,
 merges and retries at most $n_{\mathrm{pub}}$ times. Readers derive every time-dependent view
 from the stored rows, never from the publication order:
 
@@ -153,9 +153,13 @@ retained bytes and stored rows only.
 Subscripts are dropped when the submission is clear from context. A superscript $+$ marks a
 value after one update. Symbols of the catalog spec keep their meaning here: $c$, $p$, $n$,
 $f$, $d$, $a$, $k$, $H$, $Q$, $A_q$, $g_q$, $\Pi_q$, $\Delta_q$, $\mathcal{X}_q$, $t^\star$,
-$q^\star$, $r$, $\epsilon$, $T_{\mathrm{ex}}$, $N$, $n_{\mathrm{pub}}$, $n_{\max}$, $\delta_0$,
-$\delta_{\max}$, $\delta^{\mathrm{srv}}$, $\xi$. Where a symbol below shadows a component-local
-symbol of the catalog spec, this document's meaning applies.
+$q^\star$, $r$, $\epsilon$, $T_{\mathrm{ex}}$, $N$, $U$, $n_{\mathrm{pub}}$, $n_{\max}$, $\delta_0$,
+$\delta_k$, $\delta_{\max}$, $\delta^{\mathrm{srv}}$, $\xi$. The catalog's retry waits $\delta_0$,
+$\delta_k$, $\delta_{\max}$ and $\delta^{\mathrm{srv}}$ appear only in P2, step 3; everywhere else a
+bare $\delta$ is a document. Where a symbol below shadows a component-local symbol of the catalog
+spec, this document's meaning applies. A superscript $\mathrm{plat}$ marks the platform's own
+record where the catalog has one of the same kind ($\Pi^{\mathrm{plat}}_q$ beside the catalog's
+$\Pi_q$).
 
 | Symbol | Meaning | Domain / units |
 |---|---|---|
@@ -175,6 +179,7 @@ symbol of the catalog spec, this document's meaning applies.
 | $\mathcal{W}$ | Plan: the frozen, ordered submissions of one run with their outcomes | — |
 | $\nu$ | Version vector $(\nu_E, \nu_X, \nu_O, \nu_I, \nu_F, \nu_{\mathrm{cal}}, \nu_S)$: envelope parser; fact extractor with its namespace and transformation tables; ownership extractor with its code tables; item-label table; tier table; exchange calendar; schema | labels |
 | $\theta_y$ | Processing identity $(\sigma_y, h_{x_y}, \nu)$; the provenance every derived row carries | — |
+| $\mathrm{Plan}$, $\mathrm{Acquire}$, $\mathrm{Envelope}$, $\mathrm{Entity}$, $\mathrm{Facts}$, $\mathrm{Own}$, $\mathrm{Events}$ | The procedures of P1, P2, P3, P4, P5, P6 and P8, each written as a map from its inputs to its outputs | maps |
 | $\Sigma_y$ | Submission record: header fields, $t^{\mathrm{acc}}_y$, items, filer-role blocks | record |
 | $t^{\mathrm{acc}}_y$ | Acceptance instant from the header, converted from Eastern time; the original string is retained | UTC instant |
 | $d^{\mathrm{hdr}}_y$, $d^{\mathrm{chg}}_y$, $\rho_y$ | Header filing date, header date of last change, period of report | dates |
@@ -192,8 +197,12 @@ symbol of the catalog spec, this document's meaning applies.
 | $\mathrm{lvl}(\cdot)$ | Provenance level of a derived field | {A, B, C, D} |
 | $\mathrm{ev}$ | Evidence span: $(a_y, \delta.\mathrm{seq}, h_\delta, [\mathrm{start}, \mathrm{end}), H(\text{bytes}))$, offsets into the payload of $\delta$ | — |
 | $\Gamma_q$ | Platform generation of quarter $q$: a manifest of accepted processing identities, partition files and tombstones, named by its identity | — |
-| $\Pi^{\mathcal{P}}_q$ | Platform pointer record of $q$: names the active $\Gamma_q$, its manifest hash and length, $\nu$ and the $g_q$ it was built against; replaced only conditionally on its version | versioned record |
+| $\Pi^{\mathrm{plat}}_q$ | Platform pointer record of $q$: names the active $\Gamma_q$, its manifest hash and length, $\nu$ and the $g_q$ it was built against; replaced only conditionally on its version | versioned record |
+| $\mathrm{Tomb}_q(\vec{g})$ | Tombstones added to quarter $q$: one for each submission dated in $q$ all of whose rows the catalog withdrew between the previously pinned vector and $\vec{g}$ (P7, step 5) | set |
+| $z$, $y(z)$ | A stored row of any partition; the submission it derives from | — |
+| $S$, $F$ | A set of stored rows; the union of the fact sets $F_y$ | sets |
 | $\mathrm{Known}_t$, $\mathrm{AsOf}_t$, $\mathrm{First}$, $\mathrm{Current}$ | View operators (P7) | — |
+| $j$, $\mathrm{close}(j)$ | A trading session of $\nu_{\mathrm{cal}}$; its closing instant, early closes included | session date; UTC instant |
 | $s(\cdot)$ | Session assignment: the first trading session of $\nu_{\mathrm{cal}}$ whose close follows an instant; $s_y = s(t^{\mathrm{acc}}_y)$ | session date |
 | $B^{\mathrm{sub}}_{\mathrm{rx}}$ | Guard on received bytes of one submission file | 256 MiB |
 | $n_{404}$ | Runs that may see "not found" for a listed submission before it is parked | 3 |
@@ -409,7 +418,8 @@ as a submission file, kept unchanged and pinned to the plan.
    accepted, and only a later audit fetch could reveal it.
 2. **Oversize is manual.** A submission that cannot finish within $T_{\mathrm{ex}}$ or
    $B^{\mathrm{sub}}_{\mathrm{rx}}$ is parked. Raising either limit changes the governor's
-   takeover bound $U$ (catalog spec, C2), so an override is an operator decision per
+   unsafe-until bound $U$, which sets when a takeover may start (catalog spec, C2), so an
+   override is an operator decision per
    submission, not a retry. How many submissions this affects is unmeasured.
 3. **Receipt time is local.** $\tau_x$ orders revisions by first local receipt, as in the
    catalog spec; the header's date of last change is kept but does not order revisions.
@@ -840,7 +850,7 @@ strings and element paths; or a refusal of that document with its reason.
 | $\mathrm{tomb}(y, t)$ | True if a tombstone for $y$ with detection time at or before $t$ exists | predicate |
 | $t^{\mathrm{det}}$ | Detection time of a tombstone: the receipt of the catalog generation that withdrew the last row of $y$ | UTC instant |
 | $\succ_{\mathrm{acc}}$ | Order on facts of one cell: acceptance instant, then accession number, higher wins | strict order |
-| $\Lambda^{\mathcal{P}}$ | Lineage of a platform generation | sequence |
+| $\Lambda^{\mathrm{plat}}$ | Lineage of a platform generation | sequence |
 | $n_{\mathrm{batch}}$ | Complete submissions per publication within a run | 500 |
 
 #### Problem formulation and data-generating story
@@ -869,9 +879,9 @@ move.
    previous generation's identity, $g_q$, $\nu$ and the sorted set of processing identities, so
    the same content on the same base gives the same identity and run timestamps never enter.
 3. **Publish.** Within a run, after every $n_{\mathrm{batch}}$ complete submissions and at the
-   end, for each affected quarter: read $\Pi^{\mathcal{P}}_q$ and its version; write the new
+   end, for each affected quarter: read $\Pi^{\mathrm{plat}}_q$ and its version; write the new
    partition files; write $\mathcal{M}_q$ as the union of the active manifest and the new
-   entries; run the independent check (step 7); then replace $\Pi^{\mathcal{P}}_q$
+   entries; run the independent check (step 7); then replace $\Pi^{\mathrm{plat}}_q$
    conditionally on the version read. A lost race re-reads the winner, merges by union and
    retries, at most $n_{\mathrm{pub}}$ times; after that the run reports a publication conflict
    and the units stay pending. A manifest built on an old base never becomes current.
@@ -900,12 +910,12 @@ move.
    ($Q(d_y) = q$ for every row), that every row's $\theta_y$ is in the manifest's set and
    every set member has rows, that no two rows share a primary key, and that the generation's
    rows are the union of the base's rows and the new entries.
-8. **Reader contract.** Read $\Pi^{\mathcal{P}}_q$, then $\mathcal{M}_q$, then exactly the
+8. **Reader contract.** Read $\Pi^{\mathrm{plat}}_q$, then $\mathcal{M}_q$, then exactly the
    files it lists; verify as in step 7; a failed check fails the read with no fallback. A
    consumer of several quarters records the vector $(\Gamma_q)$ it read, with $\vec{g}$ and
    $\nu$.
 9. **Rollback.** An operator names $q$, a from-generation, a to-generation, their own name and
-   a reason; the to-generation must be a strict ancestor in $\Lambda^{\mathcal{P}}$; the
+   a reason; the to-generation must be a strict ancestor in $\Lambda^{\mathrm{plat}}$; the
    rollback record is written ahead of the conditional move. A rollback is not a pin.
 10. **Compaction.** Partition files may be rewritten into fewer files only as a new generation
     whose row set, by $(\theta_y, \text{row hash})$, equals the base's exactly; the check in
