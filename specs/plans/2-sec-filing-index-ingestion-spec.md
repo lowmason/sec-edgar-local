@@ -1,5 +1,7 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
+**Status: BLOCKED at Task 4 (2026-10-21)** — Tasks 1–3 and 8 executed via executing-plans (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Task 4 was not run. Its release gate stays closed on release `fc68adef…` (F11), and the owner routed the blocker to an engine change and a new release (D5). Tasks 4–7 wait for a revision of this plan for that release. Roadmap Stage 2 stays unticked. See `## Handoff to later stages`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > Roadmap: specs/sec-filing-index-ingestion-roadmap.md, Stage 2 — on plan completion, tick the stage and re-validate later stages against what shipped.
@@ -155,7 +157,7 @@ Each default below is applied in the named task. The owner accepted O1–O10 as 
 
 The coverage rule is the core of G2. A requested unit counts as covered only when the quarter's quarterly source member is complete and the active generation names that same source as its `membership_source`. The gate must also be `clear`, and the validated row count must equal the manifest row count and be above zero. A readable quarter alone never counts (F6).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `packages/sec-edgar-ingest/tests/test_baseline_campaign.py`:
 
@@ -419,7 +421,9 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
+
+> Deviation: unittest printed `FAILED (failures=10)`, not `errors=10`. D7 corrected the wording; with the D7 test the count is 11.
 
 ```sh
 cd /Users/lowell/Projects/sec-edgar-local
@@ -430,7 +434,9 @@ UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never uv run --offline --locked --package sec-e
 
 Expected: `FAILED (failures=11)`. Every failure is `AssertionError: missing read-only baseline campaign evidence tool`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
+
+> Deviation: after execution, D7 (`4004f2e`) changed `compare_inventory` and added an 11th test. The code shown is the D7 version.
 
 Create `scripts/baseline-campaign.py`:
 
@@ -730,13 +736,13 @@ if __name__ == '__main__':
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run the Step 2 command again.
 
 Expected: `Ran 11 tests` and `OK`, in about 2–3 minutes. All 11 tests passed on 2026-10-21 against the checkout package.
 
-- [ ] **Step 5: Check the tool under the release interpreter, read-only**
+- [x] **Step 5: Check the tool under the release interpreter, read-only**
 
 This reads files only. It does not open SQLite.
 
@@ -749,7 +755,7 @@ tool files --root "$project/data" --recorded specs/evidence/local-port/sec-accep
 
 Expected: `exit=1`. The comparison has `missing: []`, and `changed_state` is empty or lists only SQLite state files. It has `changed_immutable` equal to exactly the F1 manifest path, and `added` equal to exactly the five `.DS_Store` paths (`.DS_Store`, `objects/.DS_Store`, `objects/raw/.DS_Store`, `objects/raw/sec/.DS_Store`, `objects/raw/sec/indexes/.DS_Store`). Any other difference stops the plan. Report it to the owner.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 The full offline checker is not required, because no file under `packages/sec-edgar-ingest/src` changes and the release is unchanged. Later full checker runs also collect this module.
 
@@ -776,7 +782,9 @@ git commit -m "feat(scripts): add read-only baseline campaign evidence tool"
 
 The owner approved O2, O3 and O9 (D6). It stays useful under D5, because F1 also blocks any later `daily` run whose back-dated rows reach 2021Q1. No SEC request is involved. Stop at the first unexpected value and report it. Do not improvise a repair.
 
-- [ ] **Step 1: Confirm that no writer runs**
+- [x] **Step 1: Confirm that no writer runs**
+
+> Deviation: `pgrep` printed four processes that do not write to the store: three VS Code formatter servers and the Antigravity hub. The pattern matches the project path. A narrower check printed nothing before the copy and before the write. Recorded in `pre-campaign.md`.
 
 ```sh
 # prelude (Global Constraints)
@@ -785,7 +793,7 @@ pgrep -fl 'sec_edgar_ingest|sec-edgar-local|local-bootstrap' || echo 'no writer'
 
 Expected: `no writer`.
 
-- [ ] **Step 2: Record the live root before any change**
+- [x] **Step 2: Record the live root before any change**
 
 ```sh
 # prelude
@@ -796,7 +804,7 @@ tool files --root "$project/data" --recorded specs/evidence/local-port/sec-accep
 
 Expected: `exit=1`, with the same comparison as Task 1 Step 5.
 
-- [ ] **Step 3: Make the stopped-writer backup**
+- [x] **Step 3: Make the stopped-writer backup**
 
 ```sh
 # prelude
@@ -822,7 +830,7 @@ echo "$backup"
 
 Expected: `exit=0`. The comparison is `{'added': [], 'changed_immutable': [], 'changed_state': [], 'missing': []}`. Record the backup path and the `state.sqlite3` backup hash in `pre-campaign.md`.
 
-- [ ] **Step 4: Restore the F1 manifest from its canonical bytes**
+- [x] **Step 4: Restore the F1 manifest from its canonical bytes**
 
 ```sh
 # prelude
@@ -855,7 +863,9 @@ PY
 
 Expected: `a445d0a836208255d238d92434c98e58f83682bd00de5c4a76860ff24a47f11a 5100`. The drifted bytes stay in `$backup/data-raw/…/manifest.json`.
 
-- [ ] **Step 5: Remove the five `.DS_Store` files (O3)**
+- [x] **Step 5: Remove the five `.DS_Store` files (O3)**
+
+> Deviation: the Claude Code safety check blocks `rm` with variable-expanded paths. The five files were removed with literal absolute paths.
 
 ```sh
 # prelude
@@ -866,7 +876,9 @@ done
 
 Expected: no output. `files-before.json` keeps their hashes.
 
-- [ ] **Step 6: Verify the root against L12 before opening the store**
+- [x] **Step 6: Verify the root against L12 before opening the store**
+
+> Deviation: passed with 155 files. Task 3 then closed the store, SQLite deleted its WAL and SHM files, and the check exited 1 until D7 (`4004f2e`). The re-run then exited 0 with 153 files.
 
 ```sh
 # prelude
@@ -877,7 +889,7 @@ native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["inventory"]
 
 Expected: `exit=0`, file count 153–155, and empty `added`, `changed_immutable` and `missing`. `changed_state` is empty or lists only SQLite files. They can change when Step 3 reads the database, and SQLite deletes its WAL and SHM files when the last connection closes.
 
-- [ ] **Step 7: Verify the restored generation through its pointer**
+- [x] **Step 7: Verify the restored generation through its pointer**
 
 This opens the store with operator access.
 
@@ -906,7 +918,7 @@ PY
 
 Expected: `{"manifest_sha256": "a445d0a836208255d238d92434c98e58f83682bd00de5c4a76860ff24a47f11a", "manifest_bytes": 5100, "generation_id": "887cfe89f5fc96113ade4494ec2d727265baaa0dfc69b4ad9c26cbec08d15001", "rows": 4}`. This matches the 2021Q1 row of the L12 table.
 
-- [ ] **Step 8: Write `specs/evidence/baseline-campaign/pre-campaign.md`**
+- [x] **Step 8: Write `specs/evidence/baseline-campaign/pre-campaign.md`**
 
 Write these sections. Use the values printed in Steps 2–7.
 
@@ -947,7 +959,7 @@ No SEC request was sent. No writer ran during this task.
 - The 2021Q1 pointer binds `a445d0a8…`, 5,100 bytes. The validated read returns 4 rows.
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```sh
 git add .gitignore specs/evidence/baseline-campaign/pre-campaign.md specs/evidence/baseline-campaign/pre-campaign/
@@ -970,7 +982,7 @@ git commit -m "docs(evidence): record pre-campaign backup and manifest restorati
 
 Slice configs and hashes bind to the release that the live config selects. The plan revision for the new release (D5) regenerates them.
 
-- [ ] **Step 1: Offline preflight of the live config**
+- [x] **Step 1: Offline preflight of the live config**
 
 ```sh
 # prelude
@@ -989,7 +1001,7 @@ PY
 
 Expected: file hash `cad77e29…`, then `{"effective_config_sha256": "088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d", "release_id": "fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec", "backfill": ["2015Q1", "open"]}`. A changed file hash with the same effective hash is acceptable, but record it. Any other difference stops the plan.
 
-- [ ] **Step 2: Transport known answer**
+- [x] **Step 2: Transport known answer**
 
 ```sh
 # prelude
@@ -999,7 +1011,7 @@ native -c 'import json,sys; print(json.load(open(sys.argv[1]))["store_total"])' 
 
 Expected: `exit=0`. `store_total` has `attempts: 10`, `distinct_urls: 10`, `max_ordinal: 1`, `received_bytes: 4946565`, `uncertain: 0` and `access_denied: 0`. These are the L12 values in `sec-acceptance.md` (ten sends, 4,946,565 received bytes, no retries). A different value stops the plan. Report it, because the budget audit would then measure something else.
 
-- [ ] **Step 3: Coverage known answer**
+- [x] **Step 3: Coverage known answer**
 
 ```sh
 # prelude
@@ -1016,7 +1028,7 @@ PY
 
 Expected: `exit=0`, then `{'no_campaign_result': 48} 16 6744 [None] []`. That is 48 units with no campaign result, 16 published quarters totaling 6,744 rows (the L12 latest-capture total), all daily-only, and no quarter outside the range.
 
-- [ ] **Step 4: Append the known-answer section to `pre-campaign.md`**
+- [x] **Step 4: Append the known-answer section to `pre-campaign.md`**
 
 ```markdown
 ## Known-answer checks
@@ -1029,7 +1041,9 @@ Expected: `exit=0`, then `{'no_campaign_result': 48} 16 6744 [None] []`. That is
   quarters, all daily-only, total 6,744 validated rows. This equals the L12 latest-capture total.
 ```
 
-- [ ] **Step 5: Make the pilot and first-slice configs**
+- [x] **Step 5: Make the pilot and first-slice configs**
+
+> Deviation: the 2024Q1 check config was removed with a literal absolute path (same safety check). Effective hashes: pilot `bef7c783…`, first slice `879d0e54…`.
 
 The `slice_config` function is defined here and used again in Task 5.
 
@@ -1066,7 +1080,7 @@ slice_config 2015Q1 2015Q2
 
 Expected: the first line ends with `32b4da638464758c2926fc9040e207696a081d452b2af3813ddd36d179441740`. That is the L12 quarterly config hash, which confirms the generator. That file is then removed, because 2024Q1 is not a slice of this plan. The next two lines each print a path and a new effective hash. Record both hashes in `campaign.md`.
 
-- [ ] **Step 6: Write `specs/evidence/baseline-campaign/campaign.json`**
+- [x] **Step 6: Write `specs/evidence/baseline-campaign/campaign.json`**
 
 ```json
 {
@@ -1079,7 +1093,7 @@ Expected: the first line ends with `32b4da638464758c2926fc9040e207696a081d452b2a
 }
 ```
 
-- [ ] **Step 7: Write `specs/evidence/baseline-campaign/campaign.md`**
+- [x] **Step 7: Write `specs/evidence/baseline-campaign/campaign.md`**
 
 ```markdown
 # Stage 2 baseline campaign: scope, budget and approval
@@ -1194,7 +1208,7 @@ not a failure of the plan.
 To be completed in Task 4 with the owner's exact words.
 ```
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```sh
 git add conf/stage2/ specs/evidence/baseline-campaign/
@@ -1605,7 +1619,7 @@ git commit -m "docs(evidence): record accepted Stage 2 baseline coverage finding
 
 This task does not depend on the live campaign. It can run right after plan review.
 
-- [ ] **Step 1: Amend §4.8**
+- [x] **Step 1: Amend §4.8**
 
 Replace:
 
@@ -1620,7 +1634,7 @@ The config is tracked in git since commit `001edf5`; its effective-config hash i
 (owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default selected
 ```
 
-- [ ] **Step 2: Amend §6**
+- [x] **Step 2: Amend §6**
 
 Replace:
 
@@ -1638,7 +1652,7 @@ was found absent on 2026-10-21; its recorded hashes and inventory remain in the 
 evidence (owner, plan 2, 2026-10-21). Future operational reports add evidence;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```sh
 git add specs/sec-filing-index-ingestion-spec.md
@@ -1649,10 +1663,28 @@ git commit -m "docs(specs): record tracked config and absent L12 external eviden
 
 ## After the last task
 
-Run the writing-plans Plan Completion Protocol, step 3a included. Facts known now, for the `## Handoff to later stages` section:
+When Tasks 4–7 have run under a revised plan, run the writing-plans Plan Completion Protocol, step 3a included. Update the Handoff below from what then ships.
 
-- **If Task 4's release gate stays closed**, Stage 2 is blocked, not complete. The stage stays unticked. The completion protocol records the F11 blocker and the owner's routing (D5) for derive-roadmap at the next resume. Under D5, that resume adds the engine change and its new release ahead of the Stage 2 live campaign, and then a revision of this plan for that release.
-- **Stage 3** consumes the daily sources that Stage 2 processed as retained work (O5, F4). It no longer finds the L12 "73 pending" inventory as it was. Its inventory is `final/coverage.json` `daily_sources` plus a fresh discovery. F11 applies to any `daily` invocation too: it carries every pending daily source, natively each one's publish took 40–190 s, and the work must fit inside one invocation.
-- **Stage 4** consumes every `gated` unit (F5, O6, O10) and every quarantine disposition that names reconciliation.
-- **All later stages** inherit the F1 and F3 constraints: no editor, Finder or `/tmp` use on evidence, and the integrity check `tool files … --recorded …` before live work. They also inherit F8 and F9: work must fit inside one invocation, and no member may be after the pinned end.
-- The roadmap's Stage 2 Exit says "original port acceptance evidence remains intact". As shipped, that holds for the committed records, the immutable objects and the releases, but not for the absent `/private/tmp` directory (F3). derive-roadmap reconciles that wording at the next resume.
+## Handoff to later stages
+
+Stage 2 is blocked at Task 4, not complete. As of 2026-10-21 it has produced only the offline preparation. It has not produced the roadmap's per-invocation results and captures, the coverage inventory or the operating decision. No item went to `specs/deferred_items.md`.
+
+- **Next roadmap resume (derive-roadmap).**
+  - The owner routed F11 to an engine change and a new release, before the Stage 2 live campaign (D5). That change has no stage, spec or plan yet. The resume adds it ahead of the Stage 2 live campaign.
+  - Fix areas from planning (F8, F11): a dispatch margin in `runner.run_workflow`, a per-invocation member cap, or cheaper daily publication. Measured inputs: L12 daily publishes of 41.6 s and 187.6 s. The fixture profile puts the time in per-member processing, not in selection, and each pending source is processed twice (F10).
+  - The condition that opens the gate is in `specs/evidence/baseline-campaign/campaign.md`, section Release gate.
+  - After the new release, revise this plan before Tasks 4–7: Global Constraints, the Task 1 tool's release-internal imports (re-run Task 1 Steps 4–5), the Task 3 values and slice configs, and the Task 4 gate. `campaign.md` cites the tool at `4508859`. D7 changed the tool at `4004f2e`, so the revision updates that row.
+  - The roadmap's Stage 2 Exit says "original port acceptance evidence remains intact". That holds for the committed records, the immutable objects and the releases. It does not hold for the absent `/private/tmp` directory (F3). The resume reconciles that wording.
+- **Platform spec (separate roadmap).** `specs/sec-filing-platform.md` (`4b0450b`, awaiting owner review) R4 adds a bulk lane and a third priority to the shared request governor. The F11 fix areas are in the workflow runner and in publication, not in the governor. If both changes ship in one release, the Stage 2 revision must re-check the coordination values in Global Constraints: 3 requests/second, one active collector, and the lease timings.
+- **Stage 3 (daily catch-up).**
+  - No Stage 2 coverage decision exists yet. The pending daily work is still L12's 73 sources plus each business day since.
+  - F11 applies to a `daily` invocation too. It carries every pending daily source in one invocation, and natively each daily publish took 40–190 s. So Stage 3 also needs the D5 release.
+  - After the Stage 2 pilot runs, Stage 3's inventory is `final/coverage.json` `daily_sources` plus a fresh discovery (O5, F4).
+- **Stage 4 (manual reconciliation).** It consumes every `gated` unit (F5, O6, O10) and every quarantine disposition that names reconciliation. None exists yet. Known in advance: the 2024Q1 quarantine (three conflicting keys, findings §5.2) and possible quarantines in 2015Q1 and 2026Q3 (F7). Closed-quarter publication keeps only quarterly-membership keys (O10, `catalog._resolve`).
+- **Stage 5 (scheduling).** From Stage 2 it inherits two rules. Work must fit inside one invocation (F8), and no member may be after the pinned end (F9). On release `fc68adef…`, a scheduler must not rely on the deadline to stop a backlog.
+- **All later stages: evidence tool and integrity.**
+  - Tool: `scripts/baseline-campaign.py` with `files`, `audit` and `coverage`. It is pinned to `fc68adef…` internals. Its test is `packages/sec-edgar-ingest/tests/test_baseline_campaign.py` (11 tests).
+  - Before live work, run `files --root data --recorded specs/evidence/local-port/sec-acceptance.json`. On 2026-10-21 it exited 0 with 153 files.
+  - Under D7 (`4004f2e`), `state.sqlite3-wal` and `state.sqlite3-shm` may appear or vanish and show under `changed_state`. `state.sqlite3` stays strict.
+  - Traps: the 2021Q1 manifest drift (F1). Task 2 restored it, but the cause is unknown, and editors and agents have the project folder open (`pre-campaign.md`). The lost L12 `/tmp` directory (F3). The loose writer pattern in Task 2 Step 1, which matches the project path; use `pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_bootstrap'`.
+  - Backup: `backups/stage2-pre-campaign-20261021T180646Z` (git-ignored). Slice configs `conf/stage2/backfill-2026Q4-open.json` (effective `bef7c783…`) and `conf/stage2/backfill-2015Q1-2015Q2.json` (`879d0e54…`) bind to `fc68adef…`. The revision regenerates them.
