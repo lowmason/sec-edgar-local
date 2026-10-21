@@ -68,7 +68,7 @@ column names the stage or stages that close each row.
 | R29 | missing | none found | Composition: Stage 11. Operation: Stage 13. |
 | R30 | missing | none found | Measurement: Stage 6. Owner budget: Stage 12. |
 | R31 | missing | none found | Composition: Stage 11. Backfill: Stage 12. Daily: Stage 13. |
-| V1 | missing | not run | Stage 6. |
+| V1 | missing | not run | Stage 6. Stage 12 for later years under the Q3 default. |
 | V2 | missing | not run | Stage 6 (owner decision D3). |
 | V3 | missing | not run | Stage 6 (D3). |
 | V4 | missing | not run | Stage 6 (D3). |
@@ -76,7 +76,7 @@ column names the stage or stages that close each row.
 | V6 | missing | not run | Stage 6. |
 | V7 | missing | not run. The 2026-10-15 archive with the 101 tagged submissions is not retained locally. | Stage 6. |
 | V8 | missing | not run | Stage 6. |
-| V9 | missing | not run | Stage 6. Q3 bounds the sample years. |
+| V9 | missing | not run | Stage 6. Stage 12 for later years under the Q3 default. |
 | V10 | missing | not run | Stage 6. |
 | V11 | missing | not run | Stage 6 under the Q2 default. Stage 2 if the owner answers Q2 "no". |
 | V12 | missing | not run | Stage 6 under the Q2 default. Stage 2 if the owner answers Q2 "no". |
@@ -210,9 +210,9 @@ Rollout note). Approval of a plan is not live authority.
 - [ ] Stage 4: Platform catalog release
       Objective: Cut the owner-reviewed catalog release that lets the platform send requests through the shared governor.
       Spec: R4, R6 (guard), the catalog side of R5 and R7. ADR 0001 Consequences (the Negative safeguards and the Neutral follow-on items). Spec Rollout note (the owner approves the governor change).
-      Gap closed: R4. R6 guard. Catalog side of R5 and R7. ADR 0001 rows for URL classes, the protocol-version guard and shared validator, multi-application releases and ADR 0002.
-      Consumes: The D5 release, built and reviewed (plan 2 D5, `specs/plans/2-sec-filing-index-ingestion-spec.md:82`), which the ingestion roadmap's next resume stages (plan 2, Handoff, `:1673`). Owner decision D1 (2026-10-21), "D5 first, platform after": the D5 release ships first and carries no platform item, and this release follows as its own reviewed release. It does not wait for the ingestion Stage 2 coverage decision. Stage 1's package as the second application. Plan 2, Handoff (`:1678`): a later catalog campaign revision re-checks the coordination values. The Q2 answer (a documentation URL class under the default) and the Q4 answer.
-      Produces: A reviewed release with platform URL classes, a bulk lane, three priorities, a governor protocol version in the lease record, platform governor settings read through the catalog's validator, and multi-application build and verify. Owner decision D3 (2026-10-21), "Ship with V2 open": a failed bulk transfer restarts from the first byte (spec lines 393–394), and bulk guards are sized from recorded Feed sizes (M EN, C C1). ADR 0002 on shared code.
+      Gap closed: R4. R6 guard. Catalog side of R5 and R7. The Q2 documentation URL class (default). ADR 0001 rows for URL classes, the protocol-version guard and shared validator, multi-application releases and ADR 0002.
+      Consumes: The D5 release, built and reviewed (plan 2 D5, `specs/plans/2-sec-filing-index-ingestion-spec.md:82`), which the ingestion roadmap's next resume stages (plan 2, Handoff, `:1673`). Owner decision D1 (2026-10-21), "D5 first, platform after": the D5 release ships first and carries no platform item, and this release follows as its own reviewed release. It does not wait for the ingestion Stage 2 coverage decision. Stage 1's package as the second application. Plan 2, Handoff (`:1678`): a later catalog campaign revision re-checks the coordination values. The Q2 answer and the Q4 answer.
+      Produces: A reviewed release with platform URL classes, a documentation URL class (Q2 default), a bulk lane, three priorities, a governor protocol version in the lease record, platform governor settings read through the catalog's validator, and multi-application build and verify. Owner decision D3 (2026-10-21), "Ship with V2 open": a failed bulk transfer restarts from the first byte (spec lines 393–394), and bulk guards are sized from recorded Feed sizes (M EN, C C1). ADR 0002 on shared code.
       Exit: The owner approves the governor change and the release. Tests show the three priorities in order, a failed bulk transfer restarted from the first byte, refusal on a protocol-version mismatch, and a two-application build and verify. ADR 0002 is Accepted. The ingest export diff is recorded.
       ROUTING: brainstorming
 
@@ -227,10 +227,10 @@ Rollout note). Approval of a plan is not live authority.
 
 - [ ] Stage 6: Evidence campaign and finding
       Objective: Produce an owner-accepted finding on V1–V12 and a retained real-submission sample from a bounded live campaign through the governor.
-      Spec: V1–V10, V11 and V12 (Q2 default), R3 rule 7, R30 (volume measurement), M P3.e, spec Rollout note.
-      Gap closed: V1–V12. R3 rule 7. R30 measurement part.
-      Consumes: Stage 5's release. The Stage 1–3 drafts, to read the sample. Owner decision D2, step 3. Owner decision D3: V2, V3 and V4 join this stage. A new governed fetch of the 2026-10-15 Feed archive for V7, because the local copy is gone (findings §4.2, checked 2026-10-21). The Q3 answer for the sample years. An owner-approved scope, budget and evidence location.
-      Produces: The retained sample (M P3.e) in Stage 5's snapshot format. A finding with one result for each of V1–V12. The measured compressed volume of each quarter for R30.
+      Spec: V1–V10, V11 and V12 (Q2 default), R15 grammar source (Q2 default), R3 rule 7, R30 (volume measurement), M P3.e, spec Rollout note.
+      Gap closed: V1–V12. R3 rule 7. R30 measurement part. R15 grammar source part (Q2 default).
+      Consumes: Stage 5's release. The Stage 1–3 drafts, to read the sample. Owner decision D2, step 3. Owner decision D3: V2, V3 and V4 join this stage. A new governed fetch of the 2026-10-15 Feed archive for V7, because the local copy is gone (findings §4.2, checked 2026-10-21). The Q2 answer for the documentation reads. The Q3 answer for the sample years. An owner-approved scope, budget and evidence location.
+      Produces: The retained sample (M P3.e) in Stage 5's snapshot format. A finding with one result for each of V1–V12. The measured compressed volume of each quarter for R30. Under the Q2 default, the PDS spec v2.0, its DTD, the EDGAR Filer Manual and the EDGAR XBRL Guide, each retained with its URL, date and SHA-256.
       Exit: Each of V1–V12 has a recorded result, or a named open item with an owner disposition. The sample manifest is committed. The campaign stayed inside its approved budget.
       ROUTING: writing-plans
 
@@ -238,7 +238,7 @@ Rollout note). Approval of a plan is not live authority.
       Objective: Revise the P3, P5 and P6 drafts against the retained sample and freeze their versions.
       Spec: R7 (P3 cross-check), R8 and R9 (P3 parts), R14, R15, R16, R18–R20, R22–R24. M P3.e, M P5.e, M P6.e. Spec Rollout note (V1, V7 and V10 block the freeze).
       Gap closed: R14. R15, R16, R18–R20 and R22–R24 in full. R7, R8 and R9 P3 parts.
-      Consumes: Stage 6's finding and sample. The Stage 1–3 drafts. The Q3 answer.
+      Consumes: Stage 6's finding and sample. The Stage 1–3 drafts. The Q2 answer (under the default, Stage 6's retained PDS spec and DTD). The Q3 answer.
       Produces: Frozen $\nu_E$, $\nu_X$ and $\nu_O$ versions, with the sample as regression fixtures.
       Exit: Each frozen version parses the whole sample, and each refusal has a recorded reason. The grammar, the parsed time fields and the extraction carriers follow the V1, V7 and V10 results. Each R14 disagreement is recorded as a gap.
       ROUTING: writing-plans
@@ -281,11 +281,11 @@ Rollout note). Approval of a plan is not live authority.
 
 - [ ] Stage 12: Storage gate and first backfill
       Objective: Record the storage budget and run the first platform backfill over catalog-accepted quarters.
-      Spec: R2 (coverage), R30, R31 (backfill), V17, spec Rollout note.
-      Gap closed: R30. V17. R2 coverage part. R31 backfill part.
+      Spec: R2 (coverage), R30, R31 (backfill), V1 and V9 for later years (Q3 default), V17, spec Rollout note.
+      Gap closed: R30. V17. R2 coverage part. R31 backfill part. V1 and V9 for years that Stage 6 could not sample (Q3 default).
       Consumes: Stage 11's runs. Stage 10's fit $\nu_X$ version. Stage 6's measured volume. The ingestion roadmap's Stage 2 coverage decision for each quarter in range (R2). The Q3 answer. The owner's storage budget and an owner-approved campaign scope and budget.
       Produces: Published platform generations for accepted quarters. A coverage report by quarter.
-      Exit: The backfill plan records the measured volume and the owner's budget before the first backfill request. Each requested quarter is covered, or named as a gap with an owner disposition. No quarter is covered before the catalog accepts it.
+      Exit: The backfill plan records the measured volume and the owner's budget before the first backfill request. Each requested quarter is covered, or named as a gap with an owner disposition. No quarter is covered before the catalog accepts it. Under the Q3 default, V1 and V9 have a recorded result for each newly accepted year before that year publishes.
       ROUTING: writing-plans
 
 - [ ] Stage 13: Daily continuation acceptance
