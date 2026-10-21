@@ -2,9 +2,9 @@
 > reconcile step; route each unticked stage per its ROUTING line; never plan
 > this document wholesale.
 
-**Status:** Provisional, 2026-10-21. The stage partition waits for the owner's review. Four open
-questions go with that review (see Open questions). The partition below applies their defaults. No
-stage is approved, and this roadmap authorizes no SEC request.
+**Status:** Approved, 2026-10-21. The owner approved the 13-stage partition and accepted the defaults
+for F1 and Q2–Q4 (see Open questions). No stage has started. Approval of the partition authorizes no
+SEC request.
 
 ## Gap analysis
 
@@ -78,8 +78,8 @@ column names the stage or stages that close each row.
 | V8 | missing | not run | Stage 6. |
 | V9 | missing | not run | Stage 6. Stage 12 for later years under the Q3 default. |
 | V10 | missing | not run | Stage 6. |
-| V11 | missing | not run | Stage 6 under the Q2 default. Stage 2 if the owner answers Q2 "no". |
-| V12 | missing | not run | Stage 6 under the Q2 default. Stage 2 if the owner answers Q2 "no". |
+| V11 | missing | not run | Stage 6 (Q2 answer). |
+| V12 | missing | not run | Stage 6 (Q2 answer). |
 | V13 | missing | not run | Stage 2. |
 | V14 | missing | not run | Stage 8. |
 | V15 | missing | not run | Stage 3. |
@@ -98,9 +98,10 @@ reuse. It is not a platform implementation.
 
 ## Open questions
 
-These four questions form one set for the owner's review of the partition. Each has a default, and
-the stages below apply it. Record the owner's answer under each question. Then amend the stages that
-the answer changes, and remove the Provisional status.
+These four questions formed one set for the owner's review of the partition. The owner answered them
+on 2026-10-21 and accepted every default. Owner's words: "Approve the 13-stage partition and accept
+the defaults for F1, Q2, Q3 and Q4." The stages below already applied the defaults, so no stage
+changed.
 
 - **F1 — When the platform package joins the workspace.** The new member edits the root
   `pyproject.toml` (`:19-20`) and the shared `uv.lock`. The next catalog release build reads both
@@ -110,7 +111,8 @@ the answer changes, and remove the Provisional status.
   after the member is added (ADR 0001, Consequences). Otherwise the package joins after the D5 build.
   Effect if wrong: the platform changes the locked inputs of the release that ingestion Stage 2 waits
   for. Changes: Stage 1 `Consumes`.
-  *Owner's answer:* pending.
+  *Owner's answer (2026-10-21):* the default. The member joins before the D5 build only if the export
+  is byte-identical. Otherwise it joins after the D5 build.
 - **Q2 — SEC documentation under D2.** Stage 1 needs the PDS spec v2.0 and its DTD as the R15 grammar
   source. V11 needs the EDGAR Filer Manual and V12 the EDGAR XBRL Guide. V7 and V8 cite SEC
   documentation too. These documents are on `www.sec.gov`. The governor's URL classes do not admit
@@ -122,7 +124,8 @@ the answer changes, and remove the Provisional status.
   named document is fetched once by hand and kept under `specs/evidence/` with its URL, date and
   SHA-256. Stage 1 then uses the PDS spec and DTD, and V11 and V12 return to Stage 2. Changes: Stages
   1, 2, 4, 6 and 7.
-  *Owner's answer:* pending.
+  *Owner's answer (2026-10-21):* the default. D2 covers documentation reads. The documents come
+  through Stage 4's documentation URL class, in Stage 6.
 - **Q3 — R2 and the evidence sample.** R2 lets the platform acquire only submissions that the pinned
   catalog lists. V1 stratifies its sample by year, and V9 names a 2015-on sample. The live catalog
   lists 2021–2026 quarters only (findings §2), and ingestion Stage 2 has not run. Question: does R2
@@ -132,7 +135,8 @@ the answer changes, and remove the Provisional status.
   Stage 6 waits for the ingestion Stage 2 coverage decision. Effect if wrong: the parser freeze rests
   on 2021–2026 evidence only, or all evidence waits for the whole catalog baseline. Changes: Stages
   6, 7 and 12.
-  *Owner's answer:* pending.
+  *Owner's answer (2026-10-21):* the default. R2 binds Stage 6's sample. Stage 12 checks V1 and V9 on
+  each later year before it publishes that year.
 - **Q4 — A build stage that D2 does not name.** D2 puts the release (step 2) directly before the
   evidence (step 3). Live mode requires the native runtime (`config.py:237-238`), and ADR 0001 makes
   the platform use the catalog's validator. So a reviewed release of the platform application with
@@ -143,7 +147,8 @@ the answer changes, and remove the Provisional status.
   in one cycle. Alternative (c): ship the platform's fetch code in Stage 4's release. That strains
   ADR 0001's rule that a platform change does not cut a catalog release. Effect if wrong: a longer wait for evidence,
   an oversized Stage 6, or a catalog release that carries platform code. Changes: Stages 4, 5 and 6.
-  *Owner's answer:* pending.
+  *Owner's answer (2026-10-21):* the default. Stage 5 is its own stage, between the release and the
+  evidence.
 
 ## Stages
 
@@ -156,7 +161,8 @@ D2 fixes this order:
 3. V1, V7, V10 and the real-submission sample (M P3.e), with V2, V3 and V4 under D3 (Stage 6).
 4. The parser freeze (Stage 7).
 
-Stage 5 sits between steps 2 and 3. D2 does not name it, and Q4 puts it to the owner.
+Stage 5 sits between steps 2 and 3. D2 does not name it. The owner placed it there under Q4
+(2026-10-21).
 
 **Comparison with the spec.** The order departs from the spec's Rollout note (spec lines 451–456) in
 two places, and D2 causes both:
@@ -314,9 +320,9 @@ section reads `None`.
 
 ## Completion
 
-The owner reviews this partition and the four open questions before Stage 1. Approval of the
-partition authorizes no SEC request. After approval, route Stage 1 per its ROUTING line in a fresh
-session. On a later resume, reconcile the stage stamps and each completed plan's Handoff. Then route
+The owner approved this partition and answered the four open questions on 2026-10-21. Approval of
+the partition authorizes no SEC request. Route Stage 1 per its ROUTING line in a fresh session. On a
+later resume, reconcile the stage stamps and each completed plan's Handoff. Then route
 the first unticked stage whose `Consumes` are met.
 
 Retire this roadmap only after a conformance audit accounts for R1–R31, V1–V17 and the ADR 0001
