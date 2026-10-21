@@ -2,6 +2,7 @@
 
 **Status:** Exploration findings, 2026-10-19/20. Nothing here was designed, approved, or implemented.
 §4.5 was corrected and §4.6–4.7 were added on 2026-10-20 after a second check of the extracted feed.
+§5 was added on 2026-10-21 from the stored 2024Q1 quarterly file.
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
 **Related:** [Filing-index ingestion spec](../sec-filing-index-ingestion-spec.md),
 [completed local design](../completed/sec-edgar-local-spec.md) §5.
@@ -18,6 +19,7 @@ current ingestion contract.
    `edgar/data/2488/0001950047-26-010251.txt` (2026 Q4)?
 3. What does the SEC daily feed archive for 2026-10-15 contain, and does it match the daily index
    that the store ingested?
+4. Why was the 2024Q1 quarterly file quarantined?
 
 ## 2. The `data/` store
 
@@ -197,7 +199,48 @@ that both indexes cover (2025Q3, 2025Q4, 2026Q1, 2026Q3, 2026Q4) are exactly the
 two generations. This agrees with 21 generations for 16 pointers. Which run published each
 generation was not checked in the run records.
 
-## 5. Implications for any filing-document design
+## 5. The quarantined 2024Q1 quarterly file
+
+### 5.1 Source
+
+- The store keeps the file at
+  `objects/raw/sec/indexes/kind=quarterly/period=2024Q1/sha256=ba4aa3d4…/master.zip`
+  (4,262,821 bytes). It was received in the 2026-10-18 acceptance run. The owner supplied a copy,
+  `~/Downloads/master.zip`, with the same SHA-256. The checks below read the bytes in the store.
+  No request was sent.
+- The ZIP has one member, `master.idx` (33,578,469 bytes, member time 2026-10-17 03:28). Its
+  header says `Last Data Received: March 31, 2024`. It has 370,321 data rows, with filing dates
+  from 2024-01-01 to 2024-03-29.
+
+### 5.2 The conflicting keys
+
+The file repeats 3 logical keys (CIK and archive path). No repeat is identical. In each pair, only
+the form type is different.
+
+| Lines | Company (CIK) | Filing date | Accession | Form types |
+|---|---|---|---|---|
+| 88033, 88043 | NGM BIOPHARMACEUTICALS INC (1426332) | 2024-03-22 | `0001140361-24-014854` | SC 13E3/A, SC TO-T/A |
+| 88035, 88044 | NGM BIOPHARMACEUTICALS INC (1426332) | 2024-03-08 | `0001140361-24-012376` | SC 13E3, SC TO-T |
+| 98688, 98690 | Performance Shipping Inc. (1481241) | 2024-03-26 | `0001104659-24-038822` | SC 13D/A, SC TO-T/A |
+
+Line 88043 is the line in the quarantine error (§2). Each pair has one tender-offer form type
+(SC TO-T or SC TO-T/A) and one other schedule. Each pair appears to be one submission filed under
+two form types, as a combined filing is. The submission headers were not read, so this is not
+confirmed.
+
+### 5.3 UPLOAD rows
+
+- 1,885 rows have form type UPLOAD. They come from 1,795 accessions. Every UPLOAD row has a
+  `0000000000-24-` accession, and every row with a `0000000000-` accession is UPLOAD.
+- Their filing dates run from 2024-01-01 to 2024-03-29: 749 in January, 541 in February and 595
+  in March.
+- So the 2024Q1 file, as rebuilt by 2026-10-17, lists UPLOAD submissions under 2024Q1 filing
+  dates. §4.6 shows that some UPLOAD submissions are published years after their filing date. The
+  publication dates of these 1,885 rows are not known. So this does not show whether late
+  releases enter the quarterly file of their filing date.
+- 2024Q1 is not one of the 14 back-dated quarters in §4.7, so no direct comparison was possible.
+
+## 6. Implications for any filing-document design
 
 These are constraints that were observed. They are not decisions.
 
@@ -213,8 +256,8 @@ These are constraints that were observed. They are not decisions.
 3. **Streaming.** Full extraction is wasteful. A reader can stream tar members and filter by form
    type or accession before it writes.
 4. **Granularity.** One feed file per accession, but possibly more than one index row per
-   accession (one per CIK). One feed file can hold more than one `<DOCUMENT>`. Curated filing-document data needs a clear key and a clear relation to
-   the `filing_index` rows.
+   accession (one per CIK). One feed file can hold more than one `<DOCUMENT>`. Curated
+   filing-document data needs a clear key and a clear relation to the `filing_index` rows.
 5. **Untrusted input.** Treat archives as untrusted. Check member paths and types before extraction
    (this session found no problems).
 6. **Policy.** Feed downloads use the same SEC User-Agent and rate budget (3 requests/second, one
@@ -222,8 +265,10 @@ These are constraints that were observed. They are not decisions.
 7. **Back-dated rows.** A daily index or feed can contain submissions with filing dates in old
    quarters (§4.7). Data partitioned by filing date gets changes to old partitions from each daily
    run. The publication date (the feed or index day) and the filing date are different values.
+8. **Combined filings.** One index key can have more than one form type (§5.2). A model with one
+   form type for each key refuses such a file.
 
-## 6. Open questions
+## 7. Open questions
 
 - Should the pipeline ingest filing documents? If yes, should it use daily feed archives or fetch
   individual `archive_path` URLs?
@@ -235,9 +280,13 @@ These are constraints that were observed. They are not decisions.
   map `source_id` to the index day, or should `filing_index` have a publication-day column?
 - Is the feed/index match in §4.5 true on other days? Only 2026-10-15 was checked.
 - How should the 2024Q1 quarterly quarantine (`conflicting duplicate logical key`, line 88043) be
-  resolved? It is separate from filing documents, but it was observed in the same session.
+  resolved? Its 3 conflicts appear to be combined filings (§5.2). Should a key carry a set of form
+  types, or should the form type be part of the key? Do conflicts in other quarterly files have
+  the same cause?
+- Do late releases enter the quarterly file of their filing date (§5.3)? The quarterly file of a
+  quarter from §4.7, for example 2021Q1, would answer this.
 
-## 7. Reproduction
+## 8. Reproduction
 
 ```sh
 UA="$(python3 -I -c "import json;print(json.load(open('conf/sec-edgar-local.json'))['sec']['user_agent'])")"
@@ -256,6 +305,14 @@ The §4.6 checks read the start of each `.corr01` file (run in `/tmp/sec-filings
 for f in *.corr01; do head -c 300 "$f" | grep -c PRIVATE-TO-PUBLIC; done | sort | uniq -c
 for f in *.corr01; do head -c 300 "$f" | grep -m1 -o '<TYPE>[^<]*'; done | sort | uniq -c
 ls *.corr01 | cut -c1-11 | sort | uniq -c   # accession prefixes
+```
+
+The §5 checks read the stored 2024Q1 file (run from the project root):
+
+```sh
+Z=data/objects/raw/sec/indexes/kind=quarterly/period=2024Q1/sha256=ba4aa3d405d4d603c5e881c2db023070b9b9f8eebc80a361dc61d831353453cb/master.zip
+unzip -p "$Z" master.idx | tr -d '\r' | awk -F'|' 'NF==5 && $1 ~ /^[0-9]+$/ {k=$1"|"$5; n[k]++; r[k]=r[k] NR":"$3" "} END {for (k in n) if (n[k]>1) print k, r[k]}'
+unzip -p "$Z" master.idx | tr -d '\r' | awk -F'|' '$3=="UPLOAD"' | wc -l
 ```
 
 The extracted tree in `/tmp/sec-filings/` is temporary. Delete it when inspection is done.
