@@ -79,6 +79,7 @@ cd "$project"
 - **D4** (owner, brief, 2026-10-21): The intended range defaults to the config's `2015Q1`–`open` and needs owner confirmation. Applied in: Task 3 (see O1).
 - **D5** (owner, plan review, 2026-10-21): O11 (a). An engine change and a new release come before the Stage 2 live campaign. Tasks 1–3 stay as offline preparation on release `fc68adef…`. Owner's words: "Route O11 (a): an engine change and a new release come before the Stage 2 live campaign. Keep Tasks 1–3 as offline preparation." Applied in: Feasibility blocker, Task 4, After the last task.
 - **D6** (owner, plan review, 2026-10-21): O1–O10 accepted as proposed. Owner's words: "Accept O1–O10 as proposed in plan 2." That settles: the range 2015Q1–2026Q4 in slices, pilot first (O1); restoring the 2021Q1 manifest (O2); removing the five `.DS_Store` files (O3); recording the lost L12 directory and amending the spec (O4); budgeting and reporting the retained daily sources (O5); approving no withdrawal in Stage 2 (O6); no discovery-only probe (O7); the `campaign.json` limits (O8); the backup location under `backups/` (O9); and the pilot order (O10). Applied in: the tasks that each default names.
+- **D7** (owner, execution review relayed by the parent session, 2026-10-21): After Tasks 1–3 ran, the integrity check reported `state.sqlite3-wal` and `state.sqlite3-shm` as `missing`, because SQLite deletes them when the last connection closes cleanly. The tool now lets those two files appear or vanish and reports that under `changed_state`. `state.sqlite3` stays strict. Owner's words: "Yes, approve the WAL/SHM integrity-check fix as proposed: let state.sqlite3-wal and -shm appear or disappear, keep state.sqlite3 strict, add a test, and correct the plan's code and the errors=10 wording." Applied in: Task 1 (code, test, Steps 2, 4 and 5), Task 2 Step 6.
 
 ## Defaults for owner review
 
@@ -146,7 +147,7 @@ Each default below is applied in the named task. The owner accepted O1–O10 as 
 **Interfaces:**
 - Consumes: installed `sec_edgar_ingest` APIs of release `fc68adef…`: `config.load_config`, `storage.open_stores(settings, access='operator')`, `etl.state.EtlState`, `etl.reader.capture_quarter / read_quarter / validated_manifest`, `workflows.contracts.WorkflowResult / workflow_path / member_status`, `workflows.results._read / _validate_report`, `discovery.quarter_span`, and `StateStore.scan('TransportAttempt' | 'QuarterPublication', {})`. Do not use `read_workflow_result`: it repairs index records, so it is not read-only.
 - Produces (stdout is indented sorted JSON with `format_version: sec-baseline-campaign-evidence-v1`):
-  - `files --root PATH [--recorded JSON]` returns `{kind: files, inventory: {root, file_count, byte_count, files[{relative_path, sha256, byte_count}]}, comparison?: {missing, added, changed_immutable, changed_state}}`. Exit 1 when `missing` or `changed_immutable` is nonempty. `--recorded` accepts the L12 machine evidence, an earlier `files` report or a bare inventory.
+  - `files --root PATH [--recorded JSON]` returns `{kind: files, inventory: {root, file_count, byte_count, files[{relative_path, sha256, byte_count}]}, comparison?: {missing, added, changed_immutable, changed_state}}`. Exit 1 when `missing` or `changed_immutable` is nonempty. `state.sqlite3-wal` and `state.sqlite3-shm` may appear or vanish, and the comparison lists that under `changed_state`. `state.sqlite3` itself stays strict. `--recorded` accepts the L12 machine evidence, an earlier `files` report or a bare inventory.
   - `audit --config PATH [--run-id ID]... [--budget JSON]` returns `{kind: audit, runs{run_id: summary}, total, store_total, breaches?}`. Each summary is `{attempts, distinct_urls, received_bytes, max_ordinal, uncertain, access_denied, statuses, outcomes}`. Exit 1 on any breach.
   - `coverage --config PATH [--result REF]... --start Q --end Q [--open-quarter Q]` returns `{kind: coverage, requested, results, verdicts, complete, units[{quarter, verdict, source, filing_quarter, last_result_gaps}], other_filing_quarters, daily_sources}`. Exit 0. `filing_quarter` includes `membership_source_id`, `source_kinds` and `daily_rows_considered`.
   - Unit verdicts: `covered`, `covered_open_quarter`, `quarantined`, `gated`, `pending`, `failed`, `publication_mismatch`, `source_missing`, `no_campaign_result`. `complete` is true only when every verdict is `covered` or `covered_open_quarter`.
@@ -225,6 +226,23 @@ class PureRuleTests(unittest.TestCase):
         self.assertEqual(self.api['compare_inventory'](recorded, actual),
                          {'missing': ['objects/gone'], 'added': ['objects/new'],
                           'changed_immutable': ['objects/x'], 'changed_state': ['state.sqlite3']})
+
+    def test_sqlite_journal_files_may_come_and_go_but_the_database_may_not(self):
+        def entry(path):
+            return {'relative_path': path, 'sha256': 'a', 'byte_count': 1}
+        compare = self.api['compare_inventory']
+        journaled = {'files': [entry('state.sqlite3'), entry('state.sqlite3-shm'), entry('state.sqlite3-wal')]}
+        closed = {'files': [entry('state.sqlite3')]}
+        # SQLite deletes its WAL and shared-memory files when the last connection closes cleanly.
+        self.assertEqual(compare(journaled, closed),
+                         {'missing': [], 'added': [], 'changed_immutable': [],
+                          'changed_state': ['state.sqlite3-shm', 'state.sqlite3-wal']})
+        self.assertEqual(compare(closed, journaled),
+                         {'missing': [], 'added': [], 'changed_immutable': [],
+                          'changed_state': ['state.sqlite3-shm', 'state.sqlite3-wal']})
+        self.assertEqual(compare(journaled, {'files': [entry('state.sqlite3-wal')]}),
+                         {'missing': ['state.sqlite3'], 'added': [], 'changed_immutable': [],
+                          'changed_state': ['state.sqlite3-shm']})
 
     def test_recorded_inventory_reads_l12_evidence_and_files_reports(self):
         inventory = {'files': []}
@@ -410,7 +428,7 @@ UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never uv run --offline --locked --package sec-e
   -p test_baseline_campaign.py -v
 ```
 
-Expected: `FAILED (errors=10)`. Every error is `AssertionError: missing read-only baseline campaign evidence tool`.
+Expected: `FAILED (failures=11)`. Every failure is `AssertionError: missing read-only baseline campaign evidence tool`.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -436,6 +454,8 @@ from pathlib import Path
 FORMAT = 'sec-baseline-campaign-evidence-v1'
 BUDGET_FORMAT = 'sec-baseline-campaign-budget-v1'
 MUTABLE_STATE = frozenset({'state.sqlite3', 'state.sqlite3-wal', 'state.sqlite3-shm'})
+# SQLite creates and deletes its WAL and shared-memory files itself; the database file stays strict.
+TRANSIENT_STATE = MUTABLE_STATE - {'state.sqlite3'}
 COVERED = frozenset({'covered', 'covered_open_quarter'})
 RANK = {'complete': 0, 'pending': 1, 'failed': 2}
 BUDGET_TOTALS = (('attempts', 'max_request_attempts'), ('distinct_urls', 'max_distinct_urls'),
@@ -467,16 +487,20 @@ def recorded_inventory(value: dict) -> dict:
 
 
 def compare_inventory(recorded: dict, actual: dict) -> dict:
-    """Recorded files must survive byte-identical, except the SQLite state files."""
+    """Recorded files must survive byte-identical, except the SQLite state files.
+
+    The WAL and shared-memory files may also appear or vanish; that is reported as a state change.
+    """
     before = {item['relative_path']: item for item in recorded['files']}
     after = {item['relative_path']: item for item in actual['files']}
     changed = sorted(path for path in before.keys() & after.keys()
                      if (before[path]['sha256'], before[path]['byte_count'])
                      != (after[path]['sha256'], after[path]['byte_count']))
-    return {'missing': sorted(before.keys() - after.keys()),
-            'added': sorted(after.keys() - before.keys()),
+    journal = (before.keys() ^ after.keys()) & TRANSIENT_STATE
+    return {'missing': sorted(before.keys() - after.keys() - TRANSIENT_STATE),
+            'added': sorted(after.keys() - before.keys() - TRANSIENT_STATE),
             'changed_immutable': [path for path in changed if path not in MUTABLE_STATE],
-            'changed_state': [path for path in changed if path in MUTABLE_STATE]}
+            'changed_state': sorted({path for path in changed if path in MUTABLE_STATE} | journal)}
 
 
 # ---- transport audit ------------------------------------------------------------------------
@@ -710,7 +734,7 @@ if __name__ == '__main__':
 
 Run the Step 2 command again.
 
-Expected: `Ran 10 tests` and `OK`, in about 2–3 minutes. The plan's draft passed all 10 tests on 2026-10-21 against the checkout package.
+Expected: `Ran 11 tests` and `OK`, in about 2–3 minutes. All 11 tests passed on 2026-10-21 against the checkout package.
 
 - [ ] **Step 5: Check the tool under the release interpreter, read-only**
 
@@ -723,7 +747,7 @@ tool files --root "$project/data" --recorded specs/evidence/local-port/sec-accep
   | native -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["comparison"]))'
 ```
 
-Expected: `exit=1`. The comparison has `missing: []` and `changed_state: []`. It has `changed_immutable` equal to exactly the F1 manifest path, and `added` equal to exactly the five `.DS_Store` paths (`.DS_Store`, `objects/.DS_Store`, `objects/raw/.DS_Store`, `objects/raw/sec/.DS_Store`, `objects/raw/sec/indexes/.DS_Store`). Any other difference stops the plan. Report it to the owner.
+Expected: `exit=1`. The comparison has `missing: []`, and `changed_state` is empty or lists only SQLite state files. It has `changed_immutable` equal to exactly the F1 manifest path, and `added` equal to exactly the five `.DS_Store` paths (`.DS_Store`, `objects/.DS_Store`, `objects/raw/.DS_Store`, `objects/raw/sec/.DS_Store`, `objects/raw/sec/indexes/.DS_Store`). Any other difference stops the plan. Report it to the owner.
 
 - [ ] **Step 6: Commit**
 
@@ -851,7 +875,7 @@ tool files --root "$project/data" --recorded specs/evidence/local-port/sec-accep
 native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["inventory"]["file_count"], v["comparison"])' "$evidence/pre-campaign/files-after.json"
 ```
 
-Expected: `exit=0`, file count 155, and empty `added`, `changed_immutable` and `missing`. `changed_state` is empty or lists only SQLite files, which can change when Step 3 reads the database.
+Expected: `exit=0`, file count 153–155, and empty `added`, `changed_immutable` and `missing`. `changed_state` is empty or lists only SQLite files. They can change when Step 3 reads the database, and SQLite deletes its WAL and SHM files when the last connection closes.
 
 - [ ] **Step 7: Verify the restored generation through its pointer**
 

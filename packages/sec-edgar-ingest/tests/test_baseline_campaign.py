@@ -65,6 +65,23 @@ class PureRuleTests(unittest.TestCase):
                          {'missing': ['objects/gone'], 'added': ['objects/new'],
                           'changed_immutable': ['objects/x'], 'changed_state': ['state.sqlite3']})
 
+    def test_sqlite_journal_files_may_come_and_go_but_the_database_may_not(self):
+        def entry(path):
+            return {'relative_path': path, 'sha256': 'a', 'byte_count': 1}
+        compare = self.api['compare_inventory']
+        journaled = {'files': [entry('state.sqlite3'), entry('state.sqlite3-shm'), entry('state.sqlite3-wal')]}
+        closed = {'files': [entry('state.sqlite3')]}
+        # SQLite deletes its WAL and shared-memory files when the last connection closes cleanly.
+        self.assertEqual(compare(journaled, closed),
+                         {'missing': [], 'added': [], 'changed_immutable': [],
+                          'changed_state': ['state.sqlite3-shm', 'state.sqlite3-wal']})
+        self.assertEqual(compare(closed, journaled),
+                         {'missing': [], 'added': [], 'changed_immutable': [],
+                          'changed_state': ['state.sqlite3-shm', 'state.sqlite3-wal']})
+        self.assertEqual(compare(journaled, {'files': [entry('state.sqlite3-wal')]}),
+                         {'missing': ['state.sqlite3'], 'added': [], 'changed_immutable': [],
+                          'changed_state': ['state.sqlite3-shm']})
+
     def test_recorded_inventory_reads_l12_evidence_and_files_reports(self):
         inventory = {'files': []}
         read = self.api['recorded_inventory']

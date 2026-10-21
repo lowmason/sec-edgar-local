@@ -17,6 +17,8 @@ from pathlib import Path
 FORMAT = 'sec-baseline-campaign-evidence-v1'
 BUDGET_FORMAT = 'sec-baseline-campaign-budget-v1'
 MUTABLE_STATE = frozenset({'state.sqlite3', 'state.sqlite3-wal', 'state.sqlite3-shm'})
+# SQLite creates and deletes its WAL and shared-memory files itself; the database file stays strict.
+TRANSIENT_STATE = MUTABLE_STATE - {'state.sqlite3'}
 COVERED = frozenset({'covered', 'covered_open_quarter'})
 RANK = {'complete': 0, 'pending': 1, 'failed': 2}
 BUDGET_TOTALS = (('attempts', 'max_request_attempts'), ('distinct_urls', 'max_distinct_urls'),
@@ -48,16 +50,20 @@ def recorded_inventory(value: dict) -> dict:
 
 
 def compare_inventory(recorded: dict, actual: dict) -> dict:
-    """Recorded files must survive byte-identical, except the SQLite state files."""
+    """Recorded files must survive byte-identical, except the SQLite state files.
+
+    The WAL and shared-memory files may also appear or vanish; that is reported as a state change.
+    """
     before = {item['relative_path']: item for item in recorded['files']}
     after = {item['relative_path']: item for item in actual['files']}
     changed = sorted(path for path in before.keys() & after.keys()
                      if (before[path]['sha256'], before[path]['byte_count'])
                      != (after[path]['sha256'], after[path]['byte_count']))
-    return {'missing': sorted(before.keys() - after.keys()),
-            'added': sorted(after.keys() - before.keys()),
+    journal = (before.keys() ^ after.keys()) & TRANSIENT_STATE
+    return {'missing': sorted(before.keys() - after.keys() - TRANSIENT_STATE),
+            'added': sorted(after.keys() - before.keys() - TRANSIENT_STATE),
             'changed_immutable': [path for path in changed if path not in MUTABLE_STATE],
-            'changed_state': [path for path in changed if path in MUTABLE_STATE]}
+            'changed_state': sorted({path for path in changed if path in MUTABLE_STATE} | journal)}
 
 
 # ---- transport audit ------------------------------------------------------------------------
