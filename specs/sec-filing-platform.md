@@ -72,8 +72,8 @@ on an unverified fact about the SEC, it says so and names the check that settles
 
 ## Requirements
 
-`(open)` stands for `(open — resolved by verification, not argument)`. Each `(open)` names the
-Verification bullet that discharges it.
+`(open — resolved by verification, not argument: Vn)` marks a requirement that rests on a fact
+about the SEC. Vn names the Verification bullet that discharges it.
 
 ### Base design
 
@@ -106,20 +106,23 @@ Rules:
    retained as separate compressed snapshots, so a reader reaches one submission without its
    archive. The archive's hash, size and member list form its own snapshot record. Whether the
    archive bytes are also kept after the members verify is decided at the storage gate (R30).
-3. Backfill takes every Feed archive of a quarter's business days, newest quarter first (C C18).
-   A catalog submission that no archive of its quarter holds goes to the repair path.
+3. Backfill takes every Feed archive of the requested range, newest quarter first (C C18).
+   Members match catalog submissions by accession across all archives taken, whatever quarter an
+   archive covers. A late-public submission therefore matches the later archive that carries it
+   (M EN). A catalog submission goes to the repair path only when no archive of the range holds
+   it.
 4. On the repair path, order is quarter-major, newest first (C C18, M P1.p5).
 5. A regenerated archive has a new hash, so it is a new archive snapshot (C C1, C §4.10).
 6. Feed archives do not reflect later removals. Removals come only from catalog withdrawals
    (C C1, M P10.a2).
 7. On a sample, Feed members are compared with complete submission files by document payload hash
-   (C C1, C §3 system 1). (open: V1)
+   (C C1, C §3 system 1). (open — resolved by verification, not argument: V1)
 
 **R4 — The governor gains a bulk lane and a third priority.** This changes the catalog's shared
 governor (catalog methodology C2):
 
 - A bulk lane has its own exchange deadline and byte guards, sized from the Feed listings. Archives
-  reach about 6.1 GB (C C1). Transfers resume after failure (C C1). (open: V2)
+  reach about 6.1 GB (C C1). Transfers resume after failure (C C1). (open — resolved by verification, not argument: V2)
 - Three priorities apply: catalog daily, then platform daily, then backfill and audit
   (C §3 system 10, C §3 P1.3, M P1.q3, M SQ10).
 - The owner-wide rate target stays r = 3 per second (C C2, triage Q1 option A). The methodology
@@ -131,7 +134,7 @@ The bulk lane also carries `submissions.zip` (R7) and oversize repairs (R6).
 **R5 — Per-submission transport.** Repair fetches request gzip content encoding. The platform
 hashes and retains the decoded bytes as the original bytes and records the content encoding
 (C C19, M P2.p4). It sends conditional requests when the SEC returns validators (C §3 P2.1).
-Without gzip support, identity encoding stays. (open: V3)
+Without gzip support, identity encoding stays. (open — resolved by verification, not argument: V3)
 
 **R6 — Size guards.** The per-submission byte guard is at least 400 MB plus a margin (C C9, M EN).
 A submission that cannot finish within the per-request deadline moves to the bulk lane. It is not
@@ -146,19 +149,22 @@ gives size, acceptance time, items and XBRL flags per accession (C C17, C §3 P4
   receipt (M P4.q1).
 - `.hdr.sgml` is the header-only refetch (R9, R29).
 
-(open: V4)
+(open — resolved by verification, not argument: V4)
 
 **R8 — Combined filings.** A submission may carry more than one form type. Then $f_y$ is a set and
 its tier is the highest-priority tier of the set. A set that the header confirms is not a gap
-(M EN, M P1.p2, M P3.p5). (open: V5)
+(M EN, M P1.p2, M P3.p5). (open — resolved by verification, not argument: V5)
 
 ### Identity, revisions and time
 
 **R9 — Headers are revisable, documents are not.** This replaces cross-component assumption 5
 (M XA5, C C5).
 
-- A submission's header state is identified by $(a_y, v)$. The header revision $v$ counts distinct
-  header states in order of first receipt. Every derived row carries $v$ beside $\theta_y$.
+- A submission's header state is identified by $(a_y, v)$. A header state is the set of parsed
+  header field values, not the header bytes. The header revision $v$ counts distinct header states
+  in order of first receipt. Every derived row carries $v$ beside $\theta_y$.
+- A second snapshot of the same $(a_y, v)$, in either serialization, adds no rows when its document
+  payload hashes match. A payload mismatch is a gap (V1).
 - The document payload hashes $h_\delta$ are the immutable layer. Evidence spans therefore survive a
   header revision (C C5, M P9.a3).
 - A changed filing date, form type or other header field is a new revision, not a gap
@@ -166,7 +172,7 @@ its tier is the highest-priority tier of the set. A set that the header confirms
 - When the lineage walk shows a changed filing date or form type for an acquired submission, the
   plan refetches its header (C C5, C C23, M P1.p4).
 
-(open: V6)
+(open — resolved by verification, not argument: V6)
 
 **R10 — A moved submission leaves its old quarter explicitly.** Generations grow by union only
 (M composition, M P7.p3). When the pinned catalog moves a submission to another quarter, the old
@@ -188,9 +194,9 @@ $t^{\mathrm{pub}}$ follows these rules:
 2. A submission tagged `<PRIVATE-TO-PUBLIC>` takes the day of the first Feed archive or daily index
    that carries it, at day precision (M EN). If the platform holds neither, it takes the receipt
    time of the first catalog generation that listed the submission, as an upper bound (C C16).
-   (open: V7)
+   (open — resolved by verification, not argument: V7)
 3. An acceptance after the dissemination cutoff takes the next business day, at day precision, if
-   V8 confirms next-day dissemination (C C16). (open: V8)
+   V8 confirms next-day dissemination (C C16). (open — resolved by verification, not argument: V8)
 
 **R12 — Views name their clock.** Two operators replace $\mathrm{Known}_t$ (C C10, M P7.p6):
 
@@ -224,7 +230,7 @@ Feed members and the labeled-line format of the complete submission file.
 - A document block ends only at a line-initial closing tag (C §3 P3.3, M P3.a3).
 - Unknown labels and tags are retained, not refused (C §3 P3.2, M P3.p2, M P3.q2).
 - The header fields of the two formats are compared on the V1 sample (C §3 P3.1, M P3.q1).
-- Required fields stay as M P3.p2 states. (open: V9)
+- Required fields stay as M P3.p2 states. (open — resolved by verification, not argument: V9)
 
 **R16 — Classify documents by type and root.** The encoding class comes from the declared type and
 the root element after unwrapping `<XBRL>` (C C4, M P3.p4).
@@ -234,7 +240,7 @@ the root element after unwrapping `<XBRL>` (C C4, M P3.p4).
   but never extracted. The SEC-extracted instance among them is kept as an evaluation reference
   (C C4, R21).
 
-(open: V10)
+(open — resolved by verification, not argument: V10)
 
 ### Entity history (P4)
 
@@ -260,7 +266,7 @@ one Inline XBRL Document Set (IXDS) before extraction (C C3, M P5.p1).
 - Facts are keyed by (accession, header revision, IXDS, fact id) (C C3, M P5.p4, M P7.a6).
 - An unresolved reference refuses the set.
 
-(open: V11)
+(open — resolved by verification, not argument: V11)
 
 **R19 — Duplicates, cells, revisions and the cover record.**
 
@@ -276,11 +282,11 @@ one Inline XBRL Document Set (IXDS) before extraction (C C3, M P5.p1).
 - The cover record is multi-valued by dimension: shares outstanding per class, and symbol and
   exchange per security (C C12, M P5.p5).
 - A fact's entity is the context identifier, qualified by the legal-entity axis member when one is
-  present (C C12, M SQ5). (open: V12)
+  present (C C12, M SQ5). (open — resolved by verification, not argument: V12)
 
 **R20 — Complete transformation registry.** $\mathcal{R}$ holds every Transformation Registry
 version that the EDGAR Filer Manual permits, plus the SEC's own transformations. A null value then
-marks a filer error, not a coverage gap (C C7, C §3 P5.2, M P5.a2). (open: V11)
+marks a filer error, not a coverage gap (C C7, C §3 P5.2, M P5.a2). (open — resolved by verification, not argument: V11)
 
 **R21 — References for fact accuracy.** A version of $\nu_X$ is evaluated against these
 references, in order (C C7, C C8, C §3 system 9, M SQ9):
@@ -442,12 +448,12 @@ Every methodology evaluation criterion holds (R1). These checks are added:
 
 ## Rollout note
 
-- **The governor change opens the rollout.** R4 changes the catalog's shared governor. The
-  platform roadmap stages that change as its own work, with a stated dependency on the catalog. No
-  stage is added to the ingestion roadmap. The owner approves the change to the shared governor.
 - **Evidence comes before parsers.** V1, V7 and V10 block the parser freeze. They decide the
   grammar, the time model and the extraction carriers. The retained sample of real submissions
   (M P3.e) comes first.
+- **The governor change comes next.** R4 changes the catalog's shared governor. The platform
+  roadmap stages that change as its own work, with a stated dependency on the catalog. No stage is
+  added to the ingestion roadmap. The owner approves the change to the shared governor.
 - **The storage gate blocks backfill.** V17 must hold before the first backfill.
 - **Catalog coverage bounds platform coverage.** The platform covers a quarter only after the
   catalog accepts it (R2). The catalog's baseline campaign is Stage 2 of the ingestion roadmap.
