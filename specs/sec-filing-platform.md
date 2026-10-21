@@ -3,8 +3,8 @@
 > For agentic workers: REQUIRED NEXT SKILL: derive-roadmap — do not plan
 > this spec directly and do not split it into per-subsystem plans.
 
-**Status:** Synthesized 2026-10-21 and awaiting owner review. Nothing is implemented. This spec
-authorizes no live SEC traffic.
+**Status:** Synthesized 2026-10-21. The owner approved it on 2026-10-21 for roadmap derivation.
+Nothing is implemented. This spec authorizes no live SEC traffic.
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
 **Roadmap:** none yet. derive-roadmap writes `specs/sec-filing-platform-roadmap.md`. Platform work
 never adds stages to the [ingestion roadmap](sec-filing-index-ingestion-roadmap.md).
