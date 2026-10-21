@@ -20,12 +20,12 @@ An owner gate then checks the release and approves the finite scope, budget, win
 
 ## Feasibility blocker (read first)
 
-On release `fc68adef…`, the live campaign cannot complete its first invocation inside the runtime limit. Planning found this from retained native evidence and offline fixtures. It sent no SEC request.
+On release `fc68adef…`, the first live invocation has no safe margin inside the runtime limit, and very likely exceeds it. Planning found this from retained native evidence and offline fixtures. It sent no SEC request.
 
 1. The first invocation must carry every pending daily source (F4, F9). On 2026-10-21 that is about 75 sources: L12's 73, plus the business days 2026-10-19 and 2026-10-20 if they are listed. The count grows by one each business day.
 2. In L12's genuine run, the native `publish` of the two daily sources took **41.6 s** (2026-10-14) and **187.6 s** (2026-10-15). The source is `specs/evidence/local-port/sec-acceptance.json`, `selected_sources[1].publish` and `selected_sources[2].publish`. The cause of the difference is not established.
-3. At the lower value, 75 publishes take about 3,120 s. Collect and transform add about 230 s (L12: 0.6–0.7 s and 2.2–2.6 s for each source). That totals about 3,350 s, before the second processing of each source (F10) and before any growth (F11). The launcher default is 3,300 s and the live maximum is 3,600 s. At the mean of the two observed publishes, the drain needs about 8,800 s.
-4. A run that reaches its deadline is killed and leaves no workflow result (F8). The runner defers undispatched members only when `now >= deadline`, with no margin. So the member in flight at that time becomes `state_conflict`, not a clean deferral.
+3. At the lower value, 75 publishes take about 3,120 s. Collect and transform add about 230 s (L12: 0.6–0.7 s and 2.2–2.6 s for each source). That totals about 3,350 s, before the second processing of each source (F10) and before any growth (F11). The launcher default is 3,300 s and the live maximum is 3,600 s, so even this floor leaves under 10% margin. With about 80 sources by execution day, the floor is about 3,570 s. At the mean of the two observed publishes, the drain needs about 8,800 s, about 2.5 times the live maximum.
+4. A run that reaches its deadline is killed and leaves no workflow result (F8). The runner defers undispatched members only when `now >= deadline`, with no margin. So the member in flight at that time becomes `state_conflict`, not a clean deferral. One overrun ends the run with no workflow result, so a run near the limit is not a safe operating point.
 
 Consequence: Tasks 1–3 are offline and remain useful preparation. Task 4's live gate stays closed on this release. The owner routes the blocker at plan review (O11).
 
@@ -110,7 +110,7 @@ Each default below is applied in the named task. The owner settles each one at p
 - **F8 — A run that reaches its deadline leaves no workflow result.** The launcher sends SIGTERM to the engine group at the deadline (`local_cli.py`, supervision loop). The runner checks the deadline only between members, and only as `now >= context.deadline` (`runner.run_workflow`). A checked child that ends after its deadline, or whose drain is not confirmed, is a `Conflict` (`workflows/checked.py` `_check_exit`), which is `state_conflict`. Work must therefore fit inside each invocation with margin. A range-only config is the supported bound. The L12 quarterly config was such a config, and Task 3's generator reproduces its effective SHA-256 `32b4da638464758c2926fc9040e207696a081d452b2af3813ddd36d179441740` exactly.
 - **F9 — Pending sources fix the slice order.** Discovery refuses any member whose quarter is after the pinned end (`worksets._validate_source_directory`: "source member is after the pinned endpoint"), which ends the run with `state_conflict`. While daily sources in 2026Q3–Q4 are pending, every backfill slice must end at 2026Q4. So the pilot is `2026Q4`–`open`, and it drains them. After that, slices run in ascending order, so a pending source from slice k is never after slice k+1's end. The rule is confirmed offline in a fixture store.
 - **F10 — Each pending daily source is processed twice.** The selection holds both the retained member from the earlier discovery and the new discovery's member for the same source (`runner.select_work`, `combined`). In the 4-source fixture pilot, `process_member` ran 8 times. The second pass is cheaper.
-- **F11 — The pilot cannot fit its runtime on this release.** This is the blocker stated at the top.
+- **F11 — The pilot has no safe margin inside its runtime on this release.** This is the blocker stated at the top.
   - Native evidence: L12's two daily publishes took 41.6 s and 187.6 s (`sec-acceptance.json`, `selected_sources[1..2].publish`). L12's 2024Q1 transform took 11.7 s and stopped as `invalid_source`, so no native closed-quarter publish time exists.
   - Fixture evidence (temporary stores, fixture parser, 20-row synthetic daily bodies, one back-dated row each, checkout package): the pilot took 50–61 s, 119.8 s and 349.9 s for 2, 4 and 8 pending sources. Child-process time was 20.6 s, 38.9 s and 91.3 s. Both grow faster than the source count.
   - Fixture profile at 4 sources: total 132.6 s. `select_work` 6.7 s (`reuse_exact_binding` 0.2 s, `inventory` 0.1 s). `process_member` 85.0 s over 8 calls, of which children 44.0 s. `baseline_gaps` 6.1 s. The cost is per-member processing, not selection.
@@ -1079,10 +1079,11 @@ Release gate section is open and the Approval section is complete and committed.
 ## Release gate
 
 Closed on release `fc68adef…`. The pilot must drain every pending daily source in one invocation. L12's
-native daily publishes took 41.6 s and 187.6 s, so about 75 sources need more than the 3,600-second live
-maximum, and a run that reaches its deadline leaves no result (plan 2, F8 and F11). The gate opens only on a
-release that defers undispatched members before the deadline, or bounds the members of one invocation,
-after a reviewed revision of plan 2 for that release.
+native daily publishes took 41.6 s and 187.6 s. So about 75 sources need about 3,350 s at the lower value
+and about 8,800 s at the mean, against the 3,600-second live maximum. A run that reaches its deadline leaves
+no result (plan 2, F8 and F11). The gate opens only on a release where the pilot's drain fits one invocation
+with margin, or where undispatched members defer before the deadline, after a reviewed revision of plan 2
+for that release.
 
 ## Source scope
 
@@ -1190,7 +1191,7 @@ git commit -m "docs(evidence): propose Stage 2 campaign scope, slices and budget
 Read `release_id` from the Task 3 Step 1 output.
 
 - If it is `fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec`, the gate stays closed (F11). Present the Feasibility blocker and O11 to the owner. Replace the Approval section with `Not opened: F11 blocker on release fc68adef…. Owner routing (verbatim): "<owner's words>"`. Commit as in Step 4, and end the plan here.
-- If the owner selected another release, stop. This plan pins `fc68adef…` throughout. First revise the plan for that release: Global Constraints, the Task 1 tool's release-internal imports (re-run Task 1 Steps 4–5), the Task 3 values, and this gate's evidence that the pilot defers or bounds its members before the deadline. The owner reviews that revision. Then restart at Task 3.
+- If the owner selected another release, stop. This plan pins `fc68adef…` throughout. First revise the plan for that release: Global Constraints, the Task 1 tool's release-internal imports (re-run Task 1 Steps 4–5), the Task 3 values, and this gate's evidence that the pilot's drain fits one invocation with margin, or that undispatched members defer before the deadline. The owner reviews that revision. Then restart at Task 3.
 - Continue to Step 2 only under a reviewed revision whose release gate is open.
 
 - [ ] **Step 2: Present `pre-campaign.md` and `campaign.md` to the owner**
