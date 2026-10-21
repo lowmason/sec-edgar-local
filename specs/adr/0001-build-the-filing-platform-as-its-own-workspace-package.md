@@ -1,8 +1,8 @@
 # 0001. Build the filing platform as its own workspace package
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-21
-- **Deciders:** Lowell Mason (owner), pending
+- **Deciders:** Lowell Mason (owner), accepted 2026-10-21
 - **Blast radius:** the whole uv workspace: `packages/sec-edgar-ingest`, the new platform package,
   the shared `uv.lock` and the native release machinery
 
