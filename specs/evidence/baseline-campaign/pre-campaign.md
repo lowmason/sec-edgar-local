@@ -43,3 +43,12 @@ No SEC request was sent. No writer ran during this task.
 - All 155 L12-inventoried files match again, and no other file exists
   ([files-after.json](pre-campaign/files-after.json)).
 - The 2021Q1 pointer binds `a445d0a8…`, 5,100 bytes. The validated read returns 4 rows.
+
+## Known-answer checks
+
+- Offline preflight: effective config `088403cb…`, release `fc68adef…`, range 2015Q1–open.
+  Config file bytes `cad77e29d681e47a6cfb5658b7ddd13c50b6d55f17e0e315f30c2878cf8da0c4`.
+- [audit.json](pre-campaign/audit.json): 10 transport attempts, 10 URLs, 4,946,565 received bytes,
+  ordinal 1 only. This equals L12.
+- [coverage.json](pre-campaign/coverage.json): 48 requested units without a campaign result. 16 published
+  quarters, all daily-only, total 6,744 validated rows. This equals the L12 latest-capture total.
