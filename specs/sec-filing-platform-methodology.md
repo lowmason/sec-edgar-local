@@ -22,11 +22,13 @@ governor (its C2).
 the live SEC, and no component has been measured: submission file sizes, header and document
 irregularities, parse-refusal rates, fact and record counts, throughput, storage and runtime
 are all unknown. The catalog it consumes is implemented and tested offline (see the catalog
-spec). The only measured figures used here are the catalog's sampled row counts and the
+spec). The only measured figures used in the method are the catalog's sampled row counts and the
 governor's rate ceiling; every other number is a selected limit. The SGML, XBRL and XML layouts
 described below are the design's reading of the SEC's published formats and have not yet been
 checked against retained real submissions; fixing the parsers against such a sample is the
-first evaluation step of P3, P5 and P6. Scope is acquisition, envelope parsing, entity
+first evaluation step of P3, P5 and P6. The evidence note at the end adds figures from one manual
+inspection of one day's feed archive and of one stored quarterly index; it does not change the
+method. Scope is acquisition, envelope parsing, entity
 attributes, XBRL facts, ownership XML, the point-in-time store and deterministic events.
 Model-based extraction, narrative sectioning and text-change measures are out of scope and will
 be specified separately; this document fixes only the provenance contract they must meet (P9).
@@ -1267,3 +1269,56 @@ and quarter. Coverage is never inferred from the newest filing date acquired.
 10. **Budget sharing and priority.** The platform's daily, audit and backfill runs and the
     catalog's runs share one governor with two priorities. Is "other" for all platform traffic
     the right rule, and what is the expected daily request load once the backfill is complete?
+
+## Evidence note: SEC filing submissions findings
+
+This note adds evidence from `specs/findings/sec-filing-submissions-findings.md` (2026-10-19/21). It
+does not change the method above. The evidence comes from one manual download of one daily feed
+archive (2026-10-15), the daily index of the same day and the stored 2024Q1 quarterly index. No
+complete submission file was fetched, and other days were not checked.
+
+- **P1 open question 1 and system open question 1, feed archives.** The 2026-10-15 archive was one
+  request. It returned 1,610,242,722 bytes in 251 s and unpacked to 20,742,318,080 bytes (about
+  13×). The listed compressed sizes for 2026-10-01 to 2026-10-16 are about 0.7–1.6 GB, one archive
+  per business day. The body is about 6× $B^{\mathrm{sub}}_{\mathrm{rx}}$, and the exchange took
+  about 2.8× $T_{\mathrm{ex}}$. The archive holds 2,627 files, one per accession, also when the
+  daily index has several filer rows for that accession. A file is named `<accession>.nc`, or
+  `<accession>.corrNN` for the 101 submissions in the next bullet. The header accession agrees with
+  the file name in all 2,627 files. After the suffix is removed, the accessions equal the distinct
+  accessions of the day's daily index. The feed header is tagged (`<SUBMISSION>`,
+  `<ACCESSION-NUMBER>`, `<TIMESTAMP>`), while P3's grammar is a reading of the labeled header lines
+  of the complete submission file. That file was not fetched, so the two serializations were not
+  compared, and the meaning of `<TIMESTAMP>` was not checked. Findings §§4.1–4.5 and §6.
+- **Cross-component assumptions 1 and 4, late-public submissions.** 101 of the 2,627 feed files
+  carry a `<PRIVATE-TO-PUBLIC>` tag. Their forms are CORRESP (53), UPLOAD (22), 485APOS (22), DRS
+  (2), 486APOS (1) and 485BPOS (1). 100 of them have index filing dates before 2026-10-01, back to
+  2021, and in all 101 the year of the header filing date equals the accession year. The tag name
+  suggests that the SEC made them public on
+  2026-10-15, after a period when they were not public. SEC documentation was not checked. If that
+  reading is right, two things follow. First, the acceptance instant of such a submission can
+  precede its public availability by years. Assumption 4 then fails for it, and
+  $\mathrm{Known}_t$ shows it before it was public. The acceptance lines of these files were not
+  read, so whether they carry the original instant or the release instant is unknown. Second,
+  $Q(d_y)$ puts such a submission in an old quarter. A daily run then adds to that quarter's
+  generation, and the quarter's coverage ratio (P10, step 9) falls below one until the submission
+  is complete. The catalog spec's evidence note adds that a back-dated row received after a
+  quarter's membership file is accepted cannot enter the closed catalog. Under assumption 1 the
+  platform then never sees it. Findings §§4.6–4.7 and §6.
+- **P1 step 2 and P3 step 5, one submission under several form types.** The stored 2024Q1 quarterly
+  index repeats 3 (CIK, path) keys that differ only in form type. Each pair is one tender-offer
+  schedule and one other schedule, for example SC 13E3 and SC TO-T. They appear to be combined
+  filings, one submission under two form types; the headers were not read. If so, $f_y$ is not
+  single-valued for such a submission. P1 step 2 then records a gap on rows that may be correct,
+  and the P3 cross-check of the conformed submission type against $f_y$ fails for one of them. The
+  catalog quarantines that file for this reason (its system open question 1). Findings §5.2.
+- **P2, submission sizes.** Feed-file sizes on 2026-10-15 run from a few kilobytes (a Form 144 of
+  6,530 bytes) to 352,590,758 bytes, with a mean near 7.9 MB. The three largest files
+  (352,590,758, 352,465,075 and 280,005,684 bytes) exceed $B^{\mathrm{sub}}_{\mathrm{rx}}$
+  (268,435,456 bytes). If complete submission files are about the same size, at least 3 of that
+  day's 2,627 submissions would be deferred as oversize. If other days unpack like this one, a
+  business day is roughly 9–21 GB of text. This is the first measured basis for the growth in
+  cross-component assumption 7. Findings §§4.3–4.4 and §6.
+- **P1 tiers and P6 scope.** The day's most common forms were 424B2 (382, tier 4), 4 (292), 8-K
+  (214), D (208), 13F-HR (197), D/A (130), 144 (122) and 10-D (105). The sample Form 144 holds a
+  structured XML document. Form 144 is not one of P6's three ownership families, so it yields no
+  typed record. Findings §4.4.
