@@ -32,9 +32,9 @@ Consequence: Tasks 1–3 are offline and remain useful preparation. Task 4's liv
 **Status of authority:** This plan authorizes no live traffic.
 
 - Tasks 1 and 3 are offline and send no SEC request.
-- Task 2 changes files under `data/`. It runs only after the owner approves defaults O2, O3 and O9 at plan review.
+- Task 2 changes files under `data/`. The owner approved its defaults O2, O3 and O9 (D6). It still runs only with no writer running (Task 2 Step 1).
 - Task 4 is the owner's live-execution gate. It opens only on a release that clears the feasibility blocker, after a reviewed revision of this plan for that release. Tasks 5–7 run only after the Task 4 approval commit exists.
-- Task 8 edits spec text only. It runs only if the owner approves O4, and it does not depend on the campaign.
+- Task 8 edits spec text only. The owner approved O4 (D6), and the task does not depend on the campaign.
 
 ## Global Constraints
 
@@ -78,10 +78,11 @@ cd "$project"
 - **D3** (owner, brief, 2026-10-21): The plan consumes findings §§2 and 4.6–4.7 (daily indexes add back-dated rows to old filing quarters) and §5 (2024Q1 quarantine: three conflicting keys that look like combined filings). Applied in: Task 1 (verdict rules), Tasks 6–7.
 - **D4** (owner, brief, 2026-10-21): The intended range defaults to the config's `2015Q1`–`open` and needs owner confirmation. Applied in: Task 3 (see O1).
 - **D5** (owner, plan review, 2026-10-21): O11 (a). An engine change and a new release come before the Stage 2 live campaign. Tasks 1–3 stay as offline preparation on release `fc68adef…`. Owner's words: "Route O11 (a): an engine change and a new release come before the Stage 2 live campaign. Keep Tasks 1–3 as offline preparation." Applied in: Feasibility blocker, Task 4, After the last task.
+- **D6** (owner, plan review, 2026-10-21): O1–O10 accepted as proposed. Owner's words: "Accept O1–O10 as proposed in plan 2." That settles: the range 2015Q1–2026Q4 in slices, pilot first (O1); restoring the 2021Q1 manifest (O2); removing the five `.DS_Store` files (O3); recording the lost L12 directory and amending the spec (O4); budgeting and reporting the retained daily sources (O5); approving no withdrawal in Stage 2 (O6); no discovery-only probe (O7); the `campaign.json` limits (O8); the backup location under `backups/` (O9); and the pilot order (O10). Applied in: the tasks that each default names.
 
 ## Defaults for owner review
 
-Each default below is applied in the named task. The owner settles each one at plan review. Each answer is logged as a new **D** line above.
+Each default below is applied in the named task. The owner accepted O1–O10 as proposed (D6) and settled O11 (D5).
 
 - **O1 — Range and slices.** Default: requested range 2015Q1–2026Q4, which is 48 quarterly units. This is the live config's `2015Q1`–`open` on a UTC date in 2026Q4. 2026Q4 is the open quarter, so its quarterly source is quarter-to-date. The campaign runs as range slices (F8, F9). The first slice is the pilot `2026Q4`–`open`. Then ascending slices run from 2015Q1 to 2026Q3, and together they cover the range with no gap or overlap. If the campaign starts on or after 2027-01-01T00:00:00Z, `open` becomes 2027Q1: re-derive the range, the open quarter and every value that names 2026Q4 in the plan revision that Task 4 requires. Alternative: an earlier start, such as the `2010Q1` that the completed design names as a possible later revision. Applied in: Tasks 3 and 5.
 - **O2 — 2021Q1 manifest restoration.** Default: after a stopped-writer backup, write the canonical bytes back (Task 2). The canonical re-encoding of the drifted file is SHA-256 `a445d0a8…`, 5,100 bytes, which equals the L12 inventory record. Alternative: leave the file. Then every reader and every publication onto 2021Q1 refuses with `state_conflict`. That includes a future `daily` run whose back-dated rows reach 2021Q1. Applied in: Task 2.
@@ -749,7 +750,7 @@ git commit -m "feat(scripts): add read-only baseline campaign evidence tool"
 - Consumes: Task 1 `tool files`; the recovery runbook backup procedure (`docs/runbooks/local-recovery.md`).
 - Produces: a verified backup path. A live root whose L12-inventoried files all match L12 again. `pre-campaign.md` sections `Integrity findings`, `Backup`, `Restoration` and `Verification`.
 
-Run this task only after the owner approves O2, O3 and O9. It stays useful under D5, because F1 also blocks any later `daily` run whose back-dated rows reach 2021Q1. No SEC request is involved. Stop at the first unexpected value and report it. Do not improvise a repair.
+The owner approved O2, O3 and O9 (D6). It stays useful under D5, because F1 also blocks any later `daily` run whose back-dated rows reach 2021Q1. No SEC request is involved. Stop at the first unexpected value and report it. Do not improvise a repair.
 
 - [ ] **Step 1: Confirm that no writer runs**
 
@@ -1569,13 +1570,13 @@ git commit -m "docs(evidence): record accepted Stage 2 baseline coverage finding
 
 ---
 
-### Task 8: Spec amendment for the pre-campaign facts (only if the owner approves O4)
+### Task 8: Spec amendment for the pre-campaign facts (owner-approved O4)
 
 **Files:**
 - Modify: `specs/sec-filing-index-ingestion-spec.md` (§4.8 and §6). Leave the status line untouched.
 
 **Interfaces:**
-- Consumes: the D-line date recorded for O4 at plan review.
+- Consumes: D6 (O4 approved on 2026-10-21).
 - Produces: spec text that matches the facts in F3 and in the config observation.
 
 This task does not depend on the live campaign. It can run right after plan review.
@@ -1588,11 +1589,11 @@ Replace:
 The config remains untracked. Acceptance-time statements that the preserved default selected
 ```
 
-with (use the O4 decision date):
+with:
 
 ```text
 The config is tracked in git since commit `001edf5`; its effective-config hash is unchanged
-(owner, plan 2, <O4 decision date>). Acceptance-time statements that the preserved default selected
+(owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default selected
 ```
 
 - [ ] **Step 2: Amend §6**
@@ -1610,7 +1611,7 @@ with:
 Retain the live root, releases, and committed evidence. The external directory
 `/private/tmp/sec-local-task16-acceptance-20261018`, with the original results and separate supplement,
 was found absent on 2026-10-21; its recorded hashes and inventory remain in the committed machine
-evidence (owner, plan 2, <O4 decision date>). Future operational reports add evidence;
+evidence (owner, plan 2, 2026-10-21). Future operational reports add evidence;
 ```
 
 - [ ] **Step 3: Commit**
