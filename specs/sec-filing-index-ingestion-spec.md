@@ -313,7 +313,8 @@ The selected manifest is:
 
 The post-completion release-only edit produces effective-config SHA-256
 `088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`, confirmed by offline preflight.
-The config remains untracked. Acceptance-time statements that the preserved default selected
+The config is tracked in git since commit `001edf5`; its effective-config hash is unchanged
+(owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default selected
 `900952a8…` describe the earlier bytes; they are not current release-selection instructions. Keep
 those historical records and releases intact.
 
@@ -426,8 +427,10 @@ reviewed offline adjudication of the same preserved bounded genuine attempt:
 - **73 unselected discoveries remained pending.** Neither those counts nor the bounded pass prove
   full coverage of the configured historical range or readiness for unattended scheduling.
 
-Retain the live root, releases, committed evidence, and `/private/tmp/sec-local-task16-acceptance-20261018`,
-including the original results and separate supplement. Future operational reports add evidence;
+Retain the live root, releases, and committed evidence. The external directory
+`/private/tmp/sec-local-task16-acceptance-20261018`, with the original results and separate supplement,
+was found absent on 2026-10-21; its recorded hashes and inventory remain in the committed machine
+evidence (owner, plan 2, 2026-10-21). Future operational reports add evidence;
 they do not rewrite the acceptance attempt. Do not repeat acceptance to close a documentation gate.
 
 ## 7. Operational rollout and acceptance gates
