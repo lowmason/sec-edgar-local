@@ -3,8 +3,8 @@
 **Status:** Exploration findings, 2026-10-19/20. Nothing here was designed, approved, or implemented.
 §4.5 was corrected and §4.6–4.7 were added on 2026-10-20 after a second check of the extracted feed.
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
-**Related:** [Filing-index ingestion spec](sec-filing-index-ingestion-spec.md),
-[completed local design](completed/sec-edgar-local-spec.md) §5.
+**Related:** [Filing-index ingestion spec](../sec-filing-index-ingestion-spec.md),
+[completed local design](../completed/sec-edgar-local-spec.md) §5.
 
 This document records one session of exploration. The session examined the live local store, checked
 whether it holds filing documents, and inspected one SEC daily feed archive by hand. This is input for
@@ -22,7 +22,7 @@ current ingestion contract.
 ## 2. The `data/` store
 
 `data/` is the default live store (`storage.root = ../data` relative to `conf/sec-edgar-local.json`).
-Git ignores it. [Completed local design §5](completed/sec-edgar-local-spec.md) defines the layout.
+Git ignores it. [Completed local design §5](../completed/sec-edgar-local-spec.md) defines the layout.
 At inspection time it held about 12 MB from one bounded acceptance run, `accept-38bf7c024e0fd5ac`
 (2026-10-18).
 

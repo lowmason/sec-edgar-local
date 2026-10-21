@@ -8,7 +8,9 @@
 **Rewritten:** 2026-10-18, replacing the copied Azure roadmap in place.
 **Source:** [Local filing-index spec](sec-filing-index-ingestion-spec.md). Requirement and gate IDs
 below refer to its §§3 and 7. **Status:** local stage partition proposed for review; no remaining
-stage is started or approved for execution by this rewrite. The owner requested inclusion of a
+stage is started or approved for execution by this rewrite. The owner approved the partition at
+resume, 2026-10-21, with the Stage 2 `Consumes` amendment below. Approval of the partition does not
+authorize live execution of any stage. The owner requested inclusion of a
 future local scheduling phase; its design remains open.
 
 The native port is complete, not a scaffold. Its [retired plan](plans/completed/1-sec-edgar-local-spec.md)
@@ -80,7 +82,7 @@ to live execution, not prerequisites to writing the plan that defines them.
       Objective: Produce an accepted written finding on the requested historical baseline, including every unresolved exception.
       Spec: §§4.2–4.9, 5–6, 7 G2.
       Gap closed: G2.
-      Consumes: Stage 1 evidence, the explicitly selected native release/current config, the intended range, and preserved live-root evidence.
+      Consumes: Stage 1 evidence, the explicitly selected native release/current config, the intended range, and preserved live-root evidence. The [submissions findings](findings/sec-filing-submissions-findings.md) §§2, 4.6–4.7: daily indexes add back-dated rows to old filing quarters (Approved at resume, 2026-10-21).
       Produces: A reviewed finite campaign scope/budget, per-invocation results/captures, a source-and-quarter coverage inventory, and an explicit complete-or-incomplete operating decision.
       Exit: Every requested baseline unit is accounted for by validated publication or a named gap/quarantine with owner disposition; original port acceptance evidence remains intact.
       ROUTING: writing-plans
