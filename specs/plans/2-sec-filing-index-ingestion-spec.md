@@ -27,7 +27,7 @@ On release `fc68adef…`, the first live invocation has no safe margin inside th
 3. At the lower value, 75 publishes take about 3,120 s. Collect and transform add about 230 s (L12: 0.6–0.7 s and 2.2–2.6 s for each source). That totals about 3,350 s, before the second processing of each source (F10) and before any growth (F11). The launcher default is 3,300 s and the live maximum is 3,600 s, so even this floor leaves under 10% margin. With about 80 sources by execution day, the floor is about 3,570 s. At the mean of the two observed publishes, the drain needs about 8,800 s, about 2.5 times the live maximum.
 4. A run that reaches its deadline is killed and leaves no workflow result (F8). The runner defers undispatched members only when `now >= deadline`, with no margin. So the member in flight at that time becomes `state_conflict`, not a clean deferral. One overrun ends the run with no workflow result, so a run near the limit is not a safe operating point.
 
-Consequence: Tasks 1–3 are offline and remain useful preparation. Task 4's live gate stays closed on this release. The owner routes the blocker at plan review (O11).
+Consequence: Tasks 1–3 are offline and remain useful preparation. Task 4's live gate stays closed on this release. The owner routed the blocker at plan review: D5, option (a) of O11. The engine change is outside this plan.
 
 **Status of authority:** This plan authorizes no live traffic.
 
@@ -77,6 +77,7 @@ cd "$project"
 - **D2** (owner, brief, 2026-10-21): Planning sends no SEC request, runs no acquisition, and does not rerun the completed port or the genuine acceptance harness. Plan approval is not live authority. The owner's review of the limits and confirmation of the sole-issuer condition gate live execution. Applied in: Global Constraints, Task 4.
 - **D3** (owner, brief, 2026-10-21): The plan consumes findings §§2 and 4.6–4.7 (daily indexes add back-dated rows to old filing quarters) and §5 (2024Q1 quarantine: three conflicting keys that look like combined filings). Applied in: Task 1 (verdict rules), Tasks 6–7.
 - **D4** (owner, brief, 2026-10-21): The intended range defaults to the config's `2015Q1`–`open` and needs owner confirmation. Applied in: Task 3 (see O1).
+- **D5** (owner, plan review, 2026-10-21): O11 (a). An engine change and a new release come before the Stage 2 live campaign. Tasks 1–3 stay as offline preparation on release `fc68adef…`. Owner's words: "Route O11 (a): an engine change and a new release come before the Stage 2 live campaign. Keep Tasks 1–3 as offline preparation." Applied in: Feasibility blocker, Task 4, After the last task.
 
 ## Defaults for owner review
 
@@ -92,7 +93,7 @@ Each default below is applied in the named task. The owner settles each one at p
 - **O8 — Budget numbers.** Default: the limits in Task 3's `campaign.json`. Applied in: Tasks 3 and 5.
 - **O9 — Backup location.** Default: `/Users/lowell/Projects/sec-edgar-local/backups/stage2-pre-campaign-<UTC stamp>/`, with `backups/` added to `.gitignore`. Applied in: Task 2.
 - **O10 — Order effect of the forced pilot.** The pilot runs the daily members before any older quarterly source. Back-dated daily keys therefore become active first in their closed quarters. A closed-quarter quarterly file that lacks such a key then shows as an explicit `gated` unit, with the key in its candidate. In a single full-range run, quarterly sources 2015–2025 would come first. The same keys would then be dropped from publication with no change record (`catalog._resolve`). After any later approval the end state is the same. The difference is visibility against the number of `covered` verdicts. The pilot order is forced while daily sources are pending (F9). A single full-range run is the only alternative, and it cannot fit its deadline (F8, F11). Default: accept the pilot order. In both orders, closed-quarter publication keeps only quarterly-membership keys, and Task 7 must state this as a downstream limitation. Applied in: Tasks 5 and 7.
-- **O11 — Routing the feasibility blocker (F11).** Default: (a).
+- **O11 — Routing the feasibility blocker (F11).** Settled by D5: (a).
   - (a) Route an engine change before the live campaign. Candidate fix areas, from reading the code: a dispatch margin in `runner.run_workflow`, a per-invocation member cap, or cheaper daily publication. With a margin or a cap, undispatched members end as `workflow_deferred` before the deadline, and new-ID continuation (`docs/runbooks/local-recovery.md`) drains the rest across invocations. Any of these is an engine change. It needs a new release with its own design and plan, outside Stage 2. After that release exists, revise this plan for it (Global Constraints, Task 3 values, the Task 4 release gate), get owner review, and then run Tasks 4–7.
   - (b) Untested alternative: drain on this release by deliberate deadline expiry and new-ID continuation. Each invocation would end with exit 9 and no workflow result. A kill during a collect can leave an `uncertain` transport attempt. Stop rules 1, 2 and 4 halt on these outcomes. So this route needs its own offline proof and new stop rules, and the recovery runbook names it a recovery path, not an operating mode. This plan does not include it.
   - (c) Stop Stage 2 after Tasks 1–3, or before them.
@@ -748,7 +749,7 @@ git commit -m "feat(scripts): add read-only baseline campaign evidence tool"
 - Consumes: Task 1 `tool files`; the recovery runbook backup procedure (`docs/runbooks/local-recovery.md`).
 - Produces: a verified backup path. A live root whose L12-inventoried files all match L12 again. `pre-campaign.md` sections `Integrity findings`, `Backup`, `Restoration` and `Verification`.
 
-Run this task only after the owner approves O2, O3 and O9. It is useful whatever the routing of O11, because F1 also blocks any later `daily` run whose back-dated rows reach 2021Q1. No SEC request is involved. Stop at the first unexpected value and report it. Do not improvise a repair.
+Run this task only after the owner approves O2, O3 and O9. It stays useful under D5, because F1 also blocks any later `daily` run whose back-dated rows reach 2021Q1. No SEC request is involved. Stop at the first unexpected value and report it. Do not improvise a repair.
 
 - [ ] **Step 1: Confirm that no writer runs**
 
@@ -942,7 +943,7 @@ git commit -m "docs(evidence): record pre-campaign backup and manifest restorati
 - Consumes: the Task 1 tool and the Task 2 restored root.
 - Produces: the `slice_config` shell function (used again in Task 5), the pilot and first-slice configs with their effective hashes, and `campaign.json` and `campaign.md`, which Task 4 gates and Task 5 obeys.
 
-Slice configs and hashes bind to the release that the live config selects. A plan revision for another release (O11 (a)) regenerates them.
+Slice configs and hashes bind to the release that the live config selects. The plan revision for the new release (D5) regenerates them.
 
 - [ ] **Step 1: Offline preflight of the live config**
 
@@ -1190,7 +1191,7 @@ git commit -m "docs(evidence): propose Stage 2 campaign scope, slices and budget
 
 Read `release_id` from the Task 3 Step 1 output.
 
-- If it is `fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec`, the gate stays closed (F11). Present the Feasibility blocker and O11 to the owner. Replace the Approval section with `Not opened: F11 blocker on release fc68adef…. Owner routing (verbatim): "<owner's words>"`. Commit as in Step 4, and end the plan here.
+- If it is `fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec`, the gate stays closed (F11). Replace the Approval section with `Not opened: F11 blocker on release fc68adef…. Owner routing (D5, plan review, 2026-10-21, verbatim): "Route O11 (a): an engine change and a new release come before the Stage 2 live campaign. Keep Tasks 1–3 as offline preparation."`. Commit as in Step 4, and end the plan here.
 - If the owner selected another release, stop. This plan pins `fc68adef…` throughout. First revise the plan for that release: Global Constraints, the Task 1 tool's release-internal imports (re-run Task 1 Steps 4–5), the Task 3 values, and this gate's evidence that the pilot's drain fits one invocation with margin, or that undispatched members defer before the deadline. The owner reviews that revision. Then restart at Task 3.
 - Continue to Step 2 only under a reviewed revision whose release gate is open.
 
@@ -1625,7 +1626,7 @@ git commit -m "docs(specs): record tracked config and absent L12 external eviden
 
 Run the writing-plans Plan Completion Protocol, step 3a included. Facts known now, for the `## Handoff to later stages` section:
 
-- **If Task 4's release gate stays closed**, Stage 2 is blocked, not complete. The stage stays unticked. The completion protocol records the F11 blocker and the owner's O11 routing for derive-roadmap at the next resume. Under O11 (a), that resume adds the engine change ahead of the live campaign.
+- **If Task 4's release gate stays closed**, Stage 2 is blocked, not complete. The stage stays unticked. The completion protocol records the F11 blocker and the owner's routing (D5) for derive-roadmap at the next resume. Under D5, that resume adds the engine change and its new release ahead of the Stage 2 live campaign, and then a revision of this plan for that release.
 - **Stage 3** consumes the daily sources that Stage 2 processed as retained work (O5, F4). It no longer finds the L12 "73 pending" inventory as it was. Its inventory is `final/coverage.json` `daily_sources` plus a fresh discovery. F11 applies to any `daily` invocation too: it carries every pending daily source, natively each one's publish took 40–190 s, and the work must fit inside one invocation.
 - **Stage 4** consumes every `gated` unit (F5, O6, O10) and every quarantine disposition that names reconciliation.
 - **All later stages** inherit the F1 and F3 constraints: no editor, Finder or `/tmp` use on evidence, and the integrity check `tool files … --recorded …` before live work. They also inherit F8 and F9: work must fit inside one invocation, and no member may be after the pinned end.
