@@ -1,5 +1,7 @@
 # Bounded Drain and the D5 Release Implementation Plan
 
+**Status:** Approved by the owner, 2026-10-22, with defaults P1–P8 and amendments A1 and A2 as proposed (D1 below). Nothing is executed. This plan authorizes no SEC request.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > Roadmap: specs/sec-filing-index-ingestion-roadmap.md, Stage 1a — on plan completion, tick the
@@ -46,7 +48,7 @@ Execution environment (planning facts, not spec text):
 
 ## Decisions
 
-None.
+- **D1** (owner, plan review, 2026-10-22): P1–P8 accepted as proposed, with amendments A1 and A2. That settles: B4 also skips when the selection's `already_complete` holds the source (P1, A1); the B4 receipt names no worksets, and `MemberResult` and `_validate_report` accept that exact shape (P2, A1); engine admission in `cli._validate_workflow`, before any store opens (P3, A2); the floor and reserve proposal rule (P4); the measurement design with the 14-quarter fan-out (P5); the origin release built from `3ca50c7` (P6); the merge to `main` before the build (P7); and skip-check gaps that are not reported (P8). The amendment tags in Task 1 keep the date 2026-10-22. Owner's words: "Approved". Applied in: Tasks 1, 2, 4, 6, 7 and 8–11.
 
 ## Defaults for owner review
 
