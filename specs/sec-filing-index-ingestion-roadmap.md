@@ -12,7 +12,7 @@ stage is started or approved for execution by this rewrite. The owner approved t
 resume, 2026-10-21, with the Stage 2 `Consumes` amendment below. Approval of the partition does not
 authorize live execution of any stage. The owner requested inclusion of a
 future local scheduling phase; its design remains open. **Resume, 2026-10-22:** inserted Stage 1a
-(the D5 release) is proposed and awaits owner review under Open questions; no stage is routed.
+(the D5 release) was approved by the owner with defaults (i)–(iii) under Open questions.
 
 The native port is complete, not a scaffold. Its [retired plan](plans/completed/1-sec-edgar-local-spec.md)
 and [final completion review](evidence/local-port/completion-review.md) control delivery status.
@@ -61,7 +61,7 @@ verdicts above stand; this resume does not re-run gap analysis.
 
 ## Open questions
 
-One change set awaits a single owner approve-or-amend (asked at the 2026-10-22 resume):
+One change set was put to the owner as a single approve-or-amend at the 2026-10-22 resume:
 
 Insert Stage 1a (the D5 release) ahead of Stage 2, per plan 2 D5 and Handoff `:1673`, and keep every
 existing stage number, because plan 2's header and Handoff and the platform roadmap cite them. Proposed
@@ -72,6 +72,10 @@ publish (plan 2 F11) change only Stage 1a's own design, so its design work measu
 (iii) Stage 1a ends with the reviewed live-config `release_manifest` selection and offline preflight, as
 Stage 1 did for `fc68adef…` (§4.8), so the plan 2 revision consumes a fixed effective-config hash. The
 amendments to Stages 2–5 cite plan 2 D5 rather than Stage 1a, so they stand however this is answered.
+
+*Owner's answer (2026-10-22):* approved as proposed. Owner's words: "Approve the Stage 1a
+insertion with defaults (i)–(iii) as written in the roadmap's Open questions." Approval authorizes no
+SEC request or live run.
 
 ## Stages
 
@@ -102,7 +106,7 @@ to live execution, not prerequisites to writing the plan that defines them.
   > Stage 1: COMPLETE (2026-10-18) — implemented by plan 1 ([completed native local plan](plans/completed/1-sec-edgar-local-spec.md)). This stamp maps the existing completion record; no new stage execution occurred.
   > Next: resume the roadmap.
 
-- [ ] Stage 1a: Deadline-safe drain engine change and the D5 release (proposed at resume, 2026-10-22; awaits owner review)
+- [ ] Stage 1a: Deadline-safe drain engine change and the D5 release (approved at resume, 2026-10-22)
       Objective: Ship a reviewed native release on which an invocation carrying the pending-source backlog ends with a durable workflow result inside its deadline.
       Spec: §3 R2, R5–R6, R12; §§4.2, 4.7–4.9, 5–6, 9; plan 2 D5, F8, F10, F11.
       Gap closed: None directly; removes the plan 2 F11 blocker that keeps G2 and G3 open.
