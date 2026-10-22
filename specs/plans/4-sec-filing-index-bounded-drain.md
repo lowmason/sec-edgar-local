@@ -197,6 +197,8 @@ grep -c "owner, plan 4" specs/sec-filing-index-bounded-drain.md
 
 Expected: `6` with both amendments applied. The spec's status line is unchanged.
 
+> Deviation: `grep -c` counts lines, and two tags share the B4 row, so it prints `5`. `grep -o "owner, plan 4" specs/sec-filing-index-bounded-drain.md | wc -l` prints `6`. All six tags are present (Task 1 review, 2026-10-22).
+
 - [ ] **Step 5: Commit.**
 
 ```bash
