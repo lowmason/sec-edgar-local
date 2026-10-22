@@ -4,7 +4,7 @@
 
 > Roadmap: specs/sec-filing-platform-roadmap.md, Stage 1 — on plan completion, tick the stage and re-validate later stages against what shipped.
 
-**Status:** Draft for owner review, 2026-10-21. Nothing is executed. This plan authorizes no SEC request.
+**Status:** Approved by the owner, 2026-10-21, with defaults DF1–DF7 as recommended (D1 below). Nothing is executed. This plan authorizes no SEC request.
 
 **Goal:** Add the platform workspace package `sec-edgar-filings` with a draft P3 envelope parser ($\nu_E$) that passes hand-built fixtures in both serializations, an import-direction test, and a recorded ingest export diff, with no SEC request.
 
@@ -62,6 +62,8 @@ Under the recommended DF6 default, every task runs on a worktree branch. The bra
 - **roadmap D2** (owner, brief, 2026-10-21): "No exception": no SEC request goes outside the governor. Stage 1 sends none: the governor admits no platform URL before Stage 4, and the Q2 answer covers documentation reads. Applied in: Global Constraints, Task 1 (boundary test), Task 8.
 - **roadmap F1** (owner, brief, 2026-10-21): the member joins the workspace before the D5 build only if `uv export --package sec-edgar-ingest --no-dev --no-emit-workspace` is byte-identical before and after. Otherwise it joins after the D5 build. Applied in: Task 1, Task 8, Merge gate (with DF3 and DF6).
 - **roadmap Q2** (owner, brief, 2026-10-21): D2 covers SEC documentation reads. Stage 1 drafts the R15 grammar from the spec, the methodology's reading, the critique's PDS fragments and the Feed tags in the findings. Stage 6 fetches the PDS spec and DTD through Stage 4's documentation URL class, and Stage 7 confirms the grammar. Applied in: Global Constraints (grammar provenance), Tasks 2–6.
+
+- **D1** (owner, plan review, 2026-10-21): DF1–DF7 accepted as recommended. That settles: no `sec_edgar_ingest` import in platform runtime code (DF1); the name `sec-edgar-filings` (DF2); the export diff as the Task 1 gate with stop-and-restore on a difference (DF3); verbatim item lines with an empty $\nu_I$ (DF4); pathspec commits of the plan (DF5); DF6 option (a), so Stage 1 runs on branch `platform-stage1` and merges only through the Merge gate; and one online `uv lock` to PyPI in Task 1 (DF7). Owner's words: "Approve plan 3 with the recommended defaults DF1–DF7, including DF6 (a): Stage 1 runs on the platform-stage1 branch and merges only after the D5 build and the artifact-cache decision." Applied in: Global Constraints, Tasks 1, 6 and 7, Merge gate.
 
 "The D5 release" in F1 is plan 2's D5 (`specs/plans/2-sec-filing-index-ingestion-spec.md:82`), not a platform decision.
 
