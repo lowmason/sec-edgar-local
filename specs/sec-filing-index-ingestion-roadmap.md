@@ -56,7 +56,7 @@ container release, or source-project PR is needed to resume this roadmap.
 Resume reconcile, 2026-10-22: no stage carries a new COMPLETE stamp. [Plan 2](plans/2-sec-filing-index-ingestion-spec.md)
 is blocked at its Task 4 (Status line, Feasibility blocker); its Handoff (`:1668–1690`) is the carrier for
 the amendments below. Engine source under `packages/sec-edgar-ingest/src` is unchanged since the
-`fc68adef…` build: `runner.run_workflow` still defers only at `now >= deadline` (plan 2 F8). The rubric
+`fc68adef…` build revision `3ca50c7` (its manifest `git_revision`; empty `git diff 3ca50c7 HEAD`): `runner.run_workflow` still defers only at `now >= deadline` (plan 2 F8). The rubric
 verdicts above stand; this resume does not re-run gap analysis.
 
 ## Open questions
@@ -108,7 +108,7 @@ to live execution, not prerequisites to writing the plan that defines them.
       Gap closed: None directly; removes the plan 2 F11 blocker that keeps G2 and G3 open.
       Consumes: Stage 1 release `fc68adef…` and its offline gate; plan 2 D5 and Handoff (`:1673–1676`) for the fix areas and measured inputs; the gate condition in `specs/evidence/baseline-campaign/campaign.md`, Release gate; [release upgrades](../docs/runbooks/release-upgrades.md). Platform roadmap D1 ("D5 first, platform after"): the release carries no platform item. Plan 3 DF6: the platform workspace member stays off `main` until this release is built.
       Produces: A stage spec and plan; the engine change with offline tests; the D5 release (its content-addressed release ID, setup and preflight evidence, and review record); the reviewed live-config selection with its effective-config SHA-256; and a plan Handoff that names every value the plan 2 revision must change, including any change to the §4.8 coordination values.
-      Exit: Offline tests on the D5 release meet the `campaign.md` Release gate condition; the offline checker and offline preflight pass on it, with `fc68adef…` and older releases retained (§4.9); its locked inputs carry no platform member; no SEC request was sent.
+      Exit: Offline evidence on the D5 release shows the release side of the `campaign.md` Release gate: undispatched members defer before the deadline, or the pilot's drain fits one invocation with margin (the stage spec fixes what evidence counts for each; plan 2 F11); the offline checker and offline preflight pass on it, with `fc68adef…` and older releases retained (§4.9); its locked inputs carry no platform member; no SEC request was sent.
       ROUTING: brainstorming
 
 - [ ] Stage 2: Baseline campaign and coverage decision
