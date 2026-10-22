@@ -1,6 +1,7 @@
 # Bounded drain and the D5 release — Stage 1a Design Spec
 
-**Status:** Design approved section by section by the owner, 2026-10-22. Written spec awaits owner review.
+**Status:** Approved by the owner, 2026-10-22, as committed at `1a6c3ad`. Owner's words: "I approve the
+written Stage 1a spec as committed." Ready for writing-plans.
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
 **Parent spec:** [SEC filing-index ingestion](sec-filing-index-ingestion-spec.md) (§§3 R2, R5–R6, R12; 4.2, 4.7–4.9; 5–6; 9).
 **Roadmap:** [ingestion roadmap](sec-filing-index-ingestion-roadmap.md), Stage 1a.
