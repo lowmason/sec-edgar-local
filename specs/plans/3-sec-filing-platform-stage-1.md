@@ -25,7 +25,8 @@ This plan has two owner stops: the plan review, and the DF3 fallback in Task 1. 
    - `build_release` records `uv_lock_sha256` in the release identity (`packages/sec-edgar-ingest/src/sec_edgar_ingest/release.py:274`).
    - The artifact-cache inventory is keyed to the same hash (`release.py:86-90`). With the new lock, `prepare_artifact_cache(..., offline=True)` against `releases/artifact-cache` raises `artifact cache lock/interpreter identity differs; run explicit setup` (probe, 2026-10-21).
    - A prepared cache is never rewritten in place (`release.py:119-121`).
-   - Nine ingest test modules and `scripts/check-sec-edgar-ingest.sh` run that offline check: `test_acceptance_selection`, `test_launcher_process`, `test_local_launcher`, `test_native_dispatch`, `test_runtime_preflight`, `test_local_modes`, `test_release_upgrade`, `test_release`, `test_workflow_installed_lock`.
+   - `scripts/check-sec-edgar-ingest.sh` runs that offline check (verified by reading the script and by the probe's refusal).
+   - Nine ingest test modules reference the same path through `proof_releases` or `prepare_artifact_cache`. This was found by search and not run. `proof_releases` returns before the cache check when a proof catalog is set (`packages/sec-edgar-ingest/tests/support_release.py`). The nine are `test_acceptance_selection`, `test_launcher_process`, `test_local_launcher`, `test_native_dispatch`, `test_runtime_preflight`, `test_local_modes`, `test_release_upgrade`, `test_release` and `test_workflow_installed_lock`.
 3. **Consequence.** If the member joins `main` before the D5 build, three things follow until someone prepares a new artifact cache online:
    - the catalog's check script fails on `main`;
    - the D5 build's cache check fails;
@@ -41,7 +42,7 @@ Under the recommended DF6 default, every task runs on a worktree branch. The bra
 - No SEC request (roadmap D2). Platform runtime code imports no network module. The boundary test enforces this. Every test run goes through `packages/sec-edgar-ingest/tests/network_guard.py`, which denies sockets.
 - The only network access in this plan is `uv lock` in Task 1, which reads package metadata from PyPI (`pypi.org`). It sends no SEC request (DF7).
 - Platform runtime code imports no `sec_edgar_ingest` module (DF1). There is one test-only coupling: the platform suite runs the ingest guard script by its path. That is not an import.
-- Run every task in a git worktree on branch `platform-stage1`, created from `main` at or after this plan's commit (using-git-worktrees). Do not edit, stage or commit in the shared `main` checkout. Commit by pathspec only. Do not push. Do not merge until the Merge gate.
+- Run every task in a git worktree on branch `platform-stage1`, created from `main` at or after the commit that records the owner's approval of this plan (using-git-worktrees). Do not edit, stage or commit in the shared `main` checkout. Commit by pathspec only. Do not push. Do not merge until the Merge gate.
 - In the worktree, run only `uv run --package sec-edgar-filings`, `uv lock` (Task 1) and `uv export --frozen`. Do not run `uv sync` or `uv run --package sec-edgar-ingest` there. That environment needs the pyarrow wheel, which is not in the uv cache offline (planning probe, 2026-10-21).
 - Test command (from the worktree root), used by every task:
 
@@ -2751,8 +2752,12 @@ Do not merge `platform-stage1` into `main` until all of these hold:
 1. The D5 release is built and owner-reviewed (plan 2 D5).
 2. The owner has chosen how the catalog's artifact cache follows the new lock. For example, prepare a new cache directory online with `scripts/prepare-native-release.py --prepare-cache-only` and point `SEC_LOCAL_PROOF_CACHE` at it, or replace `releases/artifact-cache` after archiving it. This is an ingest operation outside this plan.
 3. After `main` has moved, rebase or merge `main` into the branch, then rerun `uv lock` and Task 1 Steps 2 and 6–8 against `main`'s current lock. The export must still be identical, and the lock diff must still add only the member.
+4. With the new artifact cache in place, the owner runs or approves `scripts/check-sec-edgar-ingest.sh` on the merge candidate, and it passes. The planning probe proved only the cache refusal. It did not run the ingest suite against a two-member workspace. The check script, `releases/` and `dist/` belong to the catalog, so this step stays owner-gated.
 
-Then run finishing-a-development-branch and the Plan Completion Protocol. The protocol writes `## Handoff to later stages` (Stages 2, 3, 4, 5, 7, 8 and 9 consume this stage) and ticks Stage 1.
+When items 1–4 hold, and in this order:
+
+1. Run the Plan Completion Protocol on `platform-stage1`. It writes `## Handoff to later stages` (Stages 2, 3, 4, 5, 7, 8 and 9 consume this stage), ticks Stage 1 and retires this plan. Running it after item 3 keeps the Handoff current with the rebased branch.
+2. Run finishing-a-development-branch, so the merge carries the protocol's commits.
 
 ## Spec coverage
 
