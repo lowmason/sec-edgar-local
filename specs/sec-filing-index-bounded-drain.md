@@ -40,13 +40,13 @@ Out of scope:
 | ID | Requirement |
 |---|---|
 | B1 | `execution.dispatch_reserve_seconds` is an optional integer. When it is absent, the normalized effective config omits it, so every existing effective-config SHA-256 is unchanged. |
-| B2 | Live validation requires the key, with floor ≤ value < `execution.max_run_seconds`. The floor is a release constant (§6). The launcher refuses `--timeout-seconds` ≤ the reserve. Each refusal occurs before store or network authority. |
+| B2 | Admission of a new live workflow invocation requires the key, with floor ≤ value < `execution.max_run_seconds`. The floor is a release constant (§6). The launcher refuses `--timeout-seconds` ≤ the reserve. Each refusal occurs before store or network authority. The check runs only at admission: launcher `prepare_invocation`, and engine new-context creation for `backfill`, `daily` and `reconcile`. It never runs in `Settings` validation, because `_validate_live_policy` (`config.py:171–172`) also validates every frozen historical config, and `fc68adef…`-origin live configs carry no key. |
 | B3 | `run_workflow` defers a member without dispatch when `now >= deadline − reserve`, or when the run is halted. A missing key gives `cutoff = deadline`, which is today's behavior. |
-| B4 | Before it dispatches a member, the runner skips it when all of these are true: the immediately preceding member in the loop has the same `source_id` and an outcome in `workflows/contracts.py` `COMPLETE`; `reuse_exact_binding` returns no gaps; and `evaluate_member` then reports it complete with no obligations. A skipped member records a receipt with its completion capture and no child calls. In every other case the member is processed as today. |
+| B4 | Before it dispatches a member, the runner skips it when all of these are true: the immediately preceding member in the loop has the same `source_id` and an outcome in `workflows/contracts.py` `COMPLETE`; `reuse_exact_binding` returns no gaps; and `evaluate_member` then reports it complete with no obligations. A skipped member records a receipt with its completion capture and no child calls. Its outcome is `unchanged`, with `downloaded`, `transformed` and `quarantined` false, and one `unchanged` quarter for each quarter in the capture, naming the captured generation. So `processing.py`'s check that a `COMPLETE` outcome is also `evaluate_member` complete holds by construction, and the next same-source member can chain on it. In every other case the member is processed as today. |
 | B5 | `validate_member_evidence` accepts the B4 receipt shape. Existing receipts stay valid byte for byte. |
 | B6 | Selection bytes and format (`sec-local-workflow-selection-v1`) do not change. Exact replay of a run that holds B4 receipts returns identical bytes. |
 | B7 | The D5 release is built by `build_release` from clean committed `main`. The package version stays `0.2.0`. `uv.lock` and `uv export --package sec-edgar-ingest --no-dev --no-emit-workspace` are byte-identical to their `fc68adef…` build inputs (revision `3ca50c7`; no diff to `main` on 2026-10-22). |
-| B8 | The live config gains the key and selects the D5 release. Offline preflight passes, and the new effective-config SHA-256 is recorded. |
+| B8 | The live config gains the key and selects the D5 release. Offline preflight passes, and the new effective-config SHA-256 is recorded. The root binding (`storage/contracts.py` `deployment_binding`) does not include `execution`, so the key does not change the bound store. |
 
 ## 4. Design
 
@@ -54,8 +54,9 @@ Out of scope:
 
 | Unit | Change |
 |---|---|
-| `config.py` `ExecutionSettings` | B1, B2. |
-| `local_cli.py` `prepare_invocation` | B2 timeout check. |
+| `config.py` `ExecutionSettings` | B1 field, and the B2 floor constant and range check as a function that admission calls. |
+| `local_cli.py` `prepare_invocation` | B2 admission and timeout check. |
+| `cli.py` new-context creation for workflow commands | B2 admission. |
 | `workflows/runner.py` `run_workflow` | B3 cutoff in the existing `elif`; B4 skip before `process_member`. |
 | `workflows/processing.py` `validate_member_evidence` | B5. |
 | `conf/sec-edgar-local.json` | B8. |
@@ -72,6 +73,10 @@ Out of scope:
       `workflow_deferred` gap. No child starts.
    3. The B4 conditions hold: record the no-call receipt. No child starts.
    4. Otherwise: `process_member`, as today.
+
+   The cutoff check comes before the skip on purpose. A skip starts no child, but it still reads
+   captures, and many skips after the cutoff could use up the reserve. A member deferred at the
+   cutoff is selected again in the next run and skipped there.
 3. `baseline_gaps`, `source_revert_gaps`, `summarize` and `write_workflow_result` run inside the
    reserve, before the launcher's SIGTERM.
 4. Deferred members are `pending`. So the run outcome is `incomplete` (exit 3) or `pending` (exit 4),
@@ -104,10 +109,11 @@ Out of scope:
 Tests use stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. Write each
 test before its implementation.
 
-1. **Config.** With the key absent, the normalized hash equals `088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`
+1. **Config.** With the key absent, normalization alone (not admission) gives a hash equal to `088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`
    (current live config) and `32b4da638464758c2926fc9040e207696a081d452b2af3813ddd36d179441740` (L12
-   quarterly config). Live validation refuses a missing key, a value below the floor, and a value ≥
-   `max_run_seconds`. The launcher refuses a timeout ≤ the reserve.
+   quarterly config). Admission refuses a missing key, a value below the floor, and a value ≥
+   `max_run_seconds`. The launcher refuses a timeout ≤ the reserve. The D5 release validates an
+   `fc68adef…`-origin live child call and member provenance, both without the key, without refusal.
 2. **Cutoff.** In a fixture store with a patched clock, members after the cutoff record
    `workflow_deferred`, and the result is written and observed before the deadline. A member that is
    running when the cutoff passes completes.
