@@ -346,9 +346,11 @@ def store_attempts(state: Path) -> list[dict]:
 def rebuild_scenario(state: Path) -> dict:
     """Rebuild per-member child timings of one run from its store, for a run that ended without a report.
 
-    A member is one `collect` attempt id with its `transform` and `publish` attempts. Each attempt id appears
+    A member is a `collect` attempt followed by the `transform` and `publish` attempts that start before the next
+    `collect` (the runs are sequential, so order by start time identifies the member). Each attempt id appears
     in several records (the operation records have outcome `received`); the record with the attempt's own
-    outcome is the one that is timed. `gap_after_seconds` is the time from the end of the member's last child to
+    outcome is the one that is timed. `sources_in_quarter_before` is the member index, so it counts sources
+    already in the quarter only for the `open` scenario. `gap_after_seconds` is the time from the end of the member's last child to
     the start of the next member's `collect`: it is engine time outside any child (evaluation, receipts, locks).
     """
     attempts = store_attempts(state)
@@ -375,7 +377,7 @@ def rebuild_scenario(state: Path) -> dict:
             child = member.get(command)
             row[command + '_seconds'] = seconds(child) if child else None
             row[command + '_outcome'] = child['outcome'] if child else None
-        row['gap_after_seconds'] = (following - last['end']).total_seconds() if following and last['end'] else None
+        row['gap_after_seconds'] = (following - last['end']).total_seconds() if following and last and last['end'] else None
         row['member_wall_seconds'] = (following - member['collect_start']).total_seconds() if following else None
         rows.append(row)
     return {'run_id': attempts[0]['run_id'] if attempts else None,

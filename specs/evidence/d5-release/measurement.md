@@ -10,7 +10,7 @@ The full run failed. It wrote no report. The timings below come from the durable
 | Scenario | What happened |
 |---|---|
 | `open` (81 daily sources, one `daily` run) | 24 members completed. Member 25 was in its `publish` child when the run reached its hard deadline (2026-10-23 01:59:10 UTC). The run ended `state_conflict`, "child shutdown/drain was not confirmed", with no workflow result. This is the F8 and F11 failure that this stage must fix. |
-| `closed` baseline (23 quarters, 2021Q1–2026Q3, one `backfill` run) | 2 members completed. The third member was in its `transform` child at the hard deadline (2026-10-23 07:49:15 UTC). The run ended `state_conflict` with the same message. |
+| `closed` baseline (23 quarters, 2021Q1–2026Q3, one `backfill` run) | 2 members completed. The third member's `transform` child had finished (about 07:39 UTC) and no `publish` attempt was recorded. So that member was in the engine gap at the hard deadline (2026-10-23 07:49:15 UTC). The run ended `state_conflict` with the same message. |
 | `closed` daily steps (measure 1 and the 14-quarter fan-out) | Not run. The second `closed` config was written at about 07:51 UTC, but no stderr log or report exists for that invocation, so the process ended during or just after the baseline's failure. I have no traceback, because the output was in the owner's terminal. |
 | `finish` (48 quarters) | Not run. |
 
@@ -47,13 +47,13 @@ At n = 23, the three children are 29% of the member wall. The engine gap is the 
 | 1st of 23 | 250.0 | 1,139.3 | 9,470.5 | 7,372.2 |
 | 2nd of 23 | 247.3 | 1,515.8 | 10,657.5 | 8,186.6 |
 
-The 3rd member's `transform` took 247.3 s and its publish did not finish before the deadline. Discovery took 19.8 s for 23 quarters.
+The 3rd member's `transform` took 247.3 s. No `publish` attempt was recorded for it before the deadline. Discovery took 19.8 s for 23 quarters.
 
 ### Slowest member and the finish step
 
 | Measure | Seconds |
 |---|---|
-| Slowest completed member by wall time (2nd quarterly baseline member) | 10,657.5 |
+| Slowest completed member by wall time (2nd quarterly baseline member). This is collect start to the next collect start, which may differ from P4's `process_member` timer. | 10,657.5 |
 | Slowest completed child (publish, same member) | 1,515.8 |
 | Finish step, 48 requested quarters | not measured |
 | Closed-quarter rebuild by one back-dated daily row | not measured |
