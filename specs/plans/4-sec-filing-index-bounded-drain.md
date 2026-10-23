@@ -2070,6 +2070,8 @@ D5 release continues `fc68adef…`-origin pending work. (Stage 1a, plan 4;
 
 If Task 7 recorded a different answer, write that answer instead.
 
+- [ ] **Step 4b: Runbook (final-review Minor, added 2026-10-23).** In `docs/runbooks/local-ingestion.md` (line 37), the launcher rule reads `require 0 < N <= execution.max_run_seconds`. After the D5 release is selected it also refuses `N <= execution.dispatch_reserve_seconds`, and admission refuses a live config that has no `execution.dispatch_reserve_seconds` or one outside `floor <= value < execution.max_run_seconds`. Add one sentence to that paragraph that says so, and names the floor (480 s) and the Task 10 live reserve. Add the file to the Step 5 `git add`.
+
 - [ ] **Step 5: Verify and commit.** Run:
 
 ```bash
@@ -2079,7 +2081,7 @@ grep -n "Stage 1a, plan 4" specs/sec-filing-index-ingestion-spec.md
 Expected: three matches, in §4.7, the §4.8 table row and §4.9. The §4.8 selection paragraph reads "Stage 1a (plan 4)" and does not match. Then add the Task 10 commit hash to `release.md` and commit:
 
 ```bash
-git add specs/sec-filing-index-ingestion-spec.md specs/evidence/d5-release/release.md
+git add specs/sec-filing-index-ingestion-spec.md specs/evidence/d5-release/release.md docs/runbooks/local-ingestion.md
 git commit -m "docs(specs): amend the parent spec for the D5 release and its limits"
 ```
 
@@ -2096,5 +2098,8 @@ Run the writing-plans Plan Completion Protocol, step 3a included. The `## Handof
 - The §4.8 coordination values: expected unchanged (3 requests/second, one active collector, 60/20/2-second lease policy). Confirm against the final `conf/sec-edgar-local.json`.
 - Plan 3 DF6: the D5 release is built, so the platform member may now merge to `main` under plan 3's Merge gate.
 - Traps: the rollback limit in §4.9. Admission refuses keyless live configs. Measurement limits are in `measurement.md`.
+- Owner decision D2 (2026-10-23): the owner does not accept the per-member cost. A per-member-cost roadmap stage goes before Stage 2. Its inputs are in `measurement.md`: publish and member wall time grow with the number of sources already in the quarter (about 18.8 s and 62.8 s per source on fixtures), most of a member's wall time is engine time outside any child, and full-size quarterly members take more than 9,000 s. No reserve fits those members under the 3,300 s launcher default. The live reserve stays provisional until Task 10 (D4).
+- Final-review notes for that stage and for Stage 2: B4 never fires for a source with two or more historical snapshots (the single-candidate rule in `runner.sibling_completion`), so those sources keep F10's repeated child sequence. A refused skip costs an extra inventory scan and `evaluate_member` before `process_member` repeats it.
+- The two-release proofs are order-aware (plan R2). In about half the runs of `pending`, and one run in four of the Task 7 first test, no child runs on the origin release. See `two-release.md`, "Limits of the proof".
 
 Remove the `stage1a-bounded-drain` worktree after the retire commit (finishing-a-development-branch).
