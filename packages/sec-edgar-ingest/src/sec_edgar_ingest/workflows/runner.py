@@ -2,7 +2,7 @@ from .contracts import LOCAL_CONTRACT, validate_invocation
 from collections.abc import Mapping
 from ..config import Settings
 from ..models import RunContext, to_mapping_value
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from ..models import Error, Source, canonical_json, error_text, parse_json
 from ..collection import HALTING_OUTCOMES
@@ -75,6 +75,9 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
         selection = freeze_selection(context, parse_json(selection_body), store, objects)
     results, receipt_descriptors, evidences = [], [], []
     halted = selection['halted']
+    reserve = settings.execution.dispatch_reserve_seconds
+    # B3: stop dispatch early enough that the finish step writes the durable result before the deadline.
+    cutoff = context.deadline if reserve is None else context.deadline - timedelta(seconds=reserve)
     for job in selection['jobs']:
         value = job['member']
         receipt_path = workflow_path(context).rsplit('/', 1)[0] + '/members/' + value['member_id'] + '/result.json'
@@ -91,7 +94,7 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
                 context.attempt_id, result.member_id, result.parser_version, result.schema_version]))).hexdigest()
             # Frozen provenance and the checked receipt authorize historical index repair.
             immutable(store, 'WorkflowMemberResult', key, descriptor)
-        elif halted or datetime.now(timezone.utc) >= context.deadline:
+        elif halted or datetime.now(timezone.utc) >= cutoff:
             result = MemberResult(value['member_id'], Source.from_mapping(value['source']), value['parent_ref'],
                 None, None, (), 'pending', False, False, False, (),
                 (Error('workflow_deferred', 'halt/deadline left source undispatched', True,
