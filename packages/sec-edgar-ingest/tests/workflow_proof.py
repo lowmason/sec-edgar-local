@@ -512,6 +512,47 @@ def upgrade_sequence(output, a_manifest, b_manifest):
         return json.loads(done.stdout)
 
 
+def order_aware_children(scenario, objects, result, checked, a_release_id, b_release_id):
+    """Check each source's children in its frozen continue-b order; return {source_id: A-origin first}.
+
+    A-origin first: that member collects under installed A, and the later B member gets the B4
+    no-child receipt. B first: the B member collects under installed B, no A collect runs for the
+    source, and the A-origin member gets the B4 no-child receipt (the D5 path).
+    """
+    from sec_edgar_ingest.workflows.contracts import COMPLETE
+    selection = json.loads(objects.read('runs/sec/continue-b/backfill/a/selection.json'))
+    jobs = {}
+    for job in selection['jobs']:
+        value = job['member']
+        origin = json.loads(objects.read(value['member_ref']))['context']['run_id']
+        jobs.setdefault(value['source']['source_id'], []).append((value, origin))
+    receipts = {member.member_id: member for member in result.members}
+    collects = [item['call'] for item in checked if item['call']['context']['command'] == 'collect']
+    def collected(ref, release_id):
+        return any(call['input_ref'] == ref and call['context']['runtime']['release_sha256'] == release_id
+                   for call in collects)
+    a_first = {}
+    for source_id, ordered in jobs.items():
+        if not any(origin == 'origin-a' for _, origin in ordered):
+            continue
+        (first, first_origin), later = ordered[0], ordered[1:]
+        a_first[source_id] = first_origin == 'origin-a'
+        if not collected(first['member_ref'], a_release_id if a_first[source_id] else b_release_id):
+            raise AssertionError({'error': 'first member of a source did not collect under its origin release',
+                                  'scenario': scenario, 'source_id': source_id, 'a_first': a_first[source_id]})
+        for value, origin in later:
+            if any(call['input_ref'] == value['member_ref'] for call in collects):
+                raise AssertionError({'error': 'a later same-source member ran collect', 'scenario': scenario})
+            receipt = receipts[value['member_id']]
+            if (receipt.outcome not in COMPLETE or tuple(receipt.child_refs)
+                    or receipt.snapshot_ref is not None or receipt.transformed_ref is not None):
+                raise AssertionError({'error': 'later same-source member lacks the B4 no-child receipt',
+                                      'scenario': scenario, 'member_id': value['member_id'], 'origin': origin})
+    if not a_first:
+        raise AssertionError({'error': 'continue-b selected no A-origin member', 'scenario': scenario})
+    return a_first
+
+
 def installed_upgrade_cases(output, a_manifest, b_manifest):
     """Actual B application checks A-origin backlog/repair and retained read authority."""
     import sys
@@ -598,8 +639,8 @@ def installed_upgrade_cases(output, a_manifest, b_manifest):
         if not continued or continued[0]['python'] != str(b.python):
             raise AssertionError('B workflow parent must execute installed B')
         a_children = [record for record in continued[1:] if record['python'] == str(a.python)]
-        if not a_children or not all('site-packages' in Path(record['origin']).parts for record in continued):
-            raise AssertionError('B workflow did not use installed A origin/repair children')
+        if not all('site-packages' in Path(record['origin']).parts for record in continued):
+            raise AssertionError('B workflow children must import installed releases')
         if scenario == 'repair' and not any(record['argv'][0] == 'publish' for record in a_children):
             raise AssertionError('saved A publication was not repaired by installed A')
         opened = open_stores(selected_b, access='operator')
@@ -612,6 +653,17 @@ def installed_upgrade_cases(output, a_manifest, b_manifest):
                 if call['context']['run_id'] == 'continue-b':
                     child = read_child_capture(call, objects)
                     checked.append({'call': call, 'result': child.to_mapping()})
+            # Member order (plan Decisions R2, fallback). select_work orders a source's members by
+            # member_id, a hash over a workset whose context holds the discover child's wall-clock
+            # started_at (cli.py: Clock().now() in the child process). No CLI, fixture or config input
+            # reaches that field, so the order of an A-origin member and its B sibling cannot be pinned.
+            # The first member of a source runs the child sequence; B4 completes the later one with no
+            # child. Each branch is checked for what must hold in it.
+            a_first = order_aware_children(scenario, objects, result, checked, a.release_id, b.release_id)
+            a_child_expected = scenario == 'repair' or any(a_first.values())
+            if bool(a_children) != a_child_expected:
+                raise AssertionError({'error': 'B workflow did not use installed A origin/repair children',
+                                      'a_first': a_first, 'a_children': len(a_children)})
             capture = capture_quarter('2026Q3', objects, EtlState(store))
             rows = list(read_quarter(capture, objects))
             if not rows or len({(row.cik, row.archive_path) for row in rows}) != len(rows):
@@ -641,11 +693,14 @@ def installed_upgrade_cases(output, a_manifest, b_manifest):
                 before_calls = tuple(row.to_mapping() for row in store.scan('WorkflowChildCall', {}))
                 dispatcher = Dispatcher(result.context, selected_b, pack, root, store, objects,
                                         child_runner=CheckedRunner())
+                # When every A-origin member sorted after its B sibling, continue-b ran no A collect.
+                # The probe then uses the A collect that origin-a ran for that same A-origin member.
+                a_collects = [call for run_id in ('continue-b', 'origin-a') for call in calls
+                              if call['context']['run_id'] == run_id and call['context']['command'] == 'collect'
+                              and call['context']['runtime']['release_sha256'] == a.release_id]
                 try:
                     dispatcher.execute('collect', 'missing-a-execution', selected_a,
-                        ('--workset', next(item['call']['input_ref'] for item in checked
-                            if item['call']['context']['command'] == 'collect'
-                            and item['call']['context']['runtime']['release_sha256'] == a.release_id)))
+                        ('--workset', a_collects[0]['input_ref']))
                 except FileNotFoundError:
                     pass
                 else:
@@ -717,7 +772,9 @@ def installed_upgrade_cases(output, a_manifest, b_manifest):
 
 
             cases.append({'scenario': scenario, 'a_exit': a_exit, 'b_exit': b_exit,
-                'a_child_under_b_parent': True, 'rows': len(rows), 'reader': capture.to_mapping(),
+                'a_child_under_b_parent': bool(a_children), 'a_child_expected': a_child_expected,
+                'a_first': a_first, 'release_directories': sorted([str(a.directory), str(b.directory)]),
+                'rows': len(rows), 'reader': capture.to_mapping(),
                 'parent': continued[0], 'children': continued[1:], 'calls': checked,
                 'workflow': result.to_mapping(), 'original_pointers': original_pointers,
                 'history': history_result, 'missing_a_history': True, 'missing_a_execution_refused': True,

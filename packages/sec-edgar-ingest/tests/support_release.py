@@ -111,7 +111,6 @@ def origin_release(project: Path, cache: Path) -> VerifiedRelease:
     key = str(project), str(cache)
     if key in _ORIGINS:
         return _ORIGINS[key]
-    prepare_artifact_cache(project / 'uv.lock', Path(sys.executable), cache, offline=True)
     temporary = tempfile.TemporaryDirectory(prefix='sec-native-origin-')
     _TEMPORARIES.append(temporary)
     root = Path(temporary.name)
@@ -120,6 +119,8 @@ def origin_release(project: Path, cache: Path) -> VerifiedRelease:
     archive = subprocess.run(['git', '-C', str(project), 'archive', '--format=tar', ORIGIN_REVISION],
                              check=True, capture_output=True).stdout
     subprocess.run(['tar', '-x', '-C', str(source)], input=archive, check=True)
+    # The origin revision's own lock, not the checkout's, decides which artifacts it needs.
+    prepare_artifact_cache(source / 'uv.lock', Path(sys.executable), cache, offline=True)
     subprocess.run(['git', 'init', '-q', str(source)], check=True)
     subprocess.run(['git', '-C', str(source), 'add', '.'], check=True)
     subprocess.run(['git', '-C', str(source), '-c', 'user.name=Native release proof',

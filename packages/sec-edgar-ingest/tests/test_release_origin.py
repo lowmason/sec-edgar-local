@@ -90,40 +90,76 @@ class OriginReleaseTests(unittest.TestCase):
         report, steps = self.current_run(h, current, 'current')
         return h, origin, origin_members, report, steps
 
+    def scratch(self):
+        """A temporary root whose cleanup runs after the harness stores close (addCleanup is LIFO)."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return Path(tmp.name)
+
     def test_current_code_continues_origin_pending_work(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            h, _, origin_members, report, steps = self.continued(Path(tmp))
-            self.assertIn(report.outcome, ('success', 'unchanged'))
-            self.assertTrue(all(member.outcome in COMPLETE for member in report.members))
-            self.assertTrue(origin_members <= {member.member_id for member in report.members})
-            self.assertEqual(sum(1 for member in report.members if not member.child_refs), 2)
-            source_of = {v['member_id']: v['source']['source_id'] for v in WorkflowMembers(h.store, h.objects).inventory()[0]}
-            counts = Counter((step.partition('-')[0], source_of[step.partition('-')[2]]) for step, _ in steps
-                             if step.partition('-')[0] in ('collect', 'transform', 'publish'))
-            for source_id in set(source_of.values()):
-                for command in ('collect', 'transform', 'publish'):
-                    self.assertEqual(counts[command, source_id], 1, (command, source_id))
-            origin_manifest = str(self.origin.directory / 'release.json')
-            current_manifest = str(self.current.directory / 'release.json')
-            for step, manifest in steps:
-                command, _, member_id = step.partition('-')
-                if command == 'collect':
-                    # Collection stays bound to the release that discovered the member.
-                    self.assertEqual(manifest, origin_manifest if member_id in origin_members else current_manifest)
-                elif command in ('transform', 'publish'):
-                    self.assertEqual(manifest, current_manifest)
+        h, _, origin_members, report, steps = self.continued(self.scratch())
+        self.assertIn(report.outcome, ('success', 'unchanged'))
+        self.assertTrue(all(member.outcome in COMPLETE for member in report.members))
+        self.assertTrue(origin_members <= {member.member_id for member in report.members})
+        self.assertEqual(sum(1 for member in report.members if not member.child_refs), 2)
+        source_of = {v['member_id']: v['source']['source_id'] for v in WorkflowMembers(h.store, h.objects).inventory()[0]}
+        counts = Counter((step.partition('-')[0], source_of[step.partition('-')[2]]) for step, _ in steps
+                         if step.partition('-')[0] in ('collect', 'transform', 'publish'))
+        for source_id in set(source_of.values()):
+            for command in ('collect', 'transform', 'publish'):
+                self.assertEqual(counts[command, source_id], 1, (command, source_id))
+        origin_manifest = str(self.origin.directory / 'release.json')
+        current_manifest = str(self.current.directory / 'release.json')
+        for step, manifest in steps:
+            command, _, member_id = step.partition('-')
+            if command == 'collect':
+                # Collection stays bound to the release that discovered the member.
+                self.assertEqual(manifest, origin_manifest if member_id in origin_members else current_manifest)
+            elif command in ('transform', 'publish'):
+                self.assertEqual(manifest, current_manifest)
+        # Member order (plan Decisions R2, fallback). select_work orders a source's members by member_id,
+        # a hash over a workset whose context holds the discover child's wall-clock started_at
+        # (cli.py: Clock().now() in the child; no CLI, fixture or config input reaches it). So the order
+        # cannot be pinned. The first member of each source runs the child sequence, and B4 completes
+        # the other with no child. Each branch is checked for what must hold in it.
+        selection = json.loads(h.objects.read('runs/sec/current/backfill/a/selection.json'))
+        jobs: dict[str, list[str]] = {}
+        for job in selection['jobs']:
+            jobs.setdefault(job['member']['source']['source_id'], []).append(job['member']['member_id'])
+        self.assertEqual(set(jobs), set(source_of.values()))
+        collected = {step.partition('-')[2]: manifest for step, manifest in steps if step.startswith('collect-')}
+        receipts = {member.member_id: member for member in report.members}
+        origin_first = 0
+        for source_id, ordered in jobs.items():
+            self.assertEqual(len(ordered), 2, source_id)
+            self.assertEqual(len(origin_members.intersection(ordered)), 1, source_id)
+            first, later = ordered
+            if first in origin_members:
+                origin_first += 1
+                self.assertEqual(collected[first], origin_manifest)
+            else:
+                self.assertEqual(collected[first], current_manifest)
+            self.assertNotIn(later, collected)
+            skipped = receipts[later]
+            self.assertIn(skipped.outcome, COMPLETE)
+            self.assertEqual((skipped.child_refs, skipped.snapshot_ref, skipped.transformed_ref), ((), None, None))
+        manifests = {manifest for _, manifest in steps}
+        if origin_first:
+            self.assertIn(origin_manifest, manifests)
+        else:
+            self.assertNotIn(origin_manifest, manifests)
 
     def test_origin_release_reports_a_b4_receipt_as_unresolved(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            h, origin, _, report, _ = self.continued(Path(tmp))
-            skipped = sorted(member.member_id for member in report.members if not member.child_refs)
-            self.assertEqual(len(skipped), 2)
-            code, message = self.origin_run(h, origin, 'origin-again')
-            self.assertEqual((code, message['outcome']), (3, 'incomplete'), message)
-            result = json.loads(h.objects.read(message['result_ref']))
-            unresolved = sorted(gap['details']['member_id'] for gap in result['gaps']
-                                if gap['code'] == 'legacy_member_unresolved')
-            self.assertEqual(unresolved, skipped)
+        h, origin, _, report, _ = self.continued(self.scratch())
+        skipped = sorted(member.member_id for member in report.members if not member.child_refs)
+        self.assertEqual(len(skipped), 2)
+        code, message = self.origin_run(h, origin, 'origin-again')
+        self.assertEqual((code, message['outcome']), (3, 'incomplete'), message)
+        result = json.loads(h.objects.read(message['result_ref']))
+        gaps = [gap for gap in result['gaps'] if gap['code'] == 'legacy_member_unresolved']
+        self.assertEqual(sorted(gap['details']['member_id'] for gap in gaps), skipped)
+        for gap in gaps:
+            self.assertTrue(gap['message'].startswith('retained completion receipt is corrupt'), gap)
 
     def test_origin_settings_refuse_the_reserve_key(self):
         value = fixture_settings().to_mapping()
@@ -131,9 +167,9 @@ class OriginReleaseTests(unittest.TestCase):
         script = ('import json, sys\nfrom sec_edgar_ingest.config import Settings\n'
                   'Settings.from_mapping(json.loads(sys.argv[1]))\n')
         result = subprocess.run([*native_python_argv(self.origin.python), '-c', script, json.dumps(value)],
-                                capture_output=True, text=True, env=isolated_environment())
+                                capture_output=True, text=True, env=isolated_environment(), timeout=120)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unknown keys: ['dispatch_reserve_seconds']", result.stderr)
+        self.assertIn("ExecutionSettings unknown keys: ['dispatch_reserve_seconds']", result.stderr)
 
 
 if __name__ == '__main__':
