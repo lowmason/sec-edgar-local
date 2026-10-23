@@ -14,7 +14,7 @@ The full run failed. It wrote no report. The timings below come from the durable
 | `closed` daily steps (measure 1 and the 14-quarter fan-out) | Not run. The second `closed` config was written at about 07:51 UTC, but no stderr log or report exists for that invocation, so the process ended during or just after the baseline's failure. I have no traceback, because the output was in the owner's terminal. |
 | `finish` (48 quarters) | Not run. |
 
-So measure 1 (back-dated rebuild), the fan-out, and measure 3 (the finish step) have no value. Measure 2 has the 1 and 10 marks only.
+So measure 1 (back-dated rebuild) and the fan-out have no value. Measure 2 has the 1 and 10 marks only. Measure 3 (the finish step) was measured in a separate run, below.
 
 No sleep or wake event occurred in the run window (`pmset -g log`). Machine load was about 4 to 7 at the start, from other sessions. I have no load record for the later hours.
 
@@ -55,7 +55,7 @@ The 3rd member's `transform` took 247.3 s. No `publish` attempt was recorded for
 |---|---|
 | Slowest completed member by wall time (2nd quarterly baseline member). This is collect start to the next collect start, which may differ from P4's `process_member` timer. | 10,657.5 |
 | Slowest completed child (publish, same member) | 1,515.8 |
-| Finish step, 48 requested quarters | not measured |
+| Finish step, 48 requested quarters (measured separately on 2026-10-23, see below) | 152.2 |
 | Closed-quarter rebuild by one back-dated daily row | not measured |
 | Fan-out: one daily file back-dating into 14 closed quarters | not measured |
 
@@ -63,11 +63,28 @@ The 3rd member's `transform` took 247.3 s. No `publish` attempt was recorded for
 
 P4 cannot produce a valid proposal from this record:
 
-- **Floor:** P4 needs the finish-step time (`max(60, 3 × finish_seconds)`). It was not measured. The minimum is 60 s.
+- **Floor:** P4 is `max(60, 3 × finish_seconds)`, rounded up to 30 s. The finish step was measured separately (below): 152.2 s, so the floor is **480 s**.
 - **Reserve:** P4 sets `2 × slowest member + floor`. With the slowest member at 10,657.5 s, that is at least 21,375 s. The reserve must be below 3,300 s (the launcher default timeout) and below 3,600 s.
 - **Fit:** The slowest member does not fit in 3,300 − reserve for any allowed reserve. The open-quarter member with 23 sources (1,590 s) fits only if the reserve is below 1,710 s. The extrapolated 80-source member (about 5,170 s) and both quarterly baseline members (above 9,000 s) exceed the whole 3,300 s timeout.
 
 The spec §6 branch applies: the owner either accepts a limit for Stages 2–3 or adds cheaper publication as a new roadmap stage. The owner also chooses the floor and the reserve, which this record cannot derive.
+
+## Finish step, measured alone (plan 4 Task 2 Step 8b, 2026-10-23)
+
+Run: `scripts/measure-d5-drain.py run --scale full --only finish` on the installed `fc68adef…` interpreter (`-I -B -X pycache_prefix=/dev/null`), launched by the owner. Work directory `fixture-data/d5-measure-finish-20261023T132615Z`. Result file: `finish-measurement.json` (copied from the run). The run took 878 s, exited 0, and completed 48 members (2015Q1 to 2026Q4, 50 rows per quarter, fixture acquisition, no SEC request). Machine load was about 3.5 to 5, and other test runs of this plan shared it.
+
+| Finish step part | Seconds |
+|---|---|
+| `baseline_gaps` | 28.9 |
+| `source_revert_gaps` | 3.1 |
+| `summarize` | 0.0 |
+| `write_workflow_result` | 120.1 |
+| `emit_summary` | 0.0 |
+| **Total** | **152.2** |
+
+P4 floor: `max(60, ceil(3 × 152.15 / 30) × 30)` = **480 s**.
+
+Limit: the quarters in this run have 50 rows each. A finish step on a store with full-size quarters can cost more. The member wall time here also grew with the store (5.4 s for the first member, 18.3 s for the 48th), so the in-process engine cost per member rises even with tiny quarters.
 
 ## Limits
 Fixture timings can only underestimate native cost (plan 2 F11). Synthetic bodies are not SEC bodies, and the L12 publish spread (41.6–187.6 s) is unexplained. The fan-out used the 14 quarters of one retained daily file (findings §4.7). This run did not reach it.
@@ -81,4 +98,4 @@ Owner's words (2026-10-23), in order:
 1. "D2: the slowest member does not fit, so add cheaper publication as a new roadmap stage. Floor and reserve: <integers, or say to defer them>."
 2. After the controller recommended floor 300 s with the reserve deferred to D4: "D2 approved: measure finish only before setting the floor, add a per-member-cost stage before Stage 2 instead of accepting the limit, and continue Stage 1a with a provisional reserve."
 
-Result: no floor or reserve is committed yet. The finish step is measured alone next (plan 4 Task 2 Step 8b), and the floor comes from that. The reserve is provisional and is set at the Task 10 owner approval (D4). The owner does not accept the limit: a per-member-cost stage goes before Stage 2.
+Result: the finish step was then measured alone (152.2 s, above). The floor is the P4 rule's value, 480 s, which D1 approved. The reserve is provisional and is set at the Task 10 owner approval (D4). The owner does not accept the limit: a per-member-cost stage goes before Stage 2.
