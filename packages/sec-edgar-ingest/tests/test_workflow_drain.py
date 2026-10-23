@@ -264,12 +264,16 @@ class SiblingCompletionTests(unittest.TestCase):
                 pin = acquisition.binding(done.member_id, identity)
                 self.assertIsNotNone(pin)
                 self.assertIsNone(acquisition.binding(sibling['member_id'], identity))
+                # The other-source case must fail only on source identity: give it a complete outcome.
+                elsewhere = replace(done, source=other.source)
+                self.assertIn(elsewhere.outcome, COMPLETE)
+                self.assertNotEqual(elsewhere.source.source_id, identity)
                 conflict = Error('state_conflict', 'corrupt sibling evidence', False, identity, {})
                 unpinned = Error('acquisition_pending', 'member has no exact raw pin', True, identity, {})
                 # Without 'reuse', the case runs the real reuse_exact_binding, which would bind the sibling.
                 cases = {
                     'no preceding member, source not already complete': {'previous': None},
-                    'preceding member of another source': {'previous': other},
+                    'complete preceding member of another source': {'previous': elsewhere},
                     'failed sibling': {'previous': replace(done, outcome='state_conflict')},
                     'quarantined sibling': {'previous': replace(done, outcome='quarantined', quarantined=True,
                                                                 transformed=False)},
