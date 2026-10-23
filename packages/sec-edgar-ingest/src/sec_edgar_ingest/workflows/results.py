@@ -563,14 +563,17 @@ def _validate_report(result, store, objects):
             if publication.input_ref != member.transformed_ref or publication.quarters != member.quarters:
                 raise Conflict('member publication chain differs')
         if member.outcome in ('success', 'unchanged', 'no_new_sources'):
-            if member.member_id not in by_member or 'publish' not in by_command:
+            # MemberResult admits a complete member with no child only in the B4 sibling-completion shape.
+            sibling = not member.child_refs and member.snapshot_ref is None and member.transformed_ref is None
+            if member.member_id not in by_member or not (sibling or 'publish' in by_command):
                 raise Conflict('complete member lacks child and immutable completion evidence')
             capture = by_member[member.member_id]
-            from ..worksets import make_snapshot_workset
-            from ..models import Snapshot
-            projection = decode_source_workset(objects.read(selected[member.member_id]['member_ref']))
-            if make_snapshot_workset(projection, (Snapshot.from_mapping(capture['snapshot']),)) != snapshot_set:
-                raise Conflict('complete member snapshot capture differs from exact child input')
+            if not sibling:
+                from ..worksets import make_snapshot_workset
+                from ..models import Snapshot
+                projection = decode_source_workset(objects.read(selected[member.member_id]['member_ref']))
+                if make_snapshot_workset(projection, (Snapshot.from_mapping(capture['snapshot']),)) != snapshot_set:
+                    raise Conflict('complete member snapshot capture differs from exact child input')
             if capture['member'] != selected[member.member_id] or (capture['observation']['parser_version'], capture['observation']['schema_version']) != (member.parser_version, member.schema_version):
                 raise Conflict('complete member evidence/version differs')
             if set(capture['affected_quarters']) != {q.quarter for q in member.quarters}:

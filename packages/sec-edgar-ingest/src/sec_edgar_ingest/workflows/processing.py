@@ -126,6 +126,9 @@ def validate_member_evidence(result, evidence, objects) -> None:
     projected = read_source(value['member_ref'], objects)
     if projected != projection(parent, result.source.source_id) or projected.workset_id != result.member_id:
         raise Conflict('member differs from immutable original projection')
+    if not evidence['calls'] and evidence['terminal_error'] is None:
+        _validate_sibling_completion(result, evidence, value, objects)
+        return
     checked, repair_calls, missing_calls = [], [], []
     namespace = None
     for call in evidence['calls']:
@@ -256,3 +259,22 @@ def validate_member_evidence(result, evidence, objects) -> None:
         resolution_calls.append(parse_json(objects.read(resolution['ref']))['call'])
     if resolution_calls != repair_calls:
         raise Conflict('repair resolution belongs to another checked prefix')
+
+
+def _validate_sibling_completion(result, evidence, value, objects) -> None:
+    """B4 receipt: the run already completed this source, so its capture stands in for every child."""
+    if (result.outcome != 'unchanged' or result.child_refs or result.snapshot_ref is not None
+            or result.transformed_ref is not None or result.downloaded or result.transformed
+            or result.quarantined or result.gaps or evidence['resolutions']):
+        raise Conflict('member has no checked source operation')
+    complete = evidence['completion']
+    if complete is None or complete['member'] != value:
+        raise Conflict('sibling completion lacks exact captured evidence')
+    validate_capture(complete, objects)
+    if (complete['observation']['parser_version'], complete['observation']['schema_version']) != (
+            result.parser_version, result.schema_version):
+        raise Conflict('member capture processing versions differ')
+    expected = [(q['quarter'], 'unchanged', q['generation_id'], q['manifest_ref'], None, 0) for q in complete['quarters']]
+    actual = [(q.quarter, q.outcome, q.generation_id, q.manifest_ref, q.candidate_ref, q.conflicts) for q in result.quarters]
+    if actual != expected:
+        raise Conflict('sibling completion quarters differ from immutable capture')

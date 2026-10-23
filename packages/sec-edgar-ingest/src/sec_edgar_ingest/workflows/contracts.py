@@ -105,11 +105,15 @@ class MemberResult(Record):
             raise ValueError('unsupported member processing versions')
         if len({quarter.quarter for quarter in self.quarters}) != len(self.quarters):
             raise ValueError('duplicate member quarter results')
-        if self.outcome in COMPLETE and (
-            not self.snapshot_ref or not self.transformed_ref
-            or any(quarter.outcome not in ('published', 'unchanged') for quarter in self.quarters)
-        ):
-            raise ValueError('complete member lacks successful ETL/publication captures')
+        if self.outcome in COMPLETE:
+            if self.snapshot_ref is None and self.transformed_ref is None and not self.child_refs:
+                # B4 sibling completion: this run already completed the source, so no child of its own ran.
+                if (self.outcome != 'unchanged' or self.downloaded or self.transformed
+                        or any(quarter.outcome != 'unchanged' for quarter in self.quarters)):
+                    raise ValueError('sibling completion must be unchanged with no child progress')
+            elif (not self.snapshot_ref or not self.transformed_ref
+                    or any(quarter.outcome not in ('published', 'unchanged') for quarter in self.quarters)):
+                raise ValueError('complete member lacks successful ETL/publication captures')
         if self.quarantined and (self.transformed or member_status(self.outcome) != 'failed'):
             raise ValueError('quarantined member requires failed status and no accepted transform')
 
