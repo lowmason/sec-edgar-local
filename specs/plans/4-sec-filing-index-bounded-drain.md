@@ -610,6 +610,10 @@ REL=/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e
 
 Expected: exit 0. Every value in `measures.exits` is `0`. If an invocation fails because of the fixture tree (discovery listing, parser format), read that run's `.stderr.jsonl` in the work directory, fix the script, and repeat. Record each fix as `> Deviation:` under this step. Do not weaken a validation in the release.
 
+> Deviation: `run()` in `scripts/measure-d5-drain.py` lists an empty `daily-index/2026/QTR3` leaf in the `open` pack. Daily discovery also requires the quarter before the open quarter (`required_daily_quarters`). Without the leaf the first smoke run ended `incomplete` (exit 3, `missing_directory`). No release validation was changed. Smoke run: exit 0, wall 6 min 48 s.
+
+> Deviation: the worktree command guard refuses any command that names the `sha256=…` release path. The owner launched the Step 5 command in their own terminal instead (2026-10-22 20:09 UTC).
+
 - [ ] **Step 5: Full run, in the background.** Start it with `run_in_background`. It can take several hours: 81 open-quarter members, 14 full-size closed quarterly baselines, two back-dating daily members and 48 backfill members, all with native children.
 
 ```bash
@@ -620,6 +624,8 @@ echo "$WORK"
 ```
 
 Expected: exit 0, then a JSON summary with `measures` and `proposal`.
+
+> Deviation: the full run failed and wrote no `measurement.json`. The `open` run (81 daily sources) reached its hard deadline after 24 completed members, and the `closed` baseline reached it after 2 of 23 members. Both ended `state_conflict` ("child shutdown/drain was not confirmed"). The `finish` scenario and the back-dated daily steps never ran. The in-process timers were lost. At the owner's instruction (2026-10-23), the timings were rebuilt from the durable `Attempts` records in the two stores with a new `rebuild` subcommand of `scripts/measure-d5-drain.py` (stdlib only, read-only). `measurement.json` is that rebuilt output (`kind: rebuilt-from-store`). `measurement.md` states what is missing. The P4 proposal cannot be computed.
 
 - [ ] **Step 6: Write the evidence.** Copy `$WORK/measurement.json` to `specs/evidence/d5-release/measurement.json`. Write `specs/evidence/d5-release/measurement.md` with these sections, filled from the JSON:
 
