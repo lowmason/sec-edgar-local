@@ -46,6 +46,8 @@ class LauncherPreparationTests(unittest.TestCase):
         self.verified = VerifiedRelease(digest, manifest, directory, directory / 'venv/bin/python')
         value = fixture_settings().to_mapping()
         value['acquisition'] = {'mode': 'live'}
+        from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS
+        value['execution']['dispatch_reserve_seconds'] = DISPATCH_RESERVE_FLOOR_SECONDS
         value['runtime'] = {'kind': 'native', 'release_manifest': '../releases/sha256=' + digest + '/release.json'}
         value['etl']['parser_version'] = 'sec-index-parser-v1'
         value['storage']['root'] = '../data'
@@ -59,6 +61,26 @@ class LauncherPreparationTests(unittest.TestCase):
 
     def prepare(self, timeout=3300, command='backfill'):
         return self.launcher.prepare_invocation(self.config, command, timeout, project_root=self.project)
+
+    def write_execution(self, **execution):
+        value = json.loads(self.config.read_text())
+        value['execution'] = {'max_run_seconds': 3600, **execution}
+        self.config.write_text(json.dumps(value, indent=3) + '\n')
+
+    def test_live_reserve_admission_refuses_before_preflight_or_logs(self):
+        from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS as floor
+        for execution in ({}, {'dispatch_reserve_seconds': floor - 1}, {'dispatch_reserve_seconds': 3600}):
+            with self.subTest(execution=execution):
+                self.write_execution(**execution)
+                with self.assertRaisesRegex(ValueError, 'dispatch_reserve_seconds'):
+                    self.prepare()
+        self.write_execution(dispatch_reserve_seconds=floor)
+        with self.assertRaisesRegex(ValueError, 'dispatch_reserve_seconds'):
+            self.prepare(timeout=floor)
+        self.preflight.assert_not_called()
+        self.assertFalse((self.project / 'logs').exists())
+        invocation = self.prepare(timeout=floor + 1)
+        self.assertEqual((invocation.deadline - invocation.started_at).total_seconds(), floor + 1)
 
     def main(self, *args):
         with contextlib.redirect_stderr(io.StringIO()):
@@ -386,6 +408,8 @@ class InstalledLauncherTests(unittest.TestCase):
         (self.project / '.venv').symlink_to(PROJECT / '.venv', target_is_directory=True)
         value = fixture_settings().to_mapping()
         value['acquisition'] = {'mode': 'live'}
+        from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS
+        value['execution']['dispatch_reserve_seconds'] = DISPATCH_RESERVE_FLOOR_SECONDS
         value['runtime'] = {'kind': 'native', 'release_manifest': str(self.release.directory / 'release.json')}
         value['etl']['parser_version'] = 'sec-index-parser-v1'
         value['storage']['root'] = '../data'
@@ -404,6 +428,11 @@ class InstalledLauncherTests(unittest.TestCase):
     def test_shell_finds_default_outside_checkout_and_archives_real_installed_release(self):
         # An expired preparation deadline proves real installed dispatch selection
         # without authorizing any live engine/network work in this bootstrap test.
+        # B2 refuses a live timeout at or below the reserve; this test is about dispatch selection, not admission.
+        value = json.loads(self.config.read_bytes())
+        value['acquisition'] = {'mode': 'fixture'}
+        value['execution'].pop('dispatch_reserve_seconds')
+        self.config.write_text(json.dumps(value))
         result = subprocess.run([str(self.project / 'scripts/sec-edgar-local'), 'backfill',
             '--timeout-seconds', '0.000001'],
             cwd=self.poison, env=self.environment, capture_output=True, text=True, timeout=30)
