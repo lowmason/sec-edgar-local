@@ -93,6 +93,45 @@ def proof_releases(project: Path, cache: Path) -> tuple[VerifiedRelease, Verifie
     return a, b
 
 
+ORIGIN_REVISION = '3ca50c78558bbf072a4eb75412af7d58a9e0f61b'  # source revision of release fc68adef…
+_ORIGINS: dict[tuple[str, str], VerifiedRelease] = {}
+
+
+def origin_release(project: Path, cache: Path) -> VerifiedRelease:
+    """Build the fc68adef… source revision into its own committed repository and install it.
+
+    Release identity covers the Git revision, so this release ID differs from fc68adef…; its
+    application payload is that revision's. The checkout's later code never enters it.
+    """
+    project = project.absolute()
+    override = os.environ.get('SEC_LOCAL_PROOF_CACHE')
+    cache = Path(override) if override else cache
+    if not cache.is_absolute():
+        raise ValueError('proof cache path must be absolute')
+    key = str(project), str(cache)
+    if key in _ORIGINS:
+        return _ORIGINS[key]
+    prepare_artifact_cache(project / 'uv.lock', Path(sys.executable), cache, offline=True)
+    temporary = tempfile.TemporaryDirectory(prefix='sec-native-origin-')
+    _TEMPORARIES.append(temporary)
+    root = Path(temporary.name)
+    source = root / 'source'
+    source.mkdir()
+    archive = subprocess.run(['git', '-C', str(project), 'archive', '--format=tar', ORIGIN_REVISION],
+                             check=True, capture_output=True).stdout
+    subprocess.run(['tar', '-x', '-C', str(source)], input=archive, check=True)
+    subprocess.run(['git', 'init', '-q', str(source)], check=True)
+    subprocess.run(['git', '-C', str(source), 'add', '.'], check=True)
+    subprocess.run(['git', '-C', str(source), '-c', 'user.name=Native release proof',
+                    '-c', 'user.email=proof@example.invalid', 'commit', '-qm',
+                    'Origin source revision ' + ORIGIN_REVISION], check=True)
+    release = preflight(build_release(source, root / 'releases', python=Path(sys.executable),
+                                      artifact_cache=cache, offline=True) / 'release.json')
+    assert_release_inventory(release)
+    _ORIGINS[key] = release
+    return release
+
+
 def _cleanup():
     for temporary in reversed(_TEMPORARIES):
         temporary.cleanup()
