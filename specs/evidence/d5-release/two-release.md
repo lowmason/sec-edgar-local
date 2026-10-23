@@ -26,7 +26,14 @@
    - One current run completed both sources. For each source, `collect`, `transform` and `publish` each ran once.
    - The first member of each source ran the child sequence. Its `collect` ran on the release that discovered it. Its `transform` and `publish` ran on the current release.
    - The other member got the B4 receipt: a complete outcome, no child refs, and no snapshot or transformed ref.
-   - The order of the two members is not fixed (plan Decisions R2). `member_id` hashes the discover child's wall-clock `started_at`, and no input reaches that value. If an origin member sorts first, its `collect` runs on the origin release. If no origin member sorts first, no child runs on the origin release. The test checks each branch.
+   - The order of the two members is not fixed (plan Decisions R2). `member_id` hashes a workset that holds the discover child's wall-clock `started_at`, the per-build runtime `release_sha256` and the per-run `config_sha256`. So the order is not pinned. If an origin member sorts first, its `collect` runs on the origin release. If no origin member sorts first, no child runs on the origin release. The test checks each branch.
+
+## Limits of the proof (R2 fallback applied)
+Plan Decisions R2 asked for a pinned order and allowed order-aware checks if pinning was not feasible. The order-aware fallback was applied. What was lost:
+- `test_current_code_continues_origin_pending_work`: when no origin member sorts first for either source (about 1 run in 4), no child runs on the origin release in that run. The test then proves only that the current release completes the sources and that B4 completes the later members.
+- `test_release_upgrade…continues_a_origin_pending_and_repairs`: in about half the runs the `pending` scenario proves the D5 no-child path instead of a collect under release A. The `repair` scenario still always proves a `publish` under release A.
+- The `repair` probe's fallback for the case where both sources sort B-first was not reached in the recorded runs. It was proved once with a temporary local edit, which was reverted.
+Neither limit hides a failure. Each branch is asserted in both directions. The cost is that a single run proves one branch.
 2. `fc68adef…` reads a B4 receipt as corrupt. A later origin-release run reported one `legacy_member_unresolved` gap for each B4 member. Each gap message starts with `retained completion receipt is corrupt`. The run ended `incomplete` (exit 3).
 3. `fc68adef…` refuses a config that carries `execution.dispatch_reserve_seconds`. Stderr contains `ExecutionSettings unknown keys: ['dispatch_reserve_seconds']`.
    - Inference (not tested): receipts, child results and contexts written under a D5 live config carry that config. If so, `fc68adef…` cannot validate them either.

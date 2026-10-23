@@ -119,9 +119,11 @@ class OriginReleaseTests(unittest.TestCase):
                 self.assertEqual(manifest, current_manifest)
         # Member order (plan Decisions R2, fallback). select_work orders a source's members by member_id,
         # a hash over a workset whose context holds the discover child's wall-clock started_at
-        # (cli.py: Clock().now() in the child; no CLI, fixture or config input reaches it). So the order
-        # cannot be pinned. The first member of each source runs the child sequence, and B4 completes
-        # the other with no child. Each branch is checked for what must hold in it.
+        # (cli.py: Clock().now() in the child). The same hash also covers the per-build runtime
+        # release_sha256 and the per-run config_sha256, so fixing started_at would still leave one
+        # hash comparison to tune by hand. The order is therefore not pinned. The first member of each
+        # source runs the child sequence, and B4 completes the other with no child. Each branch is
+        # checked for what must hold in it.
         selection = json.loads(h.objects.read('runs/sec/current/backfill/a/selection.json'))
         jobs: dict[str, list[str]] = {}
         for job in selection['jobs']:

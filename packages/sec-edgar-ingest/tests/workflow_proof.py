@@ -655,10 +655,11 @@ def installed_upgrade_cases(output, a_manifest, b_manifest):
                     checked.append({'call': call, 'result': child.to_mapping()})
             # Member order (plan Decisions R2, fallback). select_work orders a source's members by
             # member_id, a hash over a workset whose context holds the discover child's wall-clock
-            # started_at (cli.py: Clock().now() in the child process). No CLI, fixture or config input
-            # reaches that field, so the order of an A-origin member and its B sibling cannot be pinned.
-            # The first member of a source runs the child sequence; B4 completes the later one with no
-            # child. Each branch is checked for what must hold in it.
+            # started_at (cli.py: Clock().now() in the child process). The same hash also covers the
+            # per-build runtime release_sha256 and the per-run config_sha256, so fixing started_at would
+            # still leave one hash comparison to tune by hand: the order of an A-origin member and its B
+            # sibling is not pinned. The first member of a source runs the child sequence; B4 completes
+            # the later one with no child. Each branch is checked for what must hold in it.
             a_first = order_aware_children(scenario, objects, result, checked, a.release_id, b.release_id)
             a_child_expected = scenario == 'repair' or any(a_first.values())
             if bool(a_children) != a_child_expected:
