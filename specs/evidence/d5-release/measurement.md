@@ -76,4 +76,9 @@ The cause of the large engine gaps is unknown. They do not come from the child p
 The extrapolations to 40 and 80 sources assume the linear fit holds. A longer measurement could show otherwise.
 
 ## Owner decision
-To be completed at the Task 2 checkpoint with the owner's exact words.
+Owner's words (2026-10-23), in order:
+
+1. "D2: the slowest member does not fit, so add cheaper publication as a new roadmap stage. Floor and reserve: <integers, or say to defer them>."
+2. After the controller recommended floor 300 s with the reserve deferred to D4: "D2 approved: measure finish only before setting the floor, add a per-member-cost stage before Stage 2 instead of accepting the limit, and continue Stage 1a with a provisional reserve."
+
+Result: no floor or reserve is committed yet. The finish step is measured alone next (plan 4 Task 2 Step 8b), and the floor comes from that. The reserve is provisional and is set at the Task 10 owner approval (D4). The owner does not accept the limit: a per-member-cost stage goes before Stage 2.

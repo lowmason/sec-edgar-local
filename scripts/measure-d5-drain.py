@@ -285,6 +285,14 @@ def run(manifest: Path, work: Path, counts: dict, scale: str) -> dict:
     report['scenarios']['closed'] = scenario('closed', work, manifest, closed_leaves, [
         ('backfill', {'start': sizes['closed_start'], 'end': '2026Q3', 'daily_start': '2026-12-01'}),
         ('daily', {'start': sizes['closed_start'], 'end': 'open', 'daily_start': '2026-12-01'})])
+    run_finish(report, work, manifest, sizes)
+    report['ended_at'] = datetime.now(timezone.utc).isoformat()
+    report['measures'] = measures(report)
+    report['proposal'] = proposal(report['measures'])
+    return report
+
+
+def run_finish(report: dict, work: Path, manifest: Path, sizes: dict) -> None:
     finish_leaves = {}
     for index, (year, quarter) in enumerate(quarters(sizes['finish_start'], '2026Q4')):
         first = date(year, (quarter - 1) * 3 + 1, 1)
@@ -293,9 +301,24 @@ def run(manifest: Path, work: Path, counts: dict, scale: str) -> dict:
         finish_leaves['daily-index', year, quarter] = []
     report['scenarios']['finish'] = scenario('finish', work, manifest, finish_leaves,
         [('backfill', {'start': sizes['finish_start'], 'end': 'open', 'daily_start': '2026-12-31'})])
+
+
+def run_finish_only(manifest: Path, work: Path, scale: str) -> dict:
+    """The finish scenario alone (owner decision D2, 2026-10-23): the floor needs only the finish step's cost."""
+    sizes = SCALES[scale]
+    instrument()
+    report = {'format_version': FORMAT, 'kind': 'run-finish-only', 'scale': scale, 'python': sys.executable,
+              'flags': {'isolated': sys.flags.isolated, 'dont_write_bytecode': sys.dont_write_bytecode,
+                        'pycache_prefix': sys.pycache_prefix},
+              'release_id': json.loads(manifest.read_text())['release_id'], 'inputs': dict(sizes),
+              'started_at': datetime.now(timezone.utc).isoformat(), 'scenarios': {}}
+    run_finish(report, work, manifest, sizes)
     report['ended_at'] = datetime.now(timezone.utc).isoformat()
-    report['measures'] = measures(report)
-    report['proposal'] = proposal(report['measures'])
+    call = report['scenarios']['finish']['invocations'][0]
+    labelled = {label: sum(t['seconds'] for t in call['timings'] if t['label'] == label) for label in FINISH_LABELS}
+    report['measures'] = {'finish_seconds': sum(labelled.values()), 'finish_label_seconds': labelled,
+                          'finish_members': len(call['members']), 'invocation_seconds': call['seconds'],
+                          'exits': {'finish': [call['exit']]}}
     return report
 
 
@@ -425,6 +448,7 @@ def main(argv=None) -> int:
     running.add_argument('--work', type=Path, required=True)
     running.add_argument('--counts', type=Path, required=True)
     running.add_argument('--scale', choices=sorted(SCALES), required=True)
+    running.add_argument('--only', choices=['finish'], default=None)
     args = parser.parse_args(argv)
     if args.command == 'rebuild':
         sys.stdout.write(json.dumps(rebuild(args.work.resolve()), sort_keys=True, indent=1) + '\n')
@@ -436,9 +460,12 @@ def main(argv=None) -> int:
     if work.is_relative_to('/tmp') or work.is_relative_to('/private/tmp'):
         raise SystemExit('measurement work must be under the project, not /tmp')
     work.mkdir(parents=True, exist_ok=False)
-    report = run(args.release_manifest.resolve(), work, json.loads(args.counts.read_text()), args.scale)
+    if args.only == 'finish':
+        report = run_finish_only(args.release_manifest.resolve(), work, args.scale)
+    else:
+        report = run(args.release_manifest.resolve(), work, json.loads(args.counts.read_text()), args.scale)
     (work / 'measurement.json').write_text(json.dumps(report, sort_keys=True, indent=1) + '\n')
-    sys.stdout.write(json.dumps({'measures': report['measures'], 'proposal': report['proposal']},
+    sys.stdout.write(json.dumps({'measures': report['measures'], 'proposal': report.get('proposal')},
                                 sort_keys=True, indent=1) + '\n')
     return 0 if all(code == 0 for codes in report['measures']['exits'].values() for code in codes) else 1
 

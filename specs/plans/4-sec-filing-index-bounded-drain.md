@@ -49,6 +49,11 @@ Execution environment (planning facts, not spec text):
 ## Decisions
 
 - **D1** (owner, plan review, 2026-10-22): P1–P8 accepted as proposed, with amendments A1 and A2. That settles: B4 also skips when the selection's `already_complete` holds the source (P1, A1); the B4 receipt names no worksets, and `MemberResult` and `_validate_report` accept that exact shape (P2, A1); engine admission in `cli._validate_workflow`, before any store opens (P3, A2); the floor and reserve proposal rule (P4); the measurement design with the 14-quarter fan-out (P5); the origin release built from `3ca50c7` (P6); the merge to `main` before the build (P7); and skip-check gaps that are not reported (P8). The amendment tags in Task 1 keep the date 2026-10-22. Owner's words: "Approved". Applied in: Tasks 1, 2, 4, 6, 7 and 8–11.
+- **D2** (owner, Task 2 checkpoint, 2026-10-23). The full measurement failed: its `open` and `closed` runs reached their hard deadline, so P4 gave no floor or reserve (`specs/evidence/d5-release/measurement.md`). Owner's words, in order: "D2: the slowest member does not fit, so add cheaper publication as a new roadmap stage. Floor and reserve: <integers, or say to defer them>." Then, after the controller recommended floor 300 s with the reserve deferred to D4: "D2 approved: measure finish only before setting the floor, add a per-member-cost stage before Stage 2 instead of accepting the limit, and continue Stage 1a with a provisional reserve." That settles four things.
+  - The floor is not yet set. The finish step is measured alone first (Task 2 Step 8b). The floor integer comes from that measurement and is committed in Task 3 Step 4. Until then Task 3 uses a marked provisional value.
+  - The owner does not accept the limit. A new per-member-cost roadmap stage goes before Stage 2. This plan does not plan or place that stage. The session that owns the roadmap does (derive-roadmap).
+  - Stage 1a continues.
+  - The live reserve is provisional. Its integer is set at the Task 10 owner approval (D4), where it must satisfy floor ≤ reserve < 3,300.
 
 ## Defaults for owner review
 
@@ -672,6 +677,8 @@ git commit -m "test(evidence): measure the drain costs on release fc68adef offli
 3. if the slowest member does not fit in 3,300 − reserve, either acceptance of that limit for Stages 2–3, or a new roadmap stage for cheaper publication.
 
 Stop until the owner answers. Record the answer verbatim under `## Owner decision`. Log it in this plan's `## Decisions` as D2, with both integers.
+
+> Deviation (D2): Step 8b is added. The owner asked to measure the finish step alone before the floor is set. `scripts/measure-d5-drain.py run --scale full --only finish` runs only the `finish` scenario (48 quarters of 50 rows) and reports `finish_seconds` with a per-label split. The owner launches it in their own terminal, because the worktree command guard refuses commands that name the release path. Record the result in `measurement.md`, then the floor integer under D2, and use it in Task 3 Step 4. Limit to state: the finish scenario has small quarters (50 rows each), so the finish step on a store with full-size quarters can cost more (the baseline run's engine gaps grew with the store).
 
 - [ ] **Step 9: Commit the decision.**
 
