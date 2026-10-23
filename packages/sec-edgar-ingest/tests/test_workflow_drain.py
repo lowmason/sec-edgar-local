@@ -15,7 +15,7 @@ from support_workflows import CommandHarness, quarter_pack, simple_pack
 from sec_edgar_ingest.config import pin_context
 from sec_edgar_ingest.etl.reader import capture_quarter
 from sec_edgar_ingest.etl.state import EtlState
-from sec_edgar_ingest.models import Error, RunContext, canonical_json, to_mapping_value
+from sec_edgar_ingest.models import Error, RunContext, canonical_json, parse_json, to_mapping_value
 from sec_edgar_ingest.runtime import configured_descriptor
 from sec_edgar_ingest.state import AcquisitionState
 from sec_edgar_ingest.storage.contracts import Conflict
@@ -60,7 +60,8 @@ def widen(pack, times):
     return pack
 
 
-def run(h, run_id, allowed):
+def begin(h, run_id):
+    """Freeze a workflow attempt; the same context resumes the attempt."""
     now = datetime.now(timezone.utc)
     context = RunContext(run_id, 'manual', 'backfill', 'a', h.settings.etl.parser_version,
         h.settings.etl.schema_version, h.settings.config_sha256, now, now + timedelta(seconds=1800), 'backfill',
@@ -68,7 +69,11 @@ def run(h, run_id, allowed):
     context = pin_context(h.settings, context, TODAY)[0]
     intent = {'contract_version': LOCAL_CONTRACT, 'command': 'backfill', 'today': TODAY.isoformat(),
               'fixture_sha256': hashlib.sha256(h.pack.read_bytes()).hexdigest(), 'pinned_end_quarter': '2026Q4'}
-    context = freeze_workflow(context, intent, h.store, h.objects)
+    return freeze_workflow(context, intent, h.store, h.objects), intent
+
+
+def run(h, run_id, allowed):
+    context, intent = begin(h, run_id)
     dispatcher = Dispatcher(context, h.settings, h.pack, h.root, h.store, h.objects)
     budget, steps = MemberBudget(context, allowed), []
     execute = dispatcher.execute
@@ -355,6 +360,52 @@ class SiblingCompletionTests(unittest.TestCase):
                 for probe in probes:
                     self.assertNotIn(probe, report.gaps)
                 self.assertFalse(any(gap.message == 'skip-check probe gap' for gap in report.gaps))
+            finally:
+                h.close()
+
+    def test_a_resumed_attempt_finishes_the_members_own_children_instead_of_skipping(self):
+        from sec_edgar_ingest.workflows import runner
+        from sec_edgar_ingest.workflows.processing import _member_outcome
+
+        class Crash(Exception):
+            pass
+
+        processed = []
+        def observer(point):
+            # The engine dies after the second member's own children, before its receipt is recorded.
+            if point == 'workflow.after_member_processing':
+                processed.append(point)
+                if len(processed) == 2:
+                    raise Crash()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(simple_pack(root / 'pack'), 4))
+            try:
+                run(h, 'resume-0', allowed=0)
+                context, intent = begin(h, 'resume-1')
+                # Attempt k: the skip is refused (as for a binding gap), so the second member runs its own children.
+                with patch.object(runner, 'sibling_completion', return_value=None), self.assertRaises(Crash):
+                    run_workflow(context, h.settings, intent, Dispatcher(context, h.settings, h.pack, h.root,
+                                 h.store, h.objects), h.store, h.objects, observer)
+                registry = WorkflowMembers(h.store, h.objects)
+                selection = parse_json(h.objects.read(workflow_path(context).rsplit('/', 1)[0] + '/selection.json'))
+                first, second = (job['member'] for job in selection['jobs'][:2])
+                self.assertEqual(first['source'], second['source'])
+                registry._read_receipt(registry._path(first['member_id'], context))
+                with self.assertRaises(FileNotFoundError):
+                    h.objects.read(registry._path(second['member_id'], context))
+                # The same argv resumes: same frozen context and selection, no patch.
+                report = run_workflow(context, h.settings, intent, Dispatcher(context, h.settings, h.pack, h.root,
+                                      h.store, h.objects), h.store, h.objects)
+                write_workflow_result(report, h.store, h.objects)
+                member = next(m for m in report.members if m.member_id == second['member_id'])
+                calls = registry._read_receipt(registry._path(member.member_id, context))[2]['calls']
+                self.assertEqual([call['step_id'] for call in calls],
+                                 [command + '-' + member.member_id for command in ('collect', 'transform', 'publish')])
+                self.assertEqual(member.child_refs, tuple(call['result_ref'] for call in calls))
+                self.assertTrue(member.downloaded)
+                self.assertIsNotNone(member.snapshot_ref)
+                self.assertEqual(member.outcome, _member_outcome(read_child_capture(calls[-1], h.objects)))
             finally:
                 h.close()
 

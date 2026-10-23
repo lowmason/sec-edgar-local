@@ -13,7 +13,7 @@ from ..etl.reader import capture_from_pointer, capture_quarter, validated_manife
 from ..etl.state import EtlState
 from ..etl.contracts import PublicationResult
 from .contracts import COMPLETE, MemberResult, WorkflowResult, FATAL, summarize, workflow_path
-from .checked import ChildUnfinished, Dispatcher
+from .checked import ChildUnfinished, Dispatcher, child_attempt_id
 from .completion import evaluate_member, capture_member_provenance, capture_parent_provenance, validate_parent_provenance
 from .legacy import bootstrap_legacy
 from .members import SourceDownloads, WorkflowMembers
@@ -72,6 +72,15 @@ def sibling_completion(value: Mapping, previous: MemberResult | None, completed_
     identity = value['source']['source_id']
     preceded = previous is not None and previous.source.source_id == identity and previous.outcome in COMPLETE
     if not (preceded or identity in completed_sources):
+        return None
+    # A resumed attempt that already began this member's own children must finish them (spec 4.3 item 3).
+    # The dispatcher writes the collect call object before its child launches: the earliest durable signal.
+    step = child_attempt_id(context.run_id, context.command, context.attempt_id, 'collect-' + value['member_id'], 'collect')
+    try:
+        objects.read(f'runs/sec/{context.run_id}/{context.command}/{context.attempt_id}/children/{step}/call.json')
+    except FileNotFoundError:
+        pass
+    else:
         return None
     if reuse_exact_binding(value, store, objects):
         return None

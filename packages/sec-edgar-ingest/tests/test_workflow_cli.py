@@ -69,7 +69,8 @@ class WorkflowCliTests(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertIsNone(message)
                 self.assertEqual(json.loads(err)['outcome'], 'configuration')
-                # An admitted reserve passes on to the release preflight, which refuses the missing manifest.
+                # An admitted reserve passes on to preflight_current. This test interpreter is not isolated, so the
+                # preflight refuses on interpreter isolation before it reads the release manifest.
                 self.assertEqual('dispatch_reserve_seconds' in err, refused, err)
                 self.assertFalse((self.root / 'live-data').exists())
 
