@@ -23,8 +23,8 @@ CLOCK_UNCERTAINTY_LIMIT_SECONDS = 2
 LEASE_SECONDS = 60
 RENEW_EVERY_SECONDS = 20
 WORKER_ALLOWANCE_SECONDS = 3600
-# PROVISIONAL (plan 4, D2): replaced by the owner-approved floor once the finish step is measured.
-DISPATCH_RESERVE_FLOOR_SECONDS = 60
+# Owner decision D2 (plan 4, Task 2): three times the measured finish step (152.2 s), rounded up to 30 s.
+DISPATCH_RESERVE_FLOOR_SECONDS = 480
 MAX_EXCHANGE_SECONDS = 90
 MAX_RECEIVED_BYTES = 67108864
 MAX_EXPANDED_BYTES = 536870912
