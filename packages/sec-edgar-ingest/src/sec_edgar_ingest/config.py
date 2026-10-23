@@ -23,6 +23,8 @@ CLOCK_UNCERTAINTY_LIMIT_SECONDS = 2
 LEASE_SECONDS = 60
 RENEW_EVERY_SECONDS = 20
 WORKER_ALLOWANCE_SECONDS = 3600
+# PROVISIONAL (plan 4, D2): replaced by the owner-approved floor once the finish step is measured.
+DISPATCH_RESERVE_FLOOR_SECONDS = 60
 MAX_EXCHANGE_SECONDS = 90
 MAX_RECEIVED_BYTES = 67108864
 MAX_EXPANDED_BYTES = 536870912
@@ -106,6 +108,7 @@ class LoggingSettings(Record):
 @dataclass(frozen=True, slots=True)
 class ExecutionSettings(Record):
     max_run_seconds: int
+    dispatch_reserve_seconds: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +164,9 @@ class Settings(Record):
         else:
             require_text(self.runtime.fixture_id, "runtime.fixture_id")
         require_number(self.execution.max_run_seconds, "execution.max_run_seconds", positive=True, integer=True)
+        if self.execution.dispatch_reserve_seconds is not None:
+            require_number(self.execution.dispatch_reserve_seconds, "execution.dispatch_reserve_seconds",
+                           positive=True, integer=True)
         require_text(self.etl.parser_version, "etl.parser_version")
         if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", self.etl.parser_version) is None or self.etl.parser_version.lower() in ("latest", "open"):
             raise ValueError("etl.parser_version must be explicit immutable provenance")
@@ -175,12 +181,18 @@ class Settings(Record):
     def from_mapping(cls, value: dict[str, object]) -> Settings:
         if isinstance(value, dict) and "fixture" in value and value["fixture"] is None:
             raise ValueError("fixture must be an explicit object when supplied")
+        execution = value.get("execution") if isinstance(value, dict) else None
+        if isinstance(execution, dict) and execution.get("dispatch_reserve_seconds", 0) is None:
+            raise ValueError("execution.dispatch_reserve_seconds must be an integer when supplied")
         return record_from_mapping(cls, value, require_all=False)
 
     def to_mapping(self) -> dict[str, object]:
         mapping = super(Settings, self).to_mapping()
         if self.fixture is None:
             mapping.pop("fixture")
+        # An absent reserve stays absent, so every pre-reserve effective-config hash is unchanged.
+        if self.execution.dispatch_reserve_seconds is None:
+            mapping["execution"].pop("dispatch_reserve_seconds")
         return mapping
 
     @property
@@ -246,6 +258,23 @@ def _validate_live_policy(settings: Settings) -> None:
         raise ValueError("live coordination settings must match the accepted finite lease policy")
     if settings.execution.max_run_seconds != WORKER_ALLOWANCE_SECONDS:
         raise ValueError("live execution.max_run_seconds must equal 3600")
+
+
+def admit_dispatch_reserve(settings: Settings) -> int | None:
+    """Admit a new workflow invocation's dispatch reserve.
+
+    Call this only on the invocation's own config: frozen historical configs never carry the key.
+    Live work requires floor <= reserve < execution.max_run_seconds; fixture work may omit it.
+    """
+    reserve = settings.execution.dispatch_reserve_seconds
+    if settings.acquisition.mode != "live":
+        return reserve
+    if reserve is None:
+        raise ValueError("live workflow admission requires execution.dispatch_reserve_seconds")
+    if not DISPATCH_RESERVE_FLOOR_SECONDS <= reserve < settings.execution.max_run_seconds:
+        raise ValueError(f"execution.dispatch_reserve_seconds must be at least {DISPATCH_RESERVE_FLOOR_SECONDS}"
+                         " and below execution.max_run_seconds")
+    return reserve
 
 
 def parse_config(text: str) -> Settings:
