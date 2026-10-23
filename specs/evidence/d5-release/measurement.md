@@ -98,4 +98,4 @@ Owner's words (2026-10-23), in order:
 1. "D2: the slowest member does not fit, so add cheaper publication as a new roadmap stage. Floor and reserve: <integers, or say to defer them>."
 2. After the controller recommended floor 300 s with the reserve deferred to D4: "D2 approved: measure finish only before setting the floor, add a per-member-cost stage before Stage 2 instead of accepting the limit, and continue Stage 1a with a provisional reserve."
 
-Result: the finish step was then measured alone (152.2 s, above). The floor is the P4 rule's value, 480 s, which D1 approved. The reserve is provisional and is set at the Task 10 owner approval (D4). The owner does not accept the limit: a per-member-cost stage goes before Stage 2.
+Result: the finish step was then measured alone (152.2 s, above). The floor is the P4 rule's value, 480 s, which D1 approved. The floor was committed as 480 s in `51221e4`, and the owner confirmed that integer in the executing session on 2026-10-23 ("Approved, record it"). The reserve is provisional and is set at the Task 10 owner approval (D4). The owner does not accept the limit: a per-member-cost stage goes before Stage 2.
