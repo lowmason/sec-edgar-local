@@ -2022,7 +2022,7 @@ Add the commit hash to `release.md` in the next commit (Task 11), not by amendin
 **Interfaces:**
 - Consumes: D2, `<D5>`, the Task 10 effective SHA-256 and commit, and the Task 7 answer.
 
-- [ ] **Step 1: §4.7.** Replace:
+- [x] **Step 1: §4.7.** Replace:
 
 ```text
 A new launcher invocation creates a new result and may
@@ -2039,7 +2039,7 @@ continue eligible unresolved work. A workflow run stops starting members at its 
 A member already running at that time completes. (Stage 1a, plan 4.)
 ```
 
-- [ ] **Step 2: §4.8 table.** After the row `| Execution | Live maximum 3,600 seconds; launcher default 3,300 seconds. |`, add:
+- [x] **Step 2: §4.8 table.** After the row `| Execution | Live maximum 3,600 seconds; launcher default 3,300 seconds. |`, add:
 
 ```text
 | Dispatch reserve | `execution.dispatch_reserve_seconds=RESERVE`. Required for a new live workflow run; floor FLOOR seconds (release constant), below `max_run_seconds`. The launcher refuses a timeout at or below it. (Stage 1a, plan 4.) |
@@ -2047,7 +2047,7 @@ A member already running at that time completes. (Stage 1a, plan 4.)
 
 Write D2's integers in place of `RESERVE` and `FLOOR`.
 
-- [ ] **Step 3: §4.8 selection.** Replace the selected-manifest code block's path line with `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<D5>/release.json`. Then replace:
+- [x] **Step 3: §4.8 selection.** Replace the selected-manifest code block's path line with `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<D5>/release.json`. Then replace:
 
 ```text
 The post-completion release-only edit produces effective-config SHA-256
@@ -2064,7 +2064,7 @@ The earlier release-only edit that selected `fc68adef…` produced `088403cb55f5
 
 Write the full release ID, commit hash and SHA-256 in place of the bracketed names.
 
-- [ ] **Step 4: §4.9 rollback limit.** After the paragraph that ends `never substitute the new parent release.`, add (with the Task 7 answer):
+- [x] **Step 4: §4.9 rollback limit.** After the paragraph that ends `never substitute the new parent release.`, add (with the Task 7 answer):
 
 ```text
 Release `fc68adef…` refuses the configs, receipts and child results that a D5 live run writes. Its
@@ -2077,9 +2077,11 @@ D5 release continues `fc68adef…`-origin pending work. (Stage 1a, plan 4;
 
 If Task 7 recorded a different answer, write that answer instead.
 
-- [ ] **Step 4b: Runbook (final-review Minor, added 2026-10-23).** In `docs/runbooks/local-ingestion.md` (line 37), the launcher rule reads `require 0 < N <= execution.max_run_seconds`. After the D5 release is selected it also refuses `N <= execution.dispatch_reserve_seconds`, and admission refuses a live config that has no `execution.dispatch_reserve_seconds` or one outside `floor <= value < execution.max_run_seconds`. Add one sentence to that paragraph that says so, and names the floor (480 s) and the Task 10 live reserve. Add the file to the Step 5 `git add`.
+> Deviation (Task 11): the §4.9 text states only the two tested limits as fact: `fc68adef…` rejects the unknown `execution.dispatch_reserve_seconds` key, and it reads a B4 sibling-completion receipt as corrupt (`legacy_member_unresolved`, run ends `incomplete`, exit 3). The draft claim that it refuses the "child results" is labelled an untested inference, as `two-release.md` records it. The §4.8 table row says the launcher refuses a timeout at or below "the reserve" (the draft said "it", which was ambiguous).
 
-- [ ] **Step 5: Verify and commit.** Run:
+- [x] **Step 4b: Runbook (final-review Minor, added 2026-10-23).** In `docs/runbooks/local-ingestion.md` (line 37), the launcher rule reads `require 0 < N <= execution.max_run_seconds`. After the D5 release is selected it also refuses `N <= execution.dispatch_reserve_seconds`, and admission refuses a live config that has no `execution.dispatch_reserve_seconds` or one outside `floor <= value < execution.max_run_seconds`. Add one sentence to that paragraph that says so, and names the floor (480 s) and the Task 10 live reserve. Add the file to the Step 5 `git add`.
+
+- [x] **Step 5: Verify and commit.** Run:
 
 ```bash
 grep -n "Stage 1a, plan 4" specs/sec-filing-index-ingestion-spec.md

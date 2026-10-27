@@ -36,7 +36,7 @@ The evidence was copied to `/Users/lowell/Projects/sec-edgar-local/fixture-data/
 
 ## 4. Live-config selection (Task 10)
 `conf/sec-edgar-local.json` selects the D5 manifest `/Users/lowell/Projects/sec-edgar-local/releases/sha256=aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4/release.json` and sets `execution.dispatch_reserve_seconds` to `1800`. Nothing else changed (two changed values in the diff). The owner approved this as D4 on 2026-10-27 (plan 4 Decisions). The reserve is a provisional value (plan Decisions D2): no reserve fits a full-size quarterly member under the 3,300 s launcher default (`measurement.md`).
-- **Commit:** filled in by Task 11 (a file cannot name its own commit).
+- **Commit:** `62ce1403f192ff18537d28842548af1be2ecfe57`.
 - **Effective-config SHA-256:** `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e` (before: `088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`).
 - **Offline checks on the D5 interpreter** (`load_config`, `admit_dispatch_reserve`, `preflight_current`, `deployment_binding`; no launcher command, no store opened): `reserve 1800`; `release aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4`.
 - **Root binding** (no `execution` field, so the key does not change the bound store):

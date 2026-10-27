@@ -265,9 +265,13 @@ inspect this evidence without treating absent summary fields as successful compl
 Exact completed-result replay uses the original archived runtime/config/IDs/intent/deadline and
 can return after expiry without HTTP. An unfinished expired attempt needs supported new-attempt
 recovery; never extend its saved deadline. A new launcher invocation creates a new result and may
-continue eligible unresolved work. Ambiguous child execution is not permission for an automatic
-whole-worker relaunch. Interruption, deadline, and logging failures retain status/drain evidence;
-required launcher logging failure returns 9 while preserving the actual engine status where known.
+continue eligible unresolved work. A workflow run stops starting members at its deadline minus
+`execution.dispatch_reserve_seconds`, records each member not started as pending
+(`workflow_deferred`), and writes its durable result. So a deadline deferral reports exit 3 or 4.
+A member already running at that time completes. (Stage 1a, plan 4.) Ambiguous child execution is
+not permission for an automatic whole-worker relaunch. Interruption, deadline, and logging failures
+retain status/drain evidence; required launcher logging failure returns 9 while preserving the
+actual engine status where known.
 
 Operator commands `candidates`, `history`, `approve`, and `rollback` verify an existing store without
 initializing one. Approver/operator/reason labels are explicit audit text, not authenticated user
@@ -303,16 +307,21 @@ from the canonical normalized effective-config hash.
 | Parser / schema | `sec-index-parser-v1` / `sec-index-v1`. |
 | Withdrawal approval | `reconciliation.require_withdrawal_approval=true`. |
 | Execution | Live maximum 3,600 seconds; launcher default 3,300 seconds. |
+| Dispatch reserve | `execution.dispatch_reserve_seconds=1800`. Required for a new live workflow run; floor 480 seconds (release constant), below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4.) |
 | Runtime | `kind=native`; explicit content-addressed `release_manifest`. |
 
 The selected manifest is:
 
 ```text
-/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json
+/Users/lowell/Projects/sec-edgar-local/releases/sha256=aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4/release.json
 ```
 
-The post-completion release-only edit produces effective-config SHA-256
-`088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`, confirmed by offline preflight.
+Stage 1a (plan 4) selected the D5 release
+`aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4` and added the dispatch reserve,
+at commit `62ce1403f192ff18537d28842548af1be2ecfe57`. The effective-config SHA-256 is
+`32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e`, confirmed by offline preflight.
+The earlier release-only edit that selected `fc68adef…` produced
+`088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`.
 The config is tracked in git since commit `001edf5`; its effective-config hash is unchanged
 (owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default selected
 `900952a8…` describe the earlier bytes; they are not current release-selection instructions. Keep
@@ -339,6 +348,13 @@ Preserve original producer descriptors on cached artifacts. Historical reads val
 producer manifests without requiring the current release to equal the producer. Exact old retries,
 origin-bound collection, and publication repair still need the saved release environment. Missing
 old execution authority is a recovery failure; never substitute the new parent release.
+
+Release `fc68adef…` refuses a config and a receipt that a D5 live run writes. Its settings reject the
+unknown `execution.dispatch_reserve_seconds` key, and it reports a D5 sibling-completion receipt as
+`legacy_member_unresolved`, so the run ends `incomplete` (exit 3). That it also refuses D5 child
+results and contexts is an untested inference. After a D5 live run has written to a store, selecting
+`fc68adef…` again for that store is unsupported. The D5 release continues `fc68adef…`-origin pending
+work. (Stage 1a, plan 4; [two-release evidence](evidence/d5-release/two-release.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,
