@@ -106,7 +106,7 @@ to live execution, not prerequisites to writing the plan that defines them.
   > Stage 1: COMPLETE (2026-10-18) — implemented by plan 1 ([completed native local plan](plans/completed/1-sec-edgar-local-spec.md)). This stamp maps the existing completion record; no new stage execution occurred.
   > Next: resume the roadmap.
 
-- [ ] Stage 1a: Deadline-safe drain engine change and the D5 release (approved at resume, 2026-10-22)
+- [x] Stage 1a: Deadline-safe drain engine change and the D5 release (approved at resume, 2026-10-22)
       Objective: Ship a reviewed native release on which an invocation carrying the pending-source backlog ends with a durable workflow result inside its deadline.
       Spec: §3 R2, R5–R6, R12; §§4.2, 4.7–4.9, 5–6, 9; plan 2 D5, F8, F10, F11.
       Gap closed: None directly; removes the plan 2 F11 blocker that keeps G2 and G3 open.
@@ -114,6 +114,9 @@ to live execution, not prerequisites to writing the plan that defines them.
       Produces: A stage spec and plan; the engine change with offline tests; the D5 release (its content-addressed release ID, setup and preflight evidence, and review record); the reviewed live-config selection with its effective-config SHA-256; and a plan Handoff that names every value the plan 2 revision must change, including any change to the §4.8 coordination values.
       Exit: Offline evidence on the D5 release shows the release side of the `campaign.md` Release gate: undispatched members defer before the deadline, or the pilot's drain fits one invocation with margin (the stage spec fixes what evidence counts for each; plan 2 F11); the offline checker and offline preflight pass on it, with `fc68adef…` and older releases retained (§4.9); its locked inputs carry no platform member; no SEC request was sent.
       ROUTING: brainstorming
+
+  > Stage 1a: COMPLETE (2026-10-27) — implemented by plan 4 ([completed bounded-drain plan](plans/completed/4-sec-filing-index-bounded-drain.md)). Its Handoff section names what Stages 2–5 consume.
+  > Next: resume the roadmap.
 
 - [ ] Stage 2: Baseline campaign and coverage decision
       Objective: Produce an accepted written finding on the requested historical baseline, including every unresolved exception.

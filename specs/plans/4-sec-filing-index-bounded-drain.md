@@ -1,6 +1,8 @@
 # Bounded Drain and the D5 Release Implementation Plan
 
-**Status:** Approved by the owner, 2026-10-22, with defaults P1–P8 and amendments A1 and A2 as proposed (D1 below). Nothing is executed. This plan authorizes no SEC request.
+**Status: COMPLETE (2026-10-27)** — executed via subagent-driven-development; deferred items in specs/deferred_items.md
+
+**Approval:** Approved by the owner, 2026-10-22, with defaults P1–P8 and amendments A1 and A2 as proposed (D1 below). This plan authorizes no SEC request.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -140,7 +142,7 @@ Apply only the amendments the owner approved at plan review (D1). If the owner r
 - Consumes: the owner's plan-review decision D1.
 - Produces: spec text that Tasks 4 and 6 implement.
 
-- [ ] **Step 1: Apply A1 to row B4.** Replace:
+- [x] **Step 1: Apply A1 to row B4.** Replace:
 
 ```text
 the runner skips it when all of these are true: the immediately preceding member in the loop has the same `source_id` and an outcome in `workflows/contracts.py` `COMPLETE`; `reuse_exact_binding` returns no gaps;
@@ -164,7 +166,7 @@ with:
 A skipped member records a receipt with its completion capture and no child calls. Its `snapshot_ref`, `transformed_ref` and `child_refs` are empty, because no child of its own ran (owner, plan 4, 2026-10-22).
 ```
 
-- [ ] **Step 2: Apply A2 to row B2.** Replace:
+- [x] **Step 2: Apply A2 to row B2.** Replace:
 
 ```text
 The check runs only at admission: launcher `prepare_invocation`, and engine new-context creation for `backfill`, `daily` and `reconcile`.
@@ -176,7 +178,7 @@ with:
 The check runs only at admission: launcher `prepare_invocation`, and the engine's workflow configuration check `cli._validate_workflow` for `backfill`, `daily` and `reconcile`, on the invocation's own config, before any store opens (owner, plan 4, 2026-10-22).
 ```
 
-- [ ] **Step 3: Apply A1 and A2 to the §4.1 table.** Replace the row:
+- [x] **Step 3: Apply A1 and A2 to the §4.1 table.** Replace the row:
 
 ```text
 | `cli.py` new-context creation for workflow commands | B2 admission. |
@@ -204,7 +206,7 @@ with:
 
 If the owner approved on a later date than 2026-10-22, use D1's date in every tag.
 
-- [ ] **Step 4: Verify.** Run:
+- [x] **Step 4: Verify.** Run:
 
 ```bash
 grep -c "owner, plan 4" specs/sec-filing-index-bounded-drain.md
@@ -214,7 +216,7 @@ Expected: `6` with both amendments applied. The spec's status line is unchanged.
 
 > Deviation: `grep -c` counts lines, and two tags share the B4 row, so it prints `5`. `grep -o "owner, plan 4" specs/sec-filing-index-bounded-drain.md | wc -l` prints `6`. All six tags are present (Task 1 review, 2026-10-22).
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add specs/sec-filing-index-bounded-drain.md
@@ -235,7 +237,7 @@ This task runs the installed `fc68adef…` release offline. It never opens `data
 - Consumes: `releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/` (installed), `conf/sec-edgar-local.json` (main checkout), `specs/evidence/local-port/sec-acceptance.json`.
 - Produces: D2, the owner-approved floor (an integer number of seconds) and live reserve (an integer number of seconds). Task 3 commits the floor as `DISPATCH_RESERVE_FLOOR_SECONDS`. Task 10 commits the reserve as `execution.dispatch_reserve_seconds`.
 
-- [ ] **Step 1: Confirm that no writer is running.**
+- [x] **Step 1: Confirm that no writer is running.**
 
 ```bash
 pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_bootstrap' || echo none
@@ -243,7 +245,7 @@ pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_
 
 Expected: `none`. If a process is listed, stop and ask the owner.
 
-- [ ] **Step 2: Write the measurement script.** Create `scripts/measure-d5-drain.py`:
+- [x] **Step 2: Write the measurement script.** Create `scripts/measure-d5-drain.py`:
 
 ```python
 """Offline drain measurement for Stage 1a (bounded-drain spec §6).
@@ -605,7 +607,7 @@ if __name__ == '__main__':
     raise SystemExit(main())
 ```
 
-- [ ] **Step 3: Count the retained bodies.** From the worktree root:
+- [x] **Step 3: Count the retained bodies.** From the worktree root:
 
 ```bash
 mkdir -p specs/evidence/d5-release
@@ -616,7 +618,7 @@ cat specs/evidence/d5-release/counts.json
 
 Expected: `2024Q1` has `"bytes": 4262821` and `"rows": 370321`, which matches findings §5.1. `2026-10-14` and `2026-10-15` are `daily`, each with a row count. Use the absolute config path. The worktree's `conf/` resolves `../data` inside the worktree, where operator access refuses to create a store.
 
-- [ ] **Step 4: Smoke run.**
+- [x] **Step 4: Smoke run.**
 
 ```bash
 REL=/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec
@@ -629,7 +631,7 @@ Expected: exit 0. Every value in `measures.exits` is `0`. If an invocation fails
 
 > Deviation: the worktree command guard refuses any command that names the `sha256=…` release path. The owner launched the Step 5 command in their own terminal instead (2026-10-22 20:09 UTC).
 
-- [ ] **Step 5: Full run, in the background.** Start it with `run_in_background`. It can take several hours: 81 open-quarter members, 14 full-size closed quarterly baselines, two back-dating daily members and 48 backfill members, all with native children.
+- [x] **Step 5: Full run, in the background.** Start it with `run_in_background`. It can take several hours: 81 open-quarter members, 14 full-size closed quarterly baselines, two back-dating daily members and 48 backfill members, all with native children.
 
 ```bash
 REL=/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec
@@ -642,7 +644,7 @@ Expected: exit 0, then a JSON summary with `measures` and `proposal`.
 
 > Deviation: the full run failed and wrote no `measurement.json`. The `open` run (81 daily sources) reached its hard deadline after 24 completed members, and the `closed` baseline reached it after 2 of 23 members. Both ended `state_conflict` ("child shutdown/drain was not confirmed"). The `finish` scenario and the back-dated daily steps never ran. The in-process timers were lost. At the owner's instruction (2026-10-23), the timings were rebuilt from the durable `Attempts` records in the two stores with a new `rebuild` subcommand of `scripts/measure-d5-drain.py` (stdlib only, read-only). `measurement.json` is that rebuilt output (`kind: rebuilt-from-store`). `measurement.md` states what is missing. The P4 proposal cannot be computed.
 
-- [ ] **Step 6: Write the evidence.** Copy `$WORK/measurement.json` to `specs/evidence/d5-release/measurement.json`. Write `specs/evidence/d5-release/measurement.md` with these sections, filled from the JSON:
+- [x] **Step 6: Write the evidence.** Copy `$WORK/measurement.json` to `specs/evidence/d5-release/measurement.json`. Write `specs/evidence/d5-release/measurement.md` with these sections, filled from the JSON:
 
 ```markdown
 # D5 drain measurement (Stage 1a, plan 4 Task 2)
@@ -673,14 +675,14 @@ Fixture timings can only underestimate native cost (plan 2 F11). Synthetic bodie
 To be completed at the Task 2 checkpoint with the owner's exact words.
 ```
 
-- [ ] **Step 7: Commit the script and the evidence.**
+- [x] **Step 7: Commit the script and the evidence.**
 
 ```bash
 git add scripts/measure-d5-drain.py specs/evidence/d5-release/counts.json specs/evidence/d5-release/measurement.json specs/evidence/d5-release/measurement.md
 git commit -m "test(evidence): measure the drain costs on release fc68adef offline"
 ```
 
-- [ ] **Step 8: Owner checkpoint (HUMAN).** Show the owner `measurement.md`. Ask for:
+- [x] **Step 8: Owner checkpoint (HUMAN).** Show the owner `measurement.md`. Ask for:
 
 1. the floor, as an integer number of seconds;
 2. the live reserve, as an integer number of seconds, with floor ≤ reserve < 3,600 and reserve < 3,300 (the launcher default timeout);
@@ -690,7 +692,7 @@ Stop until the owner answers. Record the answer verbatim under `## Owner decisio
 
 > Deviation (D2): Step 8b is added. The owner asked to measure the finish step alone before the floor is set. `scripts/measure-d5-drain.py run --scale full --only finish` runs only the `finish` scenario (48 quarters of 50 rows) and reports `finish_seconds` with a per-label split. The owner launches it in their own terminal, because the worktree command guard refuses commands that name the release path. Record the result in `measurement.md`, then the floor integer under D2, and use it in Task 3 Step 4. Limit to state: the finish scenario has small quarters (50 rows each), so the finish step on a store with full-size quarters can cost more (the baseline run's engine gaps grew with the store).
 
-- [ ] **Step 9: Commit the decision.**
+- [x] **Step 9: Commit the decision.**
 
 ```bash
 git add specs/evidence/d5-release/measurement.md specs/plans/4-sec-filing-index-bounded-drain.md
@@ -712,7 +714,7 @@ git commit -m "docs(evidence): record the owner's floor and reserve decision"
   - `DISPATCH_RESERVE_FLOOR_SECONDS: int` in `sec_edgar_ingest.config`.
   - `admit_dispatch_reserve(settings: Settings) -> int | None`. For live settings it returns the reserve, or raises `ValueError` with `dispatch_reserve_seconds` in the message. For fixture settings it returns the reserve or `None`.
 
-- [ ] **Step 1: Write the failing tests.** Append to `packages/sec-edgar-ingest/tests/test_config.py`:
+- [x] **Step 1: Write the failing tests.** Append to `packages/sec-edgar-ingest/tests/test_config.py`:
 
 ```python
 import json
@@ -801,12 +803,12 @@ class DispatchReserveConfigTests(unittest.TestCase):
 
 `test_key_is_a_positive_integer_and_never_null` accepts either message. A bool or a string fails type decoding ("has an invalid type"). The range and null checks name the key.
 
-- [ ] **Step 2: Run the tests to verify that they fail.**
+- [x] **Step 2: Run the tests to verify that they fail.**
 
 Run the test command with target `test_config.DispatchReserveConfigTests`.
 Expected: errors. `ImportError: cannot import name 'DISPATCH_RESERVE_FLOOR_SECONDS'`, `AttributeError: … 'dispatch_reserve_seconds'`, and `ExecutionSettings unknown keys: ['dispatch_reserve_seconds']`. Only `test_fc68adef_origin_live_child_contexts_validate_without_the_key` passes already. It guards B1 for historical configs.
 
-- [ ] **Step 3: Implement the field and the hash-preserving mapping.** In `config.py`, change `ExecutionSettings`:
+- [x] **Step 3: Implement the field and the hash-preserving mapping.** In `config.py`, change `ExecutionSettings`:
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -845,7 +847,7 @@ Replace `Settings.from_mapping` and `Settings.to_mapping` with:
         return mapping
 ```
 
-- [ ] **Step 4: Add the floor constant (the one literal).** After `WORKER_ALLOWANCE_SECONDS = 3600`, add the constant with the floor that D2 approved. For example, if D2 approved 120 seconds:
+- [x] **Step 4: Add the floor constant (the one literal).** After `WORKER_ALLOWANCE_SECONDS = 3600`, add the constant with the floor that D2 approved. For example, if D2 approved 120 seconds:
 
 ```python
 # Owner decision D2 (plan 4, Task 2): the finish step's measured cost with margin.
@@ -854,7 +856,7 @@ DISPATCH_RESERVE_FLOOR_SECONDS = 120
 
 Use D2's integer, not 120, unless D2 approved 120. No other file holds this number. Tests and code use the name.
 
-- [ ] **Step 5: Add the admission function.** After `_validate_live_policy`, add:
+- [x] **Step 5: Add the admission function.** After `_validate_live_policy`, add:
 
 ```python
 def admit_dispatch_reserve(settings: Settings) -> int | None:
@@ -874,12 +876,12 @@ def admit_dispatch_reserve(settings: Settings) -> int | None:
     return reserve
 ```
 
-- [ ] **Step 6: Run the tests to verify that they pass.**
+- [x] **Step 6: Run the tests to verify that they pass.**
 
 Run the test command with targets `test_config` and `test_local_config`.
 Expected: `OK`.
 
-- [ ] **Step 7: Commit.**
+- [x] **Step 7: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/config.py packages/sec-edgar-ingest/tests/test_config.py
@@ -899,7 +901,7 @@ git commit -m "feat(config): add the optional dispatch reserve and its admission
 - Consumes: `admit_dispatch_reserve`, `DISPATCH_RESERVE_FLOOR_SECONDS` (Task 3).
 - Produces: launcher refusal (`ValueError`, exit 2) and engine refusal (exit 2, `configuration` on stderr). Both happen before preflight, logs or stores.
 
-- [ ] **Step 1: Give the existing live launcher configs the key (F-P7).** In `test_local_launcher.py`, in both `setUp` methods that set `value['acquisition'] = {'mode': 'live'}` (near lines 48 and 388), add after that line:
+- [x] **Step 1: Give the existing live launcher configs the key (F-P7).** In `test_local_launcher.py`, in both `setUp` methods that set `value['acquisition'] = {'mode': 'live'}` (near lines 48 and 388), add after that line:
 
 ```python
         from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS
@@ -918,7 +920,7 @@ git commit -m "feat(config): add the optional dispatch reserve and its admission
 
 The other tests in both classes keep the live config. They prepare with the default 3,300-second timeout, then replace the deadline, or they patch `execve`.
 
-- [ ] **Step 2: Write the failing launcher test.** Add to `LauncherPreparationTests`:
+- [x] **Step 2: Write the failing launcher test.** Add to `LauncherPreparationTests`:
 
 ```python
     def write_execution(self, **execution):
@@ -942,7 +944,7 @@ The other tests in both classes keep the live config. They prepare with the defa
         self.assertEqual((invocation.deadline - invocation.started_at).total_seconds(), floor + 1)
 ```
 
-- [ ] **Step 3: Write the failing engine test.** Add to `WorkflowCliTests` in `test_workflow_cli.py`:
+- [x] **Step 3: Write the failing engine test.** Add to `WorkflowCliTests` in `test_workflow_cli.py`:
 
 ```python
     def test_live_workflow_without_an_admitted_reserve_refuses_before_any_store(self):
@@ -974,12 +976,12 @@ The other tests in both classes keep the live config. They prepare with the defa
                 self.assertFalse((self.root / 'live-data').exists())
 ```
 
-- [ ] **Step 4: Run the tests to verify that they fail.**
+- [x] **Step 4: Run the tests to verify that they fail.**
 
 Run the test command with targets `test_local_launcher.LauncherPreparationTests.test_live_reserve_admission_refuses_before_preflight_or_logs` and `test_workflow_cli.WorkflowCliTests.test_live_workflow_without_an_admitted_reserve_refuses_before_any_store`.
 Expected: FAIL. The launcher prepares a keyless invocation ("ValueError not raised"). The engine's stderr names the manifest, not `dispatch_reserve_seconds`.
 
-- [ ] **Step 5: Implement the launcher check.** In `local_cli.py`, change the import to `from .config import admit_dispatch_reserve, normalize_paths, parse_config, pin_context`. After `raise ValueError('timeout_seconds exceeds execution.max_run_seconds')`, add:
+- [x] **Step 5: Implement the launcher check.** In `local_cli.py`, change the import to `from .config import admit_dispatch_reserve, normalize_paths, parse_config, pin_context`. After `raise ValueError('timeout_seconds exceeds execution.max_run_seconds')`, add:
 
 ```python
     reserve = admit_dispatch_reserve(settings)
@@ -987,19 +989,19 @@ Expected: FAIL. The launcher prepares a keyless invocation ("ValueError not rais
         raise ValueError('timeout_seconds must exceed execution.dispatch_reserve_seconds')
 ```
 
-- [ ] **Step 6: Implement the engine check.** In `cli.py`, change the import to `from .config import Settings, admit_dispatch_reserve, load_config, pin_context`. In `_validate_workflow`, after the `raise ValueError('deadline exceeds execution.max_run_seconds')` block, add:
+- [x] **Step 6: Implement the engine check.** In `cli.py`, change the import to `from .config import Settings, admit_dispatch_reserve, load_config, pin_context`. In `_validate_workflow`, after the `raise ValueError('deadline exceeds execution.max_run_seconds')` block, add:
 
 ```python
     # B2 admission reads only this invocation's own config, before any store opens (plan 4 P3).
     admit_dispatch_reserve(settings)
 ```
 
-- [ ] **Step 7: Run the affected modules.**
+- [x] **Step 7: Run the affected modules.**
 
 Run the test command with targets `test_local_launcher`, `test_workflow_cli`, `test_launcher_process` and `test_acceptance_selection`.
 Expected: `OK`. If another module prepares or runs a live workflow invocation from a keyless config, add the key as in Step 1, and record a `> Deviation:` line that names the file.
 
-- [ ] **Step 8: Commit.**
+- [x] **Step 8: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/local_cli.py packages/sec-edgar-ingest/src/sec_edgar_ingest/cli.py packages/sec-edgar-ingest/tests/test_local_launcher.py packages/sec-edgar-ingest/tests/test_workflow_cli.py
@@ -1018,7 +1020,7 @@ git commit -m "feat(workflows): admit live workflow runs only with an in-range r
 - Consumes: `Settings.execution.dispatch_reserve_seconds` (Task 3).
 - Produces: in `test_workflow_drain.py`, the helpers `MemberBudget`, `harness(root, pack, reserve=RESERVE, start='2026Q3')`, `widen(pack, times)` and `run(h, run_id, allowed) -> (WorkflowResult, list[str])`. `run` returns the report and the step IDs that the run dispatched. Task 6 uses these helpers.
 
-- [ ] **Step 1: Write the test module with the cutoff tests.** Create `packages/sec-edgar-ingest/tests/test_workflow_drain.py`:
+- [x] **Step 1: Write the test module with the cutoff tests.** Create `packages/sec-edgar-ingest/tests/test_workflow_drain.py`:
 
 ```python
 """Stage 1a: the dispatch cutoff (B3) and the sibling-completion skip (B4-B6)."""
@@ -1141,12 +1143,12 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 2: Run the tests to verify that they fail.**
+- [x] **Step 2: Run the tests to verify that they fail.**
 
 Run the test command with target `test_workflow_drain.CutoffTests`.
 Expected: `test_members_after_the_cutoff_defer…` FAILS. Without B3 the cutoff is the deadline, so both members complete ("'success' != 'pending'" or similar). `test_a_missing_reserve…` passes.
 
-- [ ] **Step 3: Implement the cutoff.** In `runner.py`, change line 5 to `from datetime import datetime, timedelta, timezone`. In `run_workflow`, replace:
+- [x] **Step 3: Implement the cutoff.** In `runner.py`, change line 5 to `from datetime import datetime, timedelta, timezone`. In `run_workflow`, replace:
 
 ```python
     results, receipt_descriptors, evidences = [], [], []
@@ -1171,12 +1173,12 @@ Then replace `elif halted or datetime.now(timezone.utc) >= context.deadline:` wi
 
 Keep the `workflow_deferred` gap and its message unchanged. `_validate_report` compares a receipt-less member with that exact canonical pending member.
 
-- [ ] **Step 4: Run the tests to verify that they pass.**
+- [x] **Step 4: Run the tests to verify that they pass.**
 
 Run the test command with targets `test_workflow_drain` and `test_workflow_runner`.
 Expected: `OK`.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/runner.py packages/sec-edgar-ingest/tests/test_workflow_drain.py
@@ -1198,7 +1200,7 @@ git commit -m "feat(workflows): stop dispatch at the deadline minus the reserve"
 - Consumes: `harness`, `widen`, `run`, `MemberBudget` (Task 5).
 - Produces: `runner.sibling_completion(value: Mapping, previous: MemberResult | None, completed_sources: frozenset[str], context: RunContext, store, objects) -> ProcessedMember | None`. The B4 receipt shape: outcome `unchanged`; `snapshot_ref`, `transformed_ref` `None`; `child_refs == ()`; `downloaded`, `transformed`, `quarantined` false; no gaps; one `PublicationResult(quarter, 'unchanged', generation_id, manifest_ref, None, 0)` per capture quarter. The evidence holds `calls == []`, `resolutions == []`, `terminal_error is None` and the completion capture.
 
-- [ ] **Step 1: Write the failing drain, shape, refusal and replay tests.** Append to `test_workflow_drain.py`, before the `if __name__` block:
+- [x] **Step 1: Write the failing drain, shape, refusal and replay tests.** Append to `test_workflow_drain.py`, before the `if __name__` block:
 
 ```python
 def child_counts(h, steps):
@@ -1363,7 +1365,7 @@ class SiblingCompletionTests(unittest.TestCase):
                 h.close()
 ```
 
-- [ ] **Step 2: Run the tests to verify that they fail.**
+- [x] **Step 2: Run the tests to verify that they fail.**
 
 Run the test command with target `test_workflow_drain.SiblingCompletionTests`.
 Expected:
@@ -1371,7 +1373,7 @@ Expected:
 - The shape and replay tests FAIL, because no member has `child_refs == ()` ("0 != 2").
 - `test_refusals…` ERRORS with `AttributeError: … has no attribute 'sibling_completion'`.
 
-- [ ] **Step 3: Accept the B4 shape in `MemberResult`.** In `workflows/contracts.py`, replace:
+- [x] **Step 3: Accept the B4 shape in `MemberResult`.** In `workflows/contracts.py`, replace:
 
 ```python
         if self.outcome in COMPLETE and (
@@ -1395,7 +1397,7 @@ with:
                 raise ValueError('complete member lacks successful ETL/publication captures')
 ```
 
-- [ ] **Step 4: Validate the B4 receipt (B5).** In `workflows/processing.py`, in `validate_member_evidence`, after the line `raise Conflict('member differs from immutable original projection')`, add:
+- [x] **Step 4: Validate the B4 receipt (B5).** In `workflows/processing.py`, in `validate_member_evidence`, after the line `raise Conflict('member differs from immutable original projection')`, add:
 
 ```python
     if not evidence['calls'] and evidence['terminal_error'] is None:
@@ -1427,7 +1429,7 @@ def _validate_sibling_completion(result, evidence, value, objects) -> None:
 
 A receipt with no calls that is not this exact shape keeps today's refusal message.
 
-- [ ] **Step 5: Accept a B4 member in the workflow report.** In `workflows/results.py` `_validate_report`, replace:
+- [x] **Step 5: Accept a B4 member in the workflow report.** In `workflows/results.py` `_validate_report`, replace:
 
 ```python
         if member.outcome in ('success', 'unchanged', 'no_new_sources'):
@@ -1460,7 +1462,7 @@ with:
 
 The checks after this block (capture member, versions, affected quarters, quarter generations) stay as they are and apply to both shapes.
 
-- [ ] **Step 6: Add the skip to the runner (B4).** In `workflows/runner.py`:
+- [x] **Step 6: Add the skip to the runner (B4).** In `workflows/runner.py`:
 
 1. Change `from .contracts import MemberResult, WorkflowResult, FATAL, summarize, workflow_path` to `from .contracts import COMPLETE, MemberResult, WorkflowResult, FATAL, summarize, workflow_path`.
 2. Change `from .processing import process_member, validate_member_evidence` to `from .processing import ProcessedMember, process_member, validate_member_evidence`.
@@ -1522,17 +1524,17 @@ with:
 
 The cutoff check stays before the skip (spec §4.2): a skip still reads captures.
 
-- [ ] **Step 7: Run the tests to verify that they pass.**
+- [x] **Step 7: Run the tests to verify that they pass.**
 
 Run the test command with target `test_workflow_drain`.
 Expected: `OK`. The drain test reports more than two runs.
 
-- [ ] **Step 8: Run the workflow modules.**
+- [x] **Step 8: Run the workflow modules.**
 
 Run the test command with targets `test_workflow_runner`, `test_workflow_processing`, `test_workflow_results`, `test_workflow_contracts`, `test_workflow_cli`, `test_workflow_acceptance`, `test_workflow_completion`, `test_workflow_selection_v1`, `test_reconcile_workflow` and `test_reconcile_acceptance`.
 Expected: `OK`. If an existing test now sees a skip where it expected a second child sequence, check whether the test asserted F10's double processing. If so, update the assertion to the B4 count and record a `> Deviation:` line. Otherwise stop and report.
 
-- [ ] **Step 9: Commit.**
+- [x] **Step 9: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/contracts.py packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/processing.py packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/results.py packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/runner.py packages/sec-edgar-ingest/tests/test_workflow_drain.py
@@ -1552,7 +1554,7 @@ git commit -m "feat(workflows): complete a member whose source this run already 
 - Consumes: `proof_releases` (current code), `CheckedRunner`, `simple_pack`, `CommandHarness`.
 - Produces: `origin_release(project: Path, cache: Path) -> VerifiedRelease` (revision `3ca50c7`, installed). Also the recorded answer to "does `fc68adef…` accept a B4 receipt", which Task 11 writes into §4.9.
 
-- [ ] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_release_origin.py`:
+- [x] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_release_origin.py`:
 
 ```python
 """Stage 1a §5 item 6: the current code continues fc68adef…-origin pending work, and fc68adef… meets a B4 receipt."""
@@ -1703,12 +1705,12 @@ The expected answers are the plan's predictions from reading revision `3ca50c7`:
 
 If execution observes a different answer, set the assertion to the observed value. Record a `> Deviation:` line, and carry the observed answer into Step 6 and Task 11.
 
-- [ ] **Step 2: Run the tests to verify that they fail.**
+- [x] **Step 2: Run the tests to verify that they fail.**
 
 Run the test command with target `test_release_origin`.
 Expected: ERROR in `setUpClass`: `ImportError: cannot import name 'origin_release' from 'support_release'`.
 
-- [ ] **Step 3: Add the origin-release helper.** In `support_release.py`, after `proof_releases`, add:
+- [x] **Step 3: Add the origin-release helper.** In `support_release.py`, after `proof_releases`, add:
 
 ```python
 ORIGIN_REVISION = '3ca50c78558bbf072a4eb75412af7d58a9e0f61b'  # source revision of release fc68adef…
@@ -1750,12 +1752,12 @@ def origin_release(project: Path, cache: Path) -> VerifiedRelease:
     return release
 ```
 
-- [ ] **Step 4: Run the tests to verify that they pass.**
+- [x] **Step 4: Run the tests to verify that they pass.**
 
 Run the test command with target `test_release_origin`.
 Expected: `OK` (3 tests). The first run builds two releases, so it takes minutes.
 
-- [ ] **Step 5: Record whether the origin release matches `fc68adef…`.** From the worktree root:
+- [x] **Step 5: Record whether the origin release matches `fc68adef…`.** From the worktree root:
 
 ```bash
 SEC_LOCAL_PROOF_CACHE=/Users/lowell/Projects/sec-edgar-local/releases/artifact-cache UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never uv run --offline --locked --package sec-edgar-ingest python - <<'PY'
@@ -1780,7 +1782,7 @@ PY
 
 Expected: `package_files_equal`, `dependencies_equal`, `uv_lock_sha256_equal` and `interpreter_equal` are `true`. `git_revision` is the throwaway repository's commit, not `3ca50c7…`. `application_wheel_sha256_equal` is recorded as found. If `package_files_equal` is `false`, stop and report: the origin release would not stand for `fc68adef…`.
 
-- [ ] **Step 6: Write the two-release evidence.** Create `specs/evidence/d5-release/two-release.md`:
+- [x] **Step 6: Write the two-release evidence.** Create `specs/evidence/d5-release/two-release.md`:
 
 ```markdown
 # Two-release behaviour (Stage 1a, plan 4 Task 7)
@@ -1799,7 +1801,7 @@ After a D5 live run has written to a store, selecting `fc68adef…` again for th
 
 Replace each `<…>` with the observed value. If Step 1's predictions were changed by a deviation, write the observed results instead.
 
-- [ ] **Step 7: Commit.**
+- [x] **Step 7: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/tests/support_release.py packages/sec-edgar-ingest/tests/test_release_origin.py specs/evidence/d5-release/two-release.md
@@ -1817,7 +1819,7 @@ git commit -m "test(release): continue fc68adef-origin work and record its refus
 - Consumes: the branch after Tasks 1–7.
 - Produces: `main` holding the reviewed engine change, from which Task 9 builds.
 
-- [ ] **Step 1: Run the full gate in the background.** From the worktree root, with `run_in_background`:
+- [x] **Step 1: Run the full gate in the background.** From the worktree root, with `run_in_background`:
 
 ```bash
 SEC_LOCAL_PROOF_CACHE=/Users/lowell/Projects/sec-edgar-local/releases/artifact-cache sh scripts/check-sec-edgar-ingest.sh > /Users/lowell/Projects/sec-edgar-local/fixture-data/stage1a-gate.log 2>&1; echo "exit $?" >> /Users/lowell/Projects/sec-edgar-local/fixture-data/stage1a-gate.log
@@ -1825,16 +1827,16 @@ SEC_LOCAL_PROOF_CACHE=/Users/lowell/Projects/sec-edgar-local/releases/artifact-c
 
 Expected: the log ends with `exit 0`, and unittest prints `OK`. The test count is 999 + the new tests, in 64 modules. The port's gate took about 56 minutes.
 
-- [ ] **Step 2: Record the gate.** Create `specs/evidence/d5-release/gate.md` with the commit, the start and end times, the `Ran N tests in S s` line, `OK`, and the module count. Commit it:
+- [x] **Step 2: Record the gate.** Create `specs/evidence/d5-release/gate.md` with the commit, the start and end times, the `Ran N tests in S s` line, `OK`, and the module count. Commit it:
 
 ```bash
 git add specs/evidence/d5-release/gate.md
 git commit -m "docs(evidence): record the Stage 1a branch gate"
 ```
 
-- [ ] **Step 3: Whole-branch review.** Use the requesting-code-review skill. It dispatches the `code-reviewer` agent on `main..stage1a-bounded-drain`, against the spec, this plan and its Decisions. Fix each accepted finding with a test, re-run the affected modules, and commit. If a fix changes code, re-run Step 1 and update `gate.md`.
+- [x] **Step 3: Whole-branch review.** Use the requesting-code-review skill. It dispatches the `code-reviewer` agent on `main..stage1a-bounded-drain`, against the spec, this plan and its Decisions. Fix each accepted finding with a test, re-run the affected modules, and commit. If a fix changes code, re-run Step 1 and update `gate.md`.
 
-- [ ] **Step 4: Check that `main` carries no platform member.**
+- [x] **Step 4: Check that `main` carries no platform member.**
 
 ```bash
 git -C /Users/lowell/Projects/sec-edgar-local show main:pyproject.toml | grep -n 'members'
@@ -1843,9 +1845,9 @@ git diff --stat 3ca50c7 stage1a-bounded-drain -- uv.lock pyproject.toml packages
 
 Expected: `members = ["packages/sec-edgar-ingest"]`, and no diff output.
 
-- [ ] **Step 5: Owner checkpoint (HUMAN).** Show the owner the gate record, the review result, and `git log --oneline main..stage1a-bounded-drain`. Ask for approval to merge the branch into `main` before the release build (P7). Stop until the owner answers, and log the answer as D3.
+- [x] **Step 5: Owner checkpoint (HUMAN).** Show the owner the gate record, the review result, and `git log --oneline main..stage1a-bounded-drain`. Ask for approval to merge the branch into `main` before the release build (P7). Stop until the owner answers, and log the answer as D3.
 
-- [ ] **Step 6: Merge.** In the main checkout:
+- [x] **Step 6: Merge.** In the main checkout:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1869,7 +1871,7 @@ Run in the main checkout on `main`.
 - Consumes: clean committed `main` after Task 8.
 - Produces: `releases/sha256=<D5>/`. Its ID, manifest path and `git_revision` feed Tasks 10 and 11.
 
-- [ ] **Step 1: Confirm a clean tree.**
+- [x] **Step 1: Confirm a clean tree.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1879,7 +1881,7 @@ git rev-parse HEAD
 
 Expected: no status output. Record the revision.
 
-- [ ] **Step 2: Build.**
+- [x] **Step 2: Build.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1890,7 +1892,7 @@ UV_OFFLINE=1 uv run --offline --locked --package sec-edgar-ingest python scripts
 
 Expected: one printed path, `…/releases/sha256=<D5>`. Record `<D5>`.
 
-- [ ] **Step 3: Check identity, lock and export (B7).**
+- [x] **Step 3: Check identity, lock and export (B7).**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1906,7 +1908,7 @@ Expected: `lock-identical`, `export-identical`, `inputs-identical`. Version `0.2
 
 > Deviation: `cmp` on `runtime-requirements.txt` fails at line 2, a comment that holds the random temporary directory of the `uv export` run. The requirement lines are identical (same SHA-256 without comment lines). Recorded in `release.md`.
 
-- [ ] **Step 4: Offline verification on the D5 interpreter.**
+- [x] **Step 4: Offline verification on the D5 interpreter.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1936,7 +1938,7 @@ Expected: the verifier prints JSON with `"exit": 0` and `"release_id": "<D5>"`. 
 
 > Deviation: the harness guard refuses any path inside a checkout, and the verifier's children inherit the current directory. So the harness and the evidence directory go under a temporary directory outside the checkout (`mktemp -d`), and the verifier runs with that directory as its working directory, with the script path absolute. The evidence was then copied to `fixture-data/d5-verify-evidence/`. Recorded in `release.md`.
 
-- [ ] **Step 5: Confirm retention.**
+- [x] **Step 5: Confirm retention.**
 
 ```bash
 ls /Users/lowell/Projects/sec-edgar-local/releases
@@ -1944,7 +1946,7 @@ ls /Users/lowell/Projects/sec-edgar-local/releases
 
 Expected: `sha256=49b7a2ed…`, `sha256=900952a8…`, `sha256=d718ae5f…`, `sha256=fc68adef…` and `sha256=<D5>` are all present.
 
-- [ ] **Step 6: Write the release evidence.** Create `specs/evidence/d5-release/release.md` with:
+- [x] **Step 6: Write the release evidence.** Create `specs/evidence/d5-release/release.md` with:
 1. The D5 release ID, its manifest path and its `git_revision` (§7 item 1).
 2. The Step 3 results: identical lock, export and inputs, version `0.2.0`, and no platform package (§7 item 2).
 3. The verifier JSON, the preflight output and the evidence directory path, with `fc68adef…` and older releases kept (§7 item 3).
@@ -1969,7 +1971,7 @@ git commit -m "docs(evidence): record the D5 release build and offline verificat
 - Consumes: D2's reserve and Task 9's `<D5>`.
 - Produces: the new effective-config SHA-256, which Task 11 and the Handoff name.
 
-- [ ] **Step 1: Edit the config.** In `conf/sec-edgar-local.json`, set `execution` to:
+- [x] **Step 1: Edit the config.** In `conf/sec-edgar-local.json`, set `execution` to:
 
 ```json
   "execution": {
@@ -1980,7 +1982,7 @@ git commit -m "docs(evidence): record the D5 release build and offline verificat
 
 Write D2's reserve integer in place of `RESERVE`. Set `runtime.release_manifest` to `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<D5>/release.json`. Change nothing else.
 
-- [ ] **Step 2: Offline preflight and hash on the D5 interpreter.**
+- [x] **Step 2: Offline preflight and hash on the D5 interpreter.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2000,9 +2002,9 @@ git diff conf/sec-edgar-local.json
 
 Expected: `reserve` is D2's integer, `release` is `<D5>`, and `effective` is a new SHA-256. The diff shows exactly two changed values. `binding` holds no `execution` field (B8). Run no launcher command: `prepare_invocation` writes logs.
 
-- [ ] **Step 3: Owner checkpoint (HUMAN).** Show the owner the diff and the Step 2 output. Ask for approval of the live-config selection. Stop until the owner answers. Log the answer as D4.
+- [x] **Step 3: Owner checkpoint (HUMAN).** Show the owner the diff and the Step 2 output. Ask for approval of the live-config selection. Stop until the owner answers. Log the answer as D4.
 
-- [ ] **Step 4: Record and commit.** Append to `release.md` a section `## Live-config selection` with the commit (filled after committing), the effective-config SHA-256, the reserve, and the binding output. Then:
+- [x] **Step 4: Record and commit.** Append to `release.md` a section `## Live-config selection` with the commit (filled after committing), the effective-config SHA-256, the reserve, and the binding output. Then:
 
 ```bash
 git add conf/sec-edgar-local.json specs/evidence/d5-release/release.md
@@ -2114,3 +2116,25 @@ Run the writing-plans Plan Completion Protocol, step 3a included. The `## Handof
 - The two-release proofs are order-aware (plan R2). In about half the runs of `pending`, and one run in four of the Task 7 first test, no child runs on the origin release. See `two-release.md`, "Limits of the proof".
 
 Remove the `stage1a-bounded-drain` worktree after the retire commit (finishing-a-development-branch).
+
+## Handoff to later stages
+
+Stage 1a shipped the D5 release `aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4` (git revision `d68787f`, version `0.2.0`), selected in `conf/sec-edgar-local.json` at `62ce140`. Its evidence is in `specs/evidence/d5-release/`. The parent spec §§4.7–4.9 carry the amendments (`bfdca00`, `4528fdb`). Deferred items are in `specs/deferred_items.md`, section `4-sec-filing-index-bounded-drain — 2026-10-27`.
+
+- **Next roadmap resume (derive-roadmap).**
+  - D2 (owner, 2026-10-23): the owner does not accept the per-member cost. A per-member-cost stage goes before Stage 2. This plan did not place it. Its inputs are in `measurement.md` and `finish-measurement.json`: publish and member wall time grow with the sources already in the quarter (about 18.8 s and 62.8 s per source on fixtures), most member wall time is engine time outside any child, and full-size quarterly members take more than 9,000 s. No reserve fits those members under the 3,300 s launcher default.
+  - Never measured (the Task 2 full run hit its deadline): measure 1 (a closed-quarter rebuild by one back-dated daily row), the 14-quarter fan-out, and the 40- and 80-source open-quarter publish marks.
+  - The roadmap's Stage 1a `Produces` holds as built. One difference: the reserve is provisional (D2, D4), not a measured value.
+  - The roadmap's gap analysis (`sec-filing-index-ingestion-roadmap.md:21`) still says the config selects `fc68adef…`. It now selects the D5 release.
+- **Stage 2 (baseline campaign): the plan 2 revision.**
+  - Global Constraints: release `aa8de1ac…6ab4`, effective-config SHA-256 `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e` (before: `088403cb…`), `execution.dispatch_reserve_seconds` 1800 (provisional), floor 480 s (`config.py` `DISPATCH_RESERVE_FLOOR_SECONDS`).
+  - Re-verify `scripts/baseline-campaign.py` against the D5 release (plan 2 Task 1 Steps 4–5). `workflows/results._validate_report` and `contracts.MemberResult` changed (P2): a complete B4 member has no child refs and null snapshot and transformed refs.
+  - Regenerate `conf/stage2/backfill-2026Q4-open.json` and `conf/stage2/backfill-2015Q1-2015Q2.json` with the D5 manifest and the reserve key. They bind to `fc68adef…` and have no key. Admission refuses a keyless live config, and the launcher refuses `--timeout-seconds` at or below the reserve.
+  - The `campaign.md` Release gate reads against the D5 release. Stop rules read durable result fields. A deadline deferral ends `incomplete` or `pending` (exit 3 or 4), never exit 5. Members not started are pending with `workflow_deferred`.
+  - §4.8 coordination values are unchanged in the D5 live config: 3 requests/second, one active collector, 60/20/2-second lease policy (`release.md` §4, root binding).
+  - Traps: the rollback limit in parent spec §4.9. After a D5 live run writes to a store, selecting `fc68adef…` again for that store is unsupported. Measurement limits are in `measurement.md`, "Limits".
+  - B4 never fires for a source with two or more historical snapshots (the single-candidate rule in `runner.sibling_completion`). Those sources keep F10's repeated child sequence. A refused skip costs an extra inventory scan and `evaluate_member` before `process_member` repeats it.
+- **Stage 3 (daily catch-up) and Stage 5 (scheduling).** They consume the D5 release through plan 2's invocation rules. On D5 a run stops starting members at `deadline − reserve` and writes its durable result (parent spec §4.7). A member already running at the cutoff still completes, so a member longer than the reserve can still overrun (D4: covers a daily member with up to about 18 sources already in its quarter).
+- **Stage 4 (manual reconciliation).** Nothing differs. It inherits the selected D5 release and the §4.9 rollback limit through Stages 2–3.
+- **Outside this roadmap: platform plan 3 DF6.** The D5 release is built, so the platform workspace member may now merge to `main` under plan 3's Merge gate. That merge belongs to the platform roadmap, not to this one.
+- **Test limits (for any stage that relies on the two-release proofs).** The proofs are order-aware (R2). In about half the runs of the `pending` scenario, and one run in four of the Task 7 first test, no child runs on the origin release. See `two-release.md`, "Limits of the proof".
