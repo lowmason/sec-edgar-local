@@ -1,6 +1,8 @@
 # Per-member cost and the 1b release — Stage 1b Design Spec
 
-**Status:** proposed, awaiting owner review of the written spec.
+**Status:** approved; awaiting its plan (writing-plans).
+**Approval:** Approved by the owner, 2026-10-27, as committed at `35f96b9`. Owner's words: "I approve the
+written Stage 1b spec as committed at 35f96b9."
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
 **Parent spec:** [SEC filing-index ingestion](sec-filing-index-ingestion-spec.md) (§§3 R5, R9, R12; 4.2, 4.6–4.9; 5–6; 9).
 **Roadmap:** [ingestion roadmap](sec-filing-index-ingestion-roadmap.md), Stage 1b.
