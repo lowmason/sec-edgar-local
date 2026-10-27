@@ -15,8 +15,8 @@ from ..config import Settings
 from ..models import Error, RunContext, canonical_json, parse_json, quarter_for, quarter_value
 from ..storage.contracts import BoundaryObserver, Conflict, ObjectStore, observe
 from .contracts import Candidate, FileRef, GenerationCapture, GenerationManifest, IndexRow, ObservationRef, canonical_schema, change_schema
-from .manifest import (gate_payload, gate_ref, generation_base, generation_identity, iter_file_rows,
-                       read_manifest, source_fingerprint, validate_candidate, validate_candidate_content, validate_files)
+from .manifest import (check_candidate_integrity, gate_payload, gate_ref, generation_base, generation_identity,
+                       iter_file_rows, read_manifest, source_fingerprint, validate_candidate_content, validate_files)
 from .state import EtlState
 from .transform import BATCH_ROWS, PARQUET_VERSION, _check_deadline, _file_identity, _validate_context, read_observations, transform_member
 
@@ -182,7 +182,7 @@ def _stage_gate(candidate, objects, state):
         objects.verify(candidate.candidate_ref, hashlib.sha256(body).hexdigest(), len(body))
         if objects.read(candidate.candidate_ref) != body:
             raise Conflict('candidate gate readback differs')
-        validate_candidate(candidate, objects)
+        check_candidate_integrity(candidate, objects)
         state.record_candidate(candidate)
 
 
@@ -206,8 +206,9 @@ def build_candidate(quarter: str, previous: GenerationCapture | None, incoming: 
         raise ValueError('previous generation belongs to another quarter')
     active = read_manifest(previous, objects) if previous else None
     if active:
-        validate_candidate(Candidate(active, previous.manifest_ref, previous.manifest_sha256,
-                                     previous.manifest_bytes, gate_ref(active)), objects)
+        # The previous generation was fully checked when its pointer committed (S1, C2).
+        check_candidate_integrity(Candidate(active, previous.manifest_ref, previous.manifest_sha256,
+                                            previous.manifest_bytes, gate_ref(active)), objects)
     selected = select_sources(active.sources if active else (), incoming)
     selected = tuple(transform_member(ref.source, ref.snapshot, context, settings, objects, state)
                      if (ref.parser_version, ref.schema_version) != (context.parser_version, context.schema_version)
