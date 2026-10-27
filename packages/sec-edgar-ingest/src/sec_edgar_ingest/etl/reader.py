@@ -57,7 +57,7 @@ def capture_quarter(quarter: str, objects: ObjectStore, state: EtlState) -> Gene
     capture = capture_from_pointer(pointer)
     if capture.quarter != quarter:
         raise ValueError('pointer belongs to another quarter')
-    manifest = validated_manifest(capture, objects)
+    manifest = checked_manifest(capture, objects)
     if manifest.source_fingerprint != pointer.value['source_fingerprint']:
         raise Conflict('pointer source fingerprint differs from captured manifest')
     return capture

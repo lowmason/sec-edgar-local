@@ -9,7 +9,7 @@ from ..collection import HALTING_OUTCOMES
 from ..state import AcquisitionState
 from ..storage.contracts import Conflict, observe
 from ..discovery import quarter_span
-from ..etl.reader import capture_from_pointer, capture_quarter, validated_manifest
+from ..etl.reader import capture_from_pointer, capture_quarter, checked_manifest
 from ..etl.state import EtlState
 from ..etl.contracts import PublicationResult
 from .contracts import COMPLETE, MemberResult, WorkflowResult, FATAL, summarize, workflow_path
@@ -349,7 +349,7 @@ def source_revert_gaps(results, store, objects) -> tuple[Error, ...]:
                 continue
             capture = capture_from_pointer(pointer)
             if capture.generation_id not in manifests:
-                manifests[capture.generation_id] = validated_manifest(capture, objects)
+                manifests[capture.generation_id] = checked_manifest(capture, objects)
             manifest = manifests[capture.generation_id]
             active = next((ref for ref in manifest.sources if ref.source.source_id == identity), None)
             if active is None or active.snapshot.sha256 == latest:

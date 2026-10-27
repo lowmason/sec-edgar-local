@@ -14,7 +14,7 @@ from ..storage.contracts import BoundaryObserver, CAS_ATTEMPTS, Conflict, Object
 from .contracts import (EtlResult, PublicationResult, decode_transformed,
                         processing_key, transformed_ref)
 from .publication import PublicationRepairError, publish_quarter
-from .reader import capture_from_pointer, validated_manifest
+from .reader import capture_from_pointer, checked_manifest
 from .parser import supported_parser, SCHEMA_VERSION
 from .state import EtlState
 from .transform import transform_workset
@@ -202,7 +202,7 @@ def _affected_quarters(observations, objects, store):
         # Receipts can be absent after a committed pointer, so discovery uses authority.
         for pointer in store.scan('QuarterPublication', {}):
             capture = capture_from_pointer(pointer)
-            manifest = validated_manifest(capture, objects)
+            manifest = checked_manifest(capture, objects)
             if manifest.source_fingerprint != pointer.value['source_fingerprint']:
                 raise Conflict('pointer source fingerprint differs from captured manifest')
             if any(ref.source.source_id in sources for ref in manifest.sources):
