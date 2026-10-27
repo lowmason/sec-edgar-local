@@ -29,7 +29,8 @@ It ships the change as a reviewed native release, called the 1b release below.
 
 In scope:
 
-- An integrity check that reads no rows, and the move of engine-side checks to it (C1, C2).
+- An integrity check that reads no rows, and the move of engine-side checks to it (C1, C2), and the
+  same check for observations (C11; owner, plan 5, 2026-10-27).
 - An incremental, columnar rebuild path for eligible quarters, with its equivalence check (C4–C6).
 - One full check per full-rebuild candidate in the `publish` child (C3).
 - The measurement, the floor constant, the reserve rule and an owner checkpoint (§6).
@@ -54,12 +55,13 @@ Out of scope:
 | C2 | Engine paths use C1 for a generation reached through a committed pointer, a retained capture or a checked `publish` result: `capture_quarter`, `etl.commands._affected_quarters`, `evaluate_member`, `validate_capture`, `read_child_capture` / `_validate_input_output`, `_obligations`, `baseline_gaps`, `source_revert_gaps`, `_validate_report`, and the `publish` child's checks of the previous generation (`publish_quarter`, `build_candidate`). |
 | C3 | The full content check stays in `read_quarter` (§4.6 of the parent spec), `approve`, `rollback`, `catalog._existing`, and the pre-pointer check of a full-rebuild candidate. A full-rebuild candidate is fully checked once per build, not twice. |
 | C4 | A quarter takes the incremental path only when all of these hold: an active generation exists, with `quarter_mode` equal to the current mode, parser and schema equal to the context's, and gate `clear`; every incoming source's `source_id` is absent from `active.sources`; and no incoming source is the quarter's quarterly membership authority. Every other case takes today's full rebuild. |
-| C5 | The incremental build has four inputs: the base data file and the base change file, read as Arrow tables after C1; the incoming observations for the quarter; and, when the quarter has a membership authority, that source's observations limited by a columnar filter to the touched keys. It resolves only the logical keys (CIK and archive path) that the delta touches, with `_resolve`'s rules: ranking (a base row's kind, period and receipt come from `active.sources` by its `source_id`), the closed-quarter membership filter, and the open-quarter non-member absence rule. The absent set is the base change file's `unresolved_absence` keys minus the touched keys that gain a proposed row. Every absent key is re-emitted as `unresolved_absence` and retained, so `retained_from_generation` follows today's rule. It computes change rows and counts relative to the active rows, and writes files with the full path's writer settings. Fingerprint, `generation_id` and manifest fields come from the full path's functions. For every eligible input, its generation is byte-identical to the full rebuild's. |
-| C6 | Before the gate and pointer steps, an incremental candidate passes an equivalence check that does not reuse C5's merge code. The base passes C1. The delta rows pass the row-level check. For the touched keys, the expected rows, change rows and counts come from the full path's own resolution code (`_load_observations` and `_resolve`), run over every selected source's observations limited by a columnar filter to those keys, and the base's active rows for those keys. Every other data row equals its base row, and every other change row equals the re-emitted `unresolved_absence` row, compared column by column. |
+| C5 | The incremental build has four inputs: the base data file and the base change file, read as Arrow tables after C1; the incoming observations for the quarter; and, when the quarter has a membership authority, that source's observations limited by a columnar filter to the touched keys and, in an open quarter, the keys of the base `added` change rows (owner, plan 5, 2026-10-27). It resolves only the logical keys (CIK and archive path) that the delta touches, with `_resolve`'s rules: ranking (a base row's kind, period and receipt come from `active.sources` by its `source_id`), the closed-quarter membership filter, and the open-quarter non-member absence rule. The absent set is the base change file's `unresolved_absence` keys minus the touched keys that gain a proposed row. In an open quarter with a membership authority, it also holds every untouched key of a base `added` change row that the authority does not list, because `_resolve`'s open-quarter non-member rule makes that key absent at the next rebuild (owner, plan 5, 2026-10-27). Every absent key is re-emitted as `unresolved_absence` and retained, so `retained_from_generation` follows today's rule. It computes change rows and counts relative to the active rows, and writes files with the full path's writer settings. Fingerprint, `generation_id` and manifest fields come from the full path's functions. For every eligible input, its generation is byte-identical to the full rebuild's. |
+| C6 | Before the gate and pointer steps, an incremental candidate passes an equivalence check that does not reuse C5's merge code. The base passes C1. The delta rows pass the row-level check. For the recomputed keys (the touched keys and, in an open quarter with a membership authority, every base key that the authority does not list; owner, plan 5, 2026-10-27), the expected rows, change rows and counts come from the full path's own resolution code (`_load_observations` and `_resolve`), run over every selected source's observations limited by a columnar filter to those keys, and the base's active rows for those keys. Every other data row equals its base row, and every other change row equals the re-emitted `unresolved_absence` row, compared column by column. |
 | C7 | Generations, manifests, receipts, selection (`sec-local-workflow-selection-v1`), effective config and outcomes do not change format. Existing receipts stay valid byte for byte. Exact replay returns identical bytes. |
 | C8 | `DISPATCH_RESERVE_FLOOR_SECONDS` = max(480, P4 floor rule), where the P4 floor rule is max(60, 3 × measured finish seconds, rounded up to 30). The finish step is measured at full size on the built 1b release (§6). If the rule gives more than 480, the constant changes in one commit, and the release is rebuilt and re-verified before C10. |
 | C9 | The 1b release is built by `build_release` from clean committed `main`. The package version stays `0.2.0`. `uv.lock` and the requirement lines of `uv export --package sec-edgar-ingest --no-dev --no-emit-workspace` are byte-identical to the D5 build inputs. The D5 release, `fc68adef…` and older releases are retained (§4.9). |
 | C10 | The live config selects the 1b release and sets `execution.dispatch_reserve_seconds` by the §6 rule, at an owner checkpoint. Offline preflight passes, and the new effective-config SHA-256 is recorded. |
+| C11 | An integrity check of an observation reads its manifest with today's address, canonical-form, producer and identity checks, and verifies the rows file SHA-256 and byte count. It reads no rows. It refuses with the same error classes as `transform._read_manifest`. Engine paths use it for an observation reached through a Processing row, a transformed workset or a capture: `evaluate_member`, `validate_capture` and `checked._transformed_input`. The `publish` child uses it for its incoming references. The full readback stays in the `transform` child, the full content check, and the full rebuild's reads of source rows. (owner, plan 5, 2026-10-27) |
 
 ## 4. Design
 
@@ -101,8 +103,10 @@ Out of scope:
    with today's `unresolved_absence` and withdrawal rules and gate.
 4. **Locality.** For an eligible addition, a key's resolution depends on its base row, its delta rows,
    its membership row (if any), and whether the base change file names it `unresolved_absence`. Untouched
-   keys keep their rows. No touched key that was present can become absent, because sources only grow and
-   membership does not change (C4). The plan proves this against `_resolve` before it builds C5. Oracle
+   keys keep their rows, with one exception. In an open quarter with a membership authority, a key that the
+   base added and that the authority does not list becomes `unresolved_absence` at the next rebuild, whether
+   or not the delta touches it. C5 and C6 handle that case (owner, plan 5, 2026-10-27; plan 5, Locality
+   proof). The plan proves this against `_resolve` before it builds C5. Oracle
    tests check byte identity. A case where locality fails joins the C4 exclusions.
 5. **What C6 guards.** C6 recomputes touched keys with the full path's code, so a C5 logic error is refused
    before the pointer commits. An error that both paths share would pass C6. The oracle tests guard that
@@ -123,7 +127,9 @@ Tests use stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard
 before its implementation.
 
 1. **C1.** Refuses a changed data-file byte, a changed manifest, and an `awaiting_approval` generation
-   without its approval. Reads no rows (patched `iter_file_rows` is not called).
+   without its approval. Reads no rows (patched `iter_file_rows` is not called). **C11** refuses a changed rows-file byte and a
+   changed observation manifest, and reads no rows (patched `_verify_parquet` is not called) (owner, plan 5,
+   2026-10-27).
 2. **Full-check budget.** In a fixture workflow run with no retried candidate, `_validate_row_origins`
    runs exactly once per full-rebuild candidate and on no other path. `read_quarter` still runs it.
 3. **Incremental oracle.** For each eligible case, incremental and full builds give identical
@@ -131,7 +137,8 @@ before its implementation.
    to a closed quarter that has a membership authority; a new row that beats the winner and one that
    loses; two delta rows with one key; added and updated change rows; a touched key that the base
    retains as `unresolved_absence`, with and without a membership row; an open quarter with a
-   membership authority and a non-member touched key; a closed daily-only quarter.
+   membership authority and a non-member touched key; a closed daily-only quarter; an open quarter with a membership authority and an
+   untouched key that the base added and the authority does not list (owner, plan 5, 2026-10-27).
 4. **Fallback.** A replacement snapshot, a revert, an incoming quarterly authority, a mode change and
    a gate other than `clear` each take the full path, with today's output.
 5. **C6 refusal.** A changed candidate row is refused before the pointer commits.
