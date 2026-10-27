@@ -44,12 +44,13 @@
   },
   "runtime": {
     "kind": "native",
-    "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json"
+    "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4/release.json"
   },
   "logging": {
     "root": "../logs"
   },
   "execution": {
-    "max_run_seconds": 3600
+    "max_run_seconds": 3600,
+    "dispatch_reserve_seconds": 1800
   }
 }
