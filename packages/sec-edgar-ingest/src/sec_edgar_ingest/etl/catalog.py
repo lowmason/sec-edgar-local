@@ -72,11 +72,11 @@ def _database(path):
     return db
 
 
-def _load_observations(db, selected, quarter, membership, objects, context):
+def _load_observations(db, selected, quarter, membership, objects, context, read=read_observations):
     for ref in selected:
         if not ref.source_row_count:
             raise ValueError('invalid_source: empty source observations')
-        with closing(read_observations(ref, objects)) as rows:
+        with closing(read(ref, objects)) as rows:
             for obs in rows:
                 if quarter_for(obs.row.filing_date) != quarter:
                     continue
