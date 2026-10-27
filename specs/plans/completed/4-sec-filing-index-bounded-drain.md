@@ -21,7 +21,7 @@ The branch merges to `main` after the full gate and a whole-branch review. The D
 
 **Tech Stack:** Python 3.14 (CPython 3.14.0, macOS arm64). Stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. `uv` offline and locked. Installed releases under `releases/sha256=<id>/`. Measurement on the installed `fc68adef…` interpreter.
 
-**Spec:** [specs/sec-filing-index-bounded-drain.md](../sec-filing-index-bounded-drain.md) (Stage 1a). Parent spec: [specs/sec-filing-index-ingestion-spec.md](../sec-filing-index-ingestion-spec.md).
+**Spec:** [specs/sec-filing-index-bounded-drain.md](../../completed/sec-filing-index-bounded-drain.md) (Stage 1a). Parent spec: [specs/sec-filing-index-ingestion-spec.md](../../sec-filing-index-ingestion-spec.md).
 
 ## Global Constraints
 
