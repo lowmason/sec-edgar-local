@@ -13,28 +13,42 @@ import pyarrow.parquet as pq
 from support_catalog import Lane, capture, row
 from sec_edgar_ingest.etl.contracts import canonical_schema, change_schema
 from sec_edgar_ingest.etl.equivalence import validate_incremental_candidate
+from sec_edgar_ingest.etl.manifest import generation_base, generation_identity, source_fingerprint
 from sec_edgar_ingest.models import canonical_json
 
 CLOSED = date(2027, 1, 7)
 
 
 def forge(lane, candidate, *, data=None, changes=None, **fields):
-    """Rewrite a candidate's files and manifest in place, keeping every hash consistent."""
+    """Rewrite a candidate's files and manifest, keeping every hash and the generation identity consistent.
+
+    A forged source set or retained basis gives a new identity, so the forgery moves to that identity's address.
+    """
+    manifest = replace(candidate.manifest, **fields)
+    fingerprint = source_fingerprint(manifest.quarter, manifest.sources, mode=manifest.quarter_mode,
+                                     membership_source=manifest.membership_source,
+                                     retained_from_generation=manifest.retained_from_generation)
+    generation_id = generation_identity(manifest.quarter, manifest.base_generation_id, fingerprint)
+    base = generation_base(manifest.quarter, generation_id)
     files = []
-    for ref in candidate.manifest.files:
+    for ref in manifest.files:
+        name = base + '/' + ref.path.rsplit('/', 1)[1]
+        path = lane.path(name)
+        path.parent.mkdir(parents=True, exist_ok=True)
         rows = data if ref.role == 'data' else changes
         if rows is None:
-            files.append(ref)
+            path.write_bytes(lane.objects.read(ref.path))
+            files.append(replace(ref, path=name))
             continue
-        path = lane.path(ref.path)
         pq.write_table(pa.Table.from_pylist(rows, schema=canonical_schema() if ref.role == 'data' else change_schema()), path)
         body = path.read_bytes()
-        files.append(replace(ref, sha256=hashlib.sha256(body).hexdigest(), byte_count=len(body), row_count=len(rows)))
-    manifest = replace(candidate.manifest, files=tuple(files), **fields)
+        files.append(replace(ref, path=name, sha256=hashlib.sha256(body).hexdigest(), byte_count=len(body),
+                             row_count=len(rows)))
+    manifest = replace(manifest, source_fingerprint=fingerprint, generation_id=generation_id, files=tuple(files))
     body = canonical_json(manifest.to_mapping())
-    lane.path(candidate.manifest_ref).write_bytes(body)
-    return replace(candidate, manifest=manifest, manifest_sha256=hashlib.sha256(body).hexdigest(),
-                   manifest_bytes=len(body))
+    lane.path(base + '/manifest.json').write_bytes(body)
+    return replace(candidate, manifest=manifest, manifest_ref=base + '/manifest.json',
+                   manifest_sha256=hashlib.sha256(body).hexdigest(), manifest_bytes=len(body))
 
 
 class EquivalenceTests(unittest.TestCase):
@@ -52,17 +66,28 @@ class EquivalenceTests(unittest.TestCase):
         candidate = lane.build([lane.observation('2026-10-02', 'daily', row('Changed') + row(number=3))], base)
         return lane, base, candidate
 
+    def authority_flip(self):
+        lane = self.lane()
+        g0 = lane.build([lane.observation(rows=row())])
+        g1 = lane.build([lane.observation('2026-10-02', 'daily', row(number=2))], g0)
+        self.check(lane, g1, g0)
+        g2 = lane.build([lane.observation('2026-10-03', 'daily', row(number=3))], g1)
+        self.assertEqual(g2.manifest.unresolved_absence, 1)
+        return lane, g1, g2
+
+    def re_emitted_absence(self):
+        lane = self.lane()
+        g1 = lane.build([lane.observation('2026-10-01', 'daily', row() + row(number=2))])
+        g2 = lane.build([lane.observation('2026-10-01', 'daily', row(), seconds=1)], g1)
+        g3 = lane.build([lane.observation('2026-10-02', 'daily', row(number=3))], g2)
+        return lane, g2, g3
+
     def test_accepts_the_full_rebuild_of_an_open_daily_addition(self):
         lane, base, candidate = self.open_addition()
         self.check(lane, candidate, base)
 
     def test_accepts_the_open_authority_flip(self):
-        lane = self.lane()
-        g0 = lane.build([lane.observation(rows=row())])
-        g1 = lane.build([lane.observation('2026-10-02', 'daily', row(number=2))], g0)
-        g2 = lane.build([lane.observation('2026-10-03', 'daily', row(number=3))], g1)
-        self.assertEqual(g2.manifest.unresolved_absence, 1)
-        self.check(lane, g1, g0)
+        lane, g1, g2 = self.authority_flip()
         self.check(lane, g2, g1)
 
     def test_accepts_a_closed_back_dated_addition(self):
@@ -93,13 +118,46 @@ class EquivalenceTests(unittest.TestCase):
             self.check(lane, forge(lane, candidate, data=rows), base)
 
     def test_refuses_a_dropped_re_emitted_absence(self):
-        lane = self.lane()
-        g1 = lane.build([lane.observation('2026-10-01', 'daily', row() + row(number=2))])
-        g2 = lane.build([lane.observation('2026-10-01', 'daily', row(), seconds=1)], g1)
-        g3 = lane.build([lane.observation('2026-10-02', 'daily', row(number=3))], g2)
+        lane, g2, g3 = self.re_emitted_absence()
         kept = [value for value in lane.rows(g3, 'changes') if value['change_type'] != 'unresolved_absence']
         with self.assertRaisesRegex(ValueError, 'outside its recomputed keys'):
             self.check(lane, forge(lane, g3, changes=kept), g2)
+
+    def test_accepts_an_untouched_re_emitted_absence(self):
+        lane, g2, g3 = self.re_emitted_absence()
+        self.assertEqual([(value['change_type'], value['archive_path'][-10:]) for value in lane.rows(g3, 'changes')],
+                         [('unresolved_absence', '000002.txt'), ('added', '000003.txt')])
+        self.check(lane, g3, g2)
+
+    def test_refuses_a_duplicated_touched_row(self):
+        lane, base, candidate = self.open_addition()
+        rows = lane.rows(candidate)
+        rows.insert(3, rows[2])
+        with self.assertRaisesRegex(ValueError, 'generation keys are duplicate or unsorted'):
+            self.check(lane, forge(lane, candidate, data=rows, row_count=4), base)
+
+    def test_refuses_a_changed_touched_change_row(self):
+        lane, base, candidate = self.open_addition()
+        changes = lane.rows(candidate, 'changes')
+        self.assertEqual([value['change_type'] for value in changes], ['updated', 'added'])
+        changes[0] = {**changes[0], 'reason': 'Forged'}
+        with self.assertRaisesRegex(ValueError, 'incremental change rows differ from the full resolution of their keys'):
+            self.check(lane, forge(lane, candidate, changes=changes), base)
+
+    def test_refuses_a_delta_source_that_differs_from_its_observation_manifest(self):
+        lane, base, candidate = self.open_addition()
+        base_ids = {ref.source.source_id for ref in base.manifest.sources}
+        sources = tuple(ref if ref.source.source_id in base_ids else replace(ref, distinct_key_count=ref.distinct_key_count - 1)
+                        for ref in candidate.manifest.sources)
+        self.assertNotEqual(sources, candidate.manifest.sources)
+        with self.assertRaisesRegex(ValueError, 'incremental source differs from its immutable observation manifest'):
+            self.check(lane, forge(lane, candidate, sources=sources), base)
+
+    def test_refuses_a_wrong_retained_basis(self):
+        lane, g1, g2 = self.authority_flip()
+        self.assertEqual(g2.manifest.retained_from_generation, g1.manifest.generation_id)
+        with self.assertRaisesRegex(ValueError, 'incremental retained basis or gate differs'):
+            self.check(lane, forge(lane, g2, retained_from_generation=None), g1)
 
     def test_refuses_a_forged_count(self):
         lane, base, candidate = self.open_addition()
