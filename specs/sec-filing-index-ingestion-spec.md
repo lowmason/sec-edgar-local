@@ -307,7 +307,7 @@ from the canonical normalized effective-config hash.
 | Parser / schema | `sec-index-parser-v1` / `sec-index-v1`. |
 | Withdrawal approval | `reconciliation.require_withdrawal_approval=true`. |
 | Execution | Live maximum 3,600 seconds; launcher default 3,300 seconds. |
-| Dispatch reserve | `execution.dispatch_reserve_seconds=1800`. Required for a new live workflow run; floor 480 seconds (release constant), below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4.) |
+| Dispatch reserve | `execution.dispatch_reserve_seconds=1800` (provisional, plan 4 D2 and D4). Required for a new live workflow run. The value must be at least the floor of 480 seconds (release constant) and below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4.) |
 | Runtime | `kind=native`; explicit content-addressed `release_manifest`. |
 
 The selected manifest is:
@@ -322,10 +322,10 @@ at commit `62ce1403f192ff18537d28842548af1be2ecfe57`. The effective-config SHA-2
 `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e`, confirmed by offline preflight.
 The earlier release-only edit that selected `fc68adef…` produced
 `088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`.
-The config is tracked in git since commit `001edf5`; its effective-config hash is unchanged
-(owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default selected
-`900952a8…` describe the earlier bytes; they are not current release-selection instructions. Keep
-those historical records and releases intact.
+The config has been tracked in git since commit `001edf5`. That change left the `088403cb…` hash
+unchanged (owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default
+selected `900952a8…` describe the earlier bytes; they are not current release-selection
+instructions. Keep those historical records and releases intact.
 
 There are no `schedule`, `jobs`, `worker.image_digest`, or cloud orchestration keys in the current
 config schema. The future scheduling phase must define its own reviewed configuration boundary;
@@ -351,10 +351,11 @@ old execution authority is a recovery failure; never substitute the new parent r
 
 Release `fc68adef…` refuses a config and a receipt that a D5 live run writes. Its settings reject the
 unknown `execution.dispatch_reserve_seconds` key, and it reports a D5 sibling-completion receipt as
-`legacy_member_unresolved`, so the run ends `incomplete` (exit 3). That it also refuses D5 child
-results and contexts is an untested inference. After a D5 live run has written to a store, selecting
-`fc68adef…` again for that store is unsupported. The D5 release continues `fc68adef…`-origin pending
-work. (Stage 1a, plan 4; [two-release evidence](evidence/d5-release/two-release.md).)
+`legacy_member_unresolved`, so the run ends `incomplete` (exit 3). The child results and contexts of
+a D5 live run carry the D5 config, so `fc68adef…` probably cannot validate them either. That is an
+untested inference. After a D5 live run has written to a store, selecting `fc68adef…` again for that
+store is unsupported. The D5 release continues `fc68adef…`-origin pending work. (Stage 1a, plan 4;
+[two-release evidence](evidence/d5-release/two-release.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,

@@ -2081,6 +2081,8 @@ If Task 7 recorded a different answer, write that answer instead.
 
 - [x] **Step 4b: Runbook (final-review Minor, added 2026-10-23).** In `docs/runbooks/local-ingestion.md` (line 37), the launcher rule reads `require 0 < N <= execution.max_run_seconds`. After the D5 release is selected it also refuses `N <= execution.dispatch_reserve_seconds`, and admission refuses a live config that has no `execution.dispatch_reserve_seconds` or one outside `floor <= value < execution.max_run_seconds`. Add one sentence to that paragraph that says so, and names the floor (480 s) and the Task 10 live reserve. Add the file to the Step 5 `git add`.
 
+> Deviation (Task 11): the runbook gained four sentences, not one: the D5 timeout rule, two admission rules and the floor-and-reserve values. They are split for length. The §4.8 table row says the reserve is "provisional" and that the launcher refuses a timeout "at or below the reserve". The plan file itself was added to the Step 5 commit, for its deviation line and ticked checkboxes.
+
 - [x] **Step 5: Verify and commit.** Run:
 
 ```bash
