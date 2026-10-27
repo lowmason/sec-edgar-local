@@ -52,8 +52,8 @@ Out of scope:
 | C2 | Engine paths use C1 for a generation reached through a committed pointer, a retained capture or a checked `publish` result: `capture_quarter`, `etl.commands._affected_quarters`, `evaluate_member`, `validate_capture`, `read_child_capture` / `_validate_input_output`, `_obligations`, `baseline_gaps`, `source_revert_gaps`, `_validate_report`, and the `publish` child's checks of the previous generation (`publish_quarter`, `build_candidate`). |
 | C3 | The full content check stays in `read_quarter` (§4.6 of the parent spec), `approve`, `rollback`, `catalog._existing`, and the pre-pointer check of a full-rebuild candidate. A full-rebuild candidate is fully checked once per build, not twice. |
 | C4 | A quarter takes the incremental path only when all of these hold: an active generation exists, with `quarter_mode` equal to the current mode, parser and schema equal to the context's, and gate `clear`; every incoming source's `source_id` is absent from `active.sources`; and no incoming source is the quarter's quarterly membership authority. Every other case takes today's full rebuild. |
-| C5 | The incremental build reads the base data file as an Arrow table after C1, and reads the incoming observations for the quarter. It resolves only the logical keys (CIK and archive path) that the delta touches, with `_resolve`'s ranking. It computes change rows for those keys relative to the active row, and writes files with the full path's writer settings. Fingerprint, `generation_id` and manifest fields come from the full path's functions. For every eligible input, its generation is byte-identical to the full rebuild's. |
-| C6 | Before the gate and pointer steps, an incremental candidate passes an equivalence check: the base passes C1, the delta rows pass the row-level check, and the candidate's data and change files equal merge(base, delta), compared column by column. |
+| C5 | The incremental build has four inputs: the base data file and the base change file, read as Arrow tables after C1; the incoming observations for the quarter; and, when the quarter has a membership authority, that source's observations limited by a columnar filter to the touched keys. It resolves only the logical keys (CIK and archive path) that the delta touches, with `_resolve`'s rules: ranking (a base row's kind, period and receipt come from `active.sources` by its `source_id`), the closed-quarter membership filter, and the open-quarter non-member absence rule. The absent set is the base change file's `unresolved_absence` keys minus the touched keys that gain a proposed row. Every absent key is re-emitted as `unresolved_absence` and retained, so `retained_from_generation` follows today's rule. It computes change rows and counts relative to the active rows, and writes files with the full path's writer settings. Fingerprint, `generation_id` and manifest fields come from the full path's functions. For every eligible input, its generation is byte-identical to the full rebuild's. |
+| C6 | Before the gate and pointer steps, an incremental candidate passes an equivalence check that does not reuse C5's merge code. The base passes C1. The delta rows pass the row-level check. For the touched keys, the expected rows, change rows and counts come from the full path's own resolution code (`_load_observations` and `_resolve`), run over every selected source's observations limited by a columnar filter to those keys, and the base's active rows for those keys. Every other data row equals its base row, and every other change row equals the re-emitted `unresolved_absence` row, compared column by column. |
 | C7 | Generations, manifests, receipts, selection (`sec-local-workflow-selection-v1`), effective config and outcomes do not change format. Existing receipts stay valid byte for byte. Exact replay returns identical bytes. |
 | C8 | `DISPATCH_RESERVE_FLOOR_SECONDS` = max(480, P4 floor rule), where the P4 floor rule is max(60, 3 × measured finish seconds, rounded up to 30). The finish step is measured at full size on the built 1b release (§6). If the rule gives more than 480, the constant changes in one commit, and the release is rebuilt and re-verified before C10. |
 | C9 | The 1b release is built by `build_release` from clean committed `main`. The package version stays `0.2.0`. `uv.lock` and the requirement lines of `uv export --package sec-edgar-ingest --no-dev --no-emit-workspace` are byte-identical to the D5 build inputs. The D5 release, `fc68adef…` and older releases are retained (§4.9). |
@@ -97,15 +97,21 @@ Out of scope:
    eligible (C4). Removing its old rows can reveal a row that the base does not hold, so it takes the full path.
 3. **Membership change.** A quarterly authority arriving for a closed quarter takes the full path,
    with today's `unresolved_absence` and withdrawal rules and gate.
-4. **Locality.** The plan proves that, for an eligible addition, each key's resolution depends only
-   on the base row and the delta rows for that key. Oracle tests check byte identity. A case where
-   locality fails joins the C4 exclusions.
-5. **Validator changes.** A generation is content-checked when its pointer commits. A validator fix
+4. **Locality.** For an eligible addition, a key's resolution depends on its base row, its delta rows,
+   its membership row (if any), and whether the base change file names it `unresolved_absence`. Untouched
+   keys keep their rows. No touched key that was present can become absent, because sources only grow and
+   membership does not change (C4). The plan proves this against `_resolve` before it builds C5. Oracle
+   tests check byte identity. A case where locality fails joins the C4 exclusions.
+5. **What C6 guards.** C6 recomputes touched keys with the full path's code, so a C5 logic error is refused
+   before the pointer commits. An error that both paths share would pass C6. The oracle tests guard that
+   case. A generation that is wrong but committed would fail the full check in a later `read_quarter`.
+   Recovery is then `rollback` to its base.
+6. **Validator changes.** A generation is content-checked when its pointer commits. A validator fix
    in a later release is not re-applied to older generations by the engine. `read_quarter` still
    applies the current release's full check (S1).
-6. **Member overrun.** A member running at the cutoff still completes (parent §4.7). The §6 reserve
+7. **Member overrun.** A member running at the cutoff still completes (parent §4.7). The §6 reserve
    rule bounds this for the measured member classes.
-7. **Two releases.** The 1b release continues D5-origin pending work. Because C7 changes no format,
+8. **Two releases.** The 1b release continues D5-origin pending work. Because C7 changes no format,
    selecting D5 again for a store that 1b wrote should be supported. The plan tests that direction
    once and records the result in §4.9 either way.
 
@@ -121,7 +127,9 @@ before its implementation.
 3. **Incremental oracle.** For each eligible case, incremental and full builds give identical
    manifest and file SHA-256 values: a daily source added to the open quarter; a back-dated row added
    to a closed quarter that has a membership authority; a new row that beats the winner and one that
-   loses; two delta rows with one key; added and updated change rows.
+   loses; two delta rows with one key; added and updated change rows; a touched key that the base
+   retains as `unresolved_absence`, with and without a membership row; an open quarter with a
+   membership authority and a non-member touched key; a closed daily-only quarter.
 4. **Fallback.** A replacement snapshot, a revert, an incoming quarterly authority, a mode change and
    a gate other than `clear` each take the full path, with today's output.
 5. **C6 refusal.** A changed candidate row is refused before the pointer commits.
@@ -148,6 +156,7 @@ Runs after the 1b release is built and verified, before the live config changes.
   | `closed` baseline: 2021Q1–2026Q3, the 14 findings §4.7 quarters full size | First-publication quarterly member wall |
   | `closed` measure 1 | One daily row back-dated into one closed full-size quarter |
   | `closed` fan-out | One daily file back-dating one row into each of the 14 quarters |
+  | `authority` | A full-size quarterly authority arriving into a closed quarter that has a daily-only generation (the live store's 16 quarters, findings §2): full path, active rows loaded, withdrawals and the gate possible |
   | `finish` | Finish step on the `closed` store and on the 48-quarter store |
   | History growth | Per-member engine time against retained `WorkflowChildCall` and `Attempt` rows, projected to about 400 and 1,200 child calls |
 
@@ -163,8 +172,9 @@ Runs after the 1b release is built and verified, before the live config changes.
   are committed. If the gate fails, the plan stops. The owner either approves a named, measured
   limit or adds a columnar full-rebuild path as a new roadmap stage. The plan does not widen this
   stage. The record states that fixture timings can only underestimate native cost (plan 2 F11).
-- **Known risk:** the slowest member is probably a first publication of a full-size quarter (full
-  path, estimated about 1,030 s unloaded). It passes the gate on a quiet machine and fails at the D5
+- **Known risk:** the slowest member is probably a full-path quarterly member: a first publication of a
+  full-size quarter (estimated about 1,030 s unloaded), or the `authority` case, which also loads the
+  active rows. It passes the gate on a quiet machine and fails at the D5
   run's load.
 
 ## 7. Release and exit evidence
@@ -217,6 +227,10 @@ Owner answers at brainstorming, 2026-10-27:
 - **S5** Approach: "B" (columnar incremental rebuild with delta-only row checks).
 - **S6** Design sections 1–5 approved as presented ("Yes" to each), including the 1.25 reserve
   factor and the stop-at-checkpoint rule (section 3).
+- Changes after design approval, for the owner's review of this written spec: C5 gains the base
+  change file and the membership rows for touched keys (a reading of `_resolve` found both necessary),
+  C6 no longer reuses C5's merge code, §4.3 items 4–5 state locality and what C6 guards, and §6 adds
+  the `authority` scenario.
 - Roadmap defaults (iv)–(vi), approved 2026-10-27: one stage, not an investigation stage plus a build
   stage; the four deferred items; Stage 2 consumes this release.
 
