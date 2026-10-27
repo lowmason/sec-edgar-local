@@ -1903,6 +1903,8 @@ python3 -c "import json,sys; i=json.load(open(sys.argv[1]))['identity']; print(i
 
 Expected: `lock-identical`, `export-identical`, `inputs-identical`. Version `0.2.0`. `git_revision` equals Step 1's revision. The dependency names are the six that `fc68adef…` lists, with no platform package.
 
+> Deviation: `cmp` on `runtime-requirements.txt` fails at line 2, a comment that holds the random temporary directory of the `uv export` run. The requirement lines are identical (same SHA-256 without comment lines). Recorded in `release.md`.
+
 - [ ] **Step 4: Offline verification on the D5 interpreter.**
 
 ```bash
@@ -1930,6 +1932,8 @@ PY
 ```
 
 Expected: the verifier prints JSON with `"exit": 0` and `"release_id": "<D5>"`. `preflight_current` prints `<D5>`.
+
+> Deviation: the harness guard refuses any path inside a checkout, and the verifier's children inherit the current directory. So the harness and the evidence directory go under a temporary directory outside the checkout (`mktemp -d`), and the verifier runs with that directory as its working directory, with the script path absolute. The evidence was then copied to `fixture-data/d5-verify-evidence/`. Recorded in `release.md`.
 
 - [ ] **Step 5: Confirm retention.**
 
