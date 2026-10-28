@@ -102,7 +102,8 @@ def publish_quarter(quarter: str, incoming: tuple[ObservationRef, ...], context:
         # build_candidate checked the candidate in one of four ways. A full rebuild had one full check (C3).
         # An incremental candidate passed the C6 equivalence check. A candidate that `_existing` found already
         # stored (a replay, a crash recovery or a concurrent writer) had a full check there. The fingerprint
-        # no-op built no candidate: it returned the active generation, fully checked when its pointer committed.
+        # no-op built no candidate: it returned the active generation, which was checked (by the full check or
+        # by C6) before its pointer committed.
         check_candidate_integrity(candidate, objects)
         if candidate.manifest.gate == 'awaiting_approval':
             state.record_candidate(candidate)
