@@ -122,9 +122,9 @@ Out of scope:
    the candidate's objects from the object store. The code has no command for that removal. Each
    blocked retry costs one full check. For a full-size quarter, one full check took about 415 s in
    the Stage 1b diagnosis probe (`specs/evidence/stage1b/diagnosis.md`, §1).
-6. **Validator changes.** A generation is content-checked when its pointer commits. A validator fix
-   in a later release is not re-applied to older generations by the engine. `read_quarter` still
-   applies the current release's full check (S1).
+6. **Validator changes.** A generation is checked before its pointer commits: by the full content
+   check, or by C6 for an incremental candidate. A validator fix in a later release is not re-applied
+   to older generations by the engine. `read_quarter` still applies the current release's full check (S1).
 7. **Member overrun.** A member running at the cutoff still completes (parent §4.7). The §6 reserve
    rule bounds this for the measured member classes.
 8. **Two releases.** The 1b release continues D5-origin pending work. Because C7 changes no format,

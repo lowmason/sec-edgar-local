@@ -298,7 +298,8 @@ def build_candidate(quarter: str, previous: GenerationCapture | None, incoming: 
         raise ValueError('previous generation belongs to another quarter')
     active = read_manifest(previous, objects) if previous else None
     if active:
-        # The previous generation was fully checked when its pointer committed (S1, C2).
+        # The previous generation was checked (by the full check or by C6) before its pointer
+        # committed (S1, C2).
         check_candidate_integrity(Candidate(active, previous.manifest_ref, previous.manifest_sha256,
                                             previous.manifest_bytes, gate_ref(active)), objects)
     selected = select_sources(active.sources if active else (), incoming)
