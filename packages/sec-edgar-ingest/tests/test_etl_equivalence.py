@@ -185,6 +185,12 @@ class EquivalenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'counts differ'):
             self.check(lane, forge(lane, candidate, updated=candidate.manifest.updated + 1), base)
 
+    def test_refuses_a_forged_row_count_over_honest_files(self):
+        # The data file has the full resolution's rows, so only the manifest's row count is wrong.
+        lane, base, candidate = self.open_addition()
+        with self.assertRaisesRegex(ValueError, 'incremental counts differ from the full resolution'):
+            self.check(lane, forge(lane, candidate, row_count=candidate.manifest.row_count + 1), base)
+
     def test_recomputes_every_base_key_that_the_authority_does_not_list_in_the_quarter(self):
         lane = self.lane()
         base = lane.build([lane.observation('2026-10-01', 'daily', row() + row(number=2) + row(number=4))])
