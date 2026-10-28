@@ -102,6 +102,17 @@ class PublishBudgetTests(unittest.TestCase):
         result, count = self.counted(self.lane.observation('2026-10-02', 'daily', row(number=2)))
         self.assertEqual((result.outcome, count), ('published', 0))
 
+    def test_a_replayed_incremental_candidate_is_fully_checked_once(self):
+        # A replayed or crash-recovered candidate skips C6, so `_existing`'s full check is its only check (C3, S1).
+        base = self.lane.build([self.lane.observation('2026-10-01', 'daily', row())])
+        daily = self.lane.observation('2026-10-02', 'daily', row(number=2))
+        counts = []
+        for _ in range(2):  # No pointer commits between the two builds.
+            with patch.object(generation, '_validate_row_origins', wraps=generation._validate_row_origins) as full:
+                candidate = self.lane.build([daily], base)
+            counts.append((candidate.manifest_ref, full.call_count))
+        self.assertEqual(counts, [(counts[0][0], 0), (counts[0][0], 1)])
+
 
 if __name__ == '__main__':
     unittest.main()

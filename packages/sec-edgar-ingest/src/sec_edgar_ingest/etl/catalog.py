@@ -17,8 +17,9 @@ from ..storage.contracts import BoundaryObserver, Conflict, ObjectStore, observe
 from . import incremental
 from .contracts import (ABSENCE_REASON, BUSINESS_FIELDS, WITHDRAWAL_REASON, Candidate, FileRef, GenerationCapture,
                         GenerationManifest, IndexRow, ObservationRef, arrow_row, canonical_schema, change_schema)
-from .manifest import (check_candidate_integrity, gate_payload, gate_ref, generation_base, generation_identity,
-                       iter_file_rows, read_manifest, source_fingerprint, validate_candidate_content, validate_files)
+from .manifest import (_validate_identity, check_candidate_integrity, gate_payload, gate_ref, generation_base,
+                       generation_identity, iter_file_rows, read_manifest, source_fingerprint,
+                       validate_candidate_content, validate_files)
 from .state import EtlState
 from .transform import BATCH_ROWS, PARQUET_VERSION, _check_deadline, _file_identity, _validate_context, read_observations, transform_member
 
@@ -271,6 +272,7 @@ def _incremental_candidate(quarter, previous, active, selected, membership, mode
             files.append(ref)
     manifest = _generation(quarter, generation_id, previous, fingerprint, context, selected, files,
                            delta.counts, mode, membership, retained)
+    _validate_identity(manifest)  # The full path checks it in `validate_files`, also before the manifest is stored.
     candidate = _store_manifest(manifest, previous, objects, observer)
     validate_incremental_candidate(candidate, previous, context, objects)
     observe(observer, 'candidate.after_validation')

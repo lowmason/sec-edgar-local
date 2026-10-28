@@ -430,7 +430,7 @@ class SupersessionWorkflowTests(ReconcileFixture):
             h.objects.read(approval_ref('2026Q3', listed['generation_id']))
         self.assertEqual(self.names(h, '2026Q3'), ['A', 'B'])
 
-    def test_revert_detection_reads_the_active_generation_through_full_validation(self):
+    def test_revert_detection_reads_the_active_generation_through_the_c1_integrity_check(self):
         h = self.harness((A, B))
         self.assertEqual(self.run_phase(h, 'backfill', 'base')[0], 0)
         code, _, added = self.run_phase(h, 'reconcile', 'add', (A, B, C))

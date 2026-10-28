@@ -2,16 +2,22 @@
 from network_guard import install
 install()
 
+import hashlib
 import unittest
 from collections import Counter
 from datetime import date
 from unittest.mock import patch
 
+import pyarrow.parquet as pq
+
+from support import fixture_snapshot, fixture_source
 from support_catalog import Lane, row
 from support_incremental import Twin
 from sec_edgar_ingest.etl import equivalence, incremental
+from sec_edgar_ingest.etl.contracts import ObservationRef, observation_base, observation_schema
 from sec_edgar_ingest.etl.publication import publish_quarter
-from sec_edgar_ingest.models import canonical_json, parse_json
+from sec_edgar_ingest.etl.transform import OBSERVATION_FORMAT, PARQUET_VERSION
+from sec_edgar_ingest.models import canonical_json, parse_json, to_mapping_value
 
 OPEN = date(2026, 10, 7)
 CLOSED = date(2027, 1, 7)
@@ -206,6 +212,52 @@ class MembershipWorkTests(unittest.TestCase):
                          [('unresolved_absence', '000001.txt'), ('unresolved_absence', '000002.txt'),
                           ('added', '000003.txt')])
         self.assertEqual((delta.counts['unresolved_absence'], delta.counts['retained'], delta.counts['data']), (2, 2, 3))
+
+
+def empty_daily(lane, day='2026-10-03'):
+    """A durable daily observation with no rows. Transform refuses an empty file, so the test writes one."""
+    source = fixture_source(day, 'daily')
+    snapshot = fixture_snapshot(source, b'no rows')
+    base = observation_base(source.source_id, snapshot.sha256, lane.context.parser_version, lane.context.schema_version)
+    target = lane.root / 'empty-rows.parquet'
+    pq.ParquetWriter(target, observation_schema(), version=PARQUET_VERSION, compression='snappy',
+                     use_dictionary=False, use_compliant_nested_type=False).close()
+    body = target.read_bytes()
+    ref = ObservationRef(source, snapshot, lane.context.parser_version, lane.context.schema_version,
+                         base + '/rows.parquet', base + '/manifest.json', hashlib.sha256(body).hexdigest(), len(body),
+                         0, 0, {})
+    lane.objects.put_once(ref.rows_ref, body)
+    lane.objects.put_once(ref.manifest_ref, canonical_json({'format_version': OBSERVATION_FORMAT,
+                                                            'observation': ref.to_mapping(),
+                                                            'runtime': to_mapping_value(lane.context.runtime)}))
+    return ref
+
+
+class EmptyDeltaSourceTests(unittest.TestCase):
+    """M1: the incremental path checks the manifest identity before it stores the manifest, as the full path does."""
+
+    def generation_objects(self, lane):
+        root = lane.path('curated/sec/filing_index')
+        return sorted(str(path.relative_to(root)) for path in root.rglob('*.json'))
+
+    def test_an_empty_delta_source_is_refused_before_a_manifest_is_stored(self):
+        for path_name, eligible in (('full', False), ('incremental', True)):
+            with self.subTest(path_name):
+                lane = Lane(command='publish')
+                self.addCleanup(lane.close)
+                publish = lambda ref: publish_quarter('2026Q4', (ref,), lane.context, lane.settings,
+                                                      lane.objects, lane.state)
+                publish(lane.observation('2026-10-01', 'daily', row()))
+                pointer, stored = lane.state.pointer('2026Q4'), self.generation_objects(lane)
+                with patch.object(incremental, 'build_incremental', wraps=incremental.build_incremental) as built, \
+                        patch.object(incremental, 'eligible', wraps=incremental.eligible) as checked:
+                    if not eligible:
+                        checked.side_effect = lambda *args: False
+                    with self.assertRaisesRegex(ValueError, 'invalid_source'):
+                        publish(empty_daily(lane))
+                self.assertEqual(built.call_count, int(eligible))
+                self.assertEqual(lane.state.pointer('2026Q4'), pointer)
+                self.assertEqual(self.generation_objects(lane), stored)
 
 
 class PrePointerRefusalTests(unittest.TestCase):
