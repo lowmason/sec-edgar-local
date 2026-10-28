@@ -112,6 +112,14 @@ Out of scope:
    before the pointer commits. An error that both paths share would pass C6. The oracle tests guard that
    case. A generation that is wrong but committed would fail the full check in a later `read_quarter`.
    Recovery is then `rollback` to its base.
+   A candidate that C6 refuses stays in the store. Its address depends only on the quarter, the base
+   generation and the source fingerprint, and the store is write-once. So a retry with the same inputs
+   finds the stored candidate and runs the full check on it. That check fails, and `publish` reports
+   `invalid_source`, which is not retryable. A fix to C5 does not change this result. The block ends
+   only when the source set or the base changes, or when an operator removes the candidate's objects
+   from the object store. The code has no command for that removal. Each blocked retry costs one full
+   check. For a full-size quarter, one full check took about 415 s in the Stage 1b diagnosis probe
+   (`specs/evidence/stage1b/diagnosis.md`, §1).
 6. **Validator changes.** A generation is content-checked when its pointer commits. A validator fix
    in a later release is not re-applied to older generations by the engine. `read_quarter` still
    applies the current release's full check (S1).

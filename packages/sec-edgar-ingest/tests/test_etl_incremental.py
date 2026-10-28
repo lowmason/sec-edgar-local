@@ -14,6 +14,7 @@ from support import fixture_snapshot, fixture_source
 from support_catalog import Lane, row
 from support_incremental import Twin
 from sec_edgar_ingest.etl import equivalence, incremental
+from sec_edgar_ingest.etl import manifest as generation
 from sec_edgar_ingest.etl.contracts import ObservationRef, observation_base, observation_schema
 from sec_edgar_ingest.etl.publication import publish_quarter
 from sec_edgar_ingest.etl.transform import OBSERVATION_FORMAT, PARQUET_VERSION
@@ -233,12 +234,14 @@ def empty_daily(lane, day='2026-10-03'):
     return ref
 
 
+def generation_objects(lane):
+    """The stored generation manifests and retained-base records, by path."""
+    root = lane.path('curated/sec/filing_index')
+    return sorted(str(path.relative_to(root)) for path in root.rglob('*.json'))
+
+
 class EmptyDeltaSourceTests(unittest.TestCase):
     """M1: the incremental path checks the manifest identity before it stores the manifest, as the full path does."""
-
-    def generation_objects(self, lane):
-        root = lane.path('curated/sec/filing_index')
-        return sorted(str(path.relative_to(root)) for path in root.rglob('*.json'))
 
     def test_an_empty_delta_source_is_refused_before_a_manifest_is_stored(self):
         for path_name, eligible in (('full', False), ('incremental', True)):
@@ -248,7 +251,7 @@ class EmptyDeltaSourceTests(unittest.TestCase):
                 publish = lambda ref: publish_quarter('2026Q4', (ref,), lane.context, lane.settings,
                                                       lane.objects, lane.state)
                 publish(lane.observation('2026-10-01', 'daily', row()))
-                pointer, stored = lane.state.pointer('2026Q4'), self.generation_objects(lane)
+                pointer, stored = lane.state.pointer('2026Q4'), generation_objects(lane)
                 with patch.object(incremental, 'build_incremental', wraps=incremental.build_incremental) as built, \
                         patch.object(incremental, 'eligible', wraps=incremental.eligible) as checked:
                     if not eligible:
@@ -257,7 +260,7 @@ class EmptyDeltaSourceTests(unittest.TestCase):
                         publish(empty_daily(lane))
                 self.assertEqual(built.call_count, int(eligible))
                 self.assertEqual(lane.state.pointer('2026Q4'), pointer)
-                self.assertEqual(self.generation_objects(lane), stored)
+                self.assertEqual(generation_objects(lane), stored)
 
 
 class PrePointerRefusalTests(unittest.TestCase):
@@ -277,10 +280,22 @@ class PrePointerRefusalTests(unittest.TestCase):
                 output = canonical_json({**parse_json(output), 'company_name': 'Wrong'})
             return output, change
 
+        daily = lane.observation('2026-10-02', 'daily', row(number=2))
+        stored = generation_objects(lane)
         with patch.object(incremental, '_resolve_touched', side_effect=wrong), \
                 self.assertRaisesRegex(ValueError, 'incremental rows differ'):
-            publish(lane.observation('2026-10-02', 'daily', row(number=2)))
+            publish(daily)
         self.assertEqual(lane.state.pointer('2026Q4'), pointer)
+        refused = generation_objects(lane)
+        self.assertEqual(len(refused), len(stored) + 2)  # The refused candidate's manifest and retained-base stay.
+        # I1: a retry with the same inputs, and a correct C5, finds the stored candidate through `_existing`.
+        # Its full check fails, so the quarter stays blocked for these inputs (`run_publish`: invalid_source).
+        with patch.object(generation, '_validate_row_origins', wraps=generation._validate_row_origins) as full, \
+                self.assertRaisesRegex(ValueError, 'canonical row is not a selected observation or exact retained row'):
+            publish(daily)
+        self.assertEqual(full.call_count, 1)
+        self.assertEqual(lane.state.pointer('2026Q4'), pointer)
+        self.assertEqual(generation_objects(lane), refused)
 
 
 if __name__ == '__main__':
