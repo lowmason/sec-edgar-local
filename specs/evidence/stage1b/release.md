@@ -47,3 +47,24 @@ The D5 release, `fc68adef…` and the older releases are all kept. No existing r
 
 ## 4. Network
 No SEC request was sent. Verification used fixture acquisition only.
+
+## Live-config selection
+The owner approved this selection on 2026-10-28 (plan 5 Decision D11), after the approved floor and reserve (Decision D10).
+
+`conf/sec-edgar-local.json` changed in one value: `runtime.release_manifest` now names `/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json`. Before, it named the D5 manifest (`aa8de1ac…`). `execution.dispatch_reserve_seconds` was already `1800` (plan 4 D4), so it did not change. Nothing else changed.
+
+The offline check ran on the 1b interpreter (`-I -B -X pycache_prefix=/dev/null`) with `load_config`, `admit_dispatch_reserve`, `preflight_current` and `deployment_binding`. It ran no launcher command and opened no store. Its output:
+
+```
+floor 480
+reserve 1800
+release 9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b
+effective db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1
+binding {'binding_version': 'sec-local-binding-v1', 'root': '/Users/lowell/Projects/sec-edgar-local/data', 'acquisition_mode': 'live', 'namespace': 'sec-owner-lowell-mason', 'sec': {'user_agent': 'Lowell Mason sec-edgar-ingest mason.lowell@mac.com', 'requests_per_second': 3.0, 'max_active_collectors': 1}, 'coordination': {'lease_seconds': 60.0, 'renew_every_seconds': 20.0, 'namespace': 'sec-owner-lowell-mason', 'clock_uncertainty_seconds': 2.0}, 'storage_contract': 'sec-local-storage-v1'}
+```
+
+The effective-config SHA-256 is `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`. It was `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e` with the D5 manifest. The binding has no `execution` field and no `runtime` field.
+
+The floor is the committed constant `DISPATCH_RESERVE_FLOOR_SECONDS` = 480 (measurement: P4 floor rule 300 s, so the C8 floor stays 480 s). The reserve is 1,800 s.
+
+No SEC request was sent in this stage.
