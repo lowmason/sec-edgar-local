@@ -25,7 +25,7 @@ The manifest `git_revision` differs from D5 (`50423a40…` against `d68787fe…`
 ## 3. Offline verification and retention
 > Note: the harness guard refuses any path inside a checkout, and the verifier children inherit the working directory. So the harness and the evidence directory were created under a temporary directory outside the checkout (`/var/folders/3m/6f8zc0l14dn8yz2x8yy2_3mw0000gn/T/tmp.OOWRlKQYRr`). The verifier ran with that directory as its working directory. This is the same method as the D5 release evidence.
 
-The verifier ran on the 1b interpreter (`-I -B -X pycache_prefix=/dev/null`). Its output:
+The verifier ran on the 1b interpreter (`-I -B -X pycache_prefix=/dev/null`). Its output is below. The `evidence` path in it is the temporary directory. The evidence was then copied to the durable evidence directory given below.
 
 ```json
 {"exit": 0, "release_id": "9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b", "evidence": "/var/folders/3m/6f8zc0l14dn8yz2x8yy2_3mw0000gn/T/tmp.OOWRlKQYRr/evidence"}
@@ -50,6 +50,8 @@ No SEC request was sent. Verification used fixture acquisition only.
 
 ## Live-config selection
 The owner approved this selection on 2026-10-28 (plan 5 Decision D11), after the approved floor and reserve (Decision D10).
+
+Commit: `6d80da4d9e1f30461c45a826fecbf8eefc899201`.
 
 `conf/sec-edgar-local.json` changed in one value: `runtime.release_manifest` now names `/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json`. Before, it named the D5 manifest (`aa8de1ac…`). `execution.dispatch_reserve_seconds` was already `1800` (plan 4 D4), so it did not change. Nothing else changed.
 

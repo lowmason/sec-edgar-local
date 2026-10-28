@@ -245,8 +245,18 @@ through checked publication after a crash.
 
 Atomicity is per quarter, not across the complete historical catalog. Readers capture a generation
 with `capture_quarter`, then use `read_quarter` to validate its manifest, files, and counts before
-exposing rows. Retained captures remain stable when active pointers change. A reproducible
-multi-quarter read records every capture; it does not scan all retained Parquet generations.
+exposing rows. The engine checks a generation or an observation that a committed pointer, a retained
+capture or a checked result names by its exact manifest and file hashes, without reading rows; the
+full content check runs once, before a full rebuild's pointer commits, and again in `read_quarter`,
+`approve` and `rollback`. A quarter that only gains new sources is rebuilt from its base generation
+and the new rows, and an equivalence check against the full path's resolution of every key that can
+change runs before its pointer commits. A candidate that the equivalence check refuses stays in the
+write-once store. A retry with the same inputs runs the full check on it, and when that check fails
+it reports `invalid_source`, even after a code fix, unless that fix changes the retained basis.
+Otherwise the quarter recovers only when its source set or base changes, or when an operator removes
+that candidate's objects from the object store. (Stage 1b, plan 5; C1–C6, C11.) Retained captures
+remain stable when active pointers change. A reproducible multi-quarter read records every capture;
+it does not scan all retained Parquet generations.
 
 ### 4.7 Invocation evidence, recovery, and operators
 
@@ -307,16 +317,21 @@ from the canonical normalized effective-config hash.
 | Parser / schema | `sec-index-parser-v1` / `sec-index-v1`. |
 | Withdrawal approval | `reconciliation.require_withdrawal_approval=true`. |
 | Execution | Live maximum 3,600 seconds; launcher default 3,300 seconds. |
-| Dispatch reserve | `execution.dispatch_reserve_seconds=1800` (provisional, plan 4 D2 and D4). Required for a new live workflow run. The value must be at least the floor of 480 seconds (release constant) and below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4.) |
+| Dispatch reserve | `execution.dispatch_reserve_seconds=1800`, set from measured member costs (Stage 1b, plan 5; [measurement](evidence/stage1b/measurement.md)). Required for a new live workflow run. The value must be at least the floor of 480 seconds (release constant) and below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4; Stage 1b, plan 5.) |
 | Runtime | `kind=native`; explicit content-addressed `release_manifest`. |
 
 The selected manifest is:
 
 ```text
-/Users/lowell/Projects/sec-edgar-local/releases/sha256=aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4/release.json
+/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json
 ```
 
-Stage 1a (plan 4) selected the D5 release
+Stage 1b (plan 5) selected the 1b release
+`9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` and the measured reserve at
+commit `6d80da4d9e1f30461c45a826fecbf8eefc899201`. The effective-config SHA-256 is
+`db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.
+
+Before that, Stage 1a (plan 4) selected the D5 release
 `aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4` and added the dispatch reserve,
 at commit `62ce1403f192ff18537d28842548af1be2ecfe57`. The effective-config SHA-256 is
 `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e`, confirmed by offline preflight.
@@ -356,6 +371,14 @@ a D5 live run carry the D5 config, so `fc68adef…` probably cannot validate the
 untested inference. After a D5 live run has written to a store, selecting `fc68adef…` again for that
 store is unsupported. The D5 release continues `fc68adef…`-origin pending work. (Stage 1a, plan 4;
 [two-release evidence](evidence/d5-release/two-release.md).)
+
+The 1b release changes no generation, manifest, receipt, selection or config format (C7). It continues
+D5-origin pending work. Selecting the D5 release again is supported for a store that holds 1b
+first-generation (full-rebuild) generations and 1b and sibling-completion receipts. This was tested
+once, on fixture packs. D5 reading an incremental 1b generation is not tested. It rests on the byte
+identity of an incremental generation with the full rebuild (C5). A D5 publish on top of a 1b
+generation is also not tested. (Stage 1b, plan 5;
+[two-release evidence](evidence/stage1b/two-release.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,
