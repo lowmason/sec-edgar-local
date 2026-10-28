@@ -115,9 +115,9 @@ Out of scope:
    A candidate that C6 refuses stays in the store. Its address depends only on the quarter, the base
    generation and the source fingerprint, and the store is write-once. So a retry with the same inputs
    finds the stored candidate and runs the full check on it. That check fails, and `publish` reports
-   `invalid_source`, which is not retryable. A fix to C5 does not change this result. The block ends
-   only when the source set or the base changes, or when an operator removes the candidate's objects
-   from the object store. The code has no command for that removal. Each blocked retry costs one full
+   `invalid_source`, which is not retryable. A fix to C5 does not change this result, unless the fix
+   changes the retained basis, which is part of the fingerprint. Otherwise the block ends only when the
+   source set or the base changes, or when an operator removes the candidate's objects from the object store. The code has no command for that removal. Each blocked retry costs one full
    check. For a full-size quarter, one full check took about 415 s in the Stage 1b diagnosis probe
    (`specs/evidence/stage1b/diagnosis.md`, §1).
 6. **Validator changes.** A generation is content-checked when its pointer commits. A validator fix
