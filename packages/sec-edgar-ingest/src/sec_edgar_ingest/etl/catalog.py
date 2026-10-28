@@ -121,10 +121,15 @@ def _database(path):
     return db
 
 
+def _require_rows(ref):
+    """Both build paths refuse an empty source before they read or stage anything."""
+    if not ref.source_row_count:
+        raise ValueError('invalid_source: empty source observations')
+
+
 def _load_observations(db, selected, quarter, membership, objects, context, read=read_observations):
     for ref in selected:
-        if not ref.source_row_count:
-            raise ValueError('invalid_source: empty source observations')
+        _require_rows(ref)
         with closing(read(ref, objects)) as rows:
             for obs in rows:
                 if quarter_for(obs.row.filing_date) != quarter:
@@ -256,6 +261,8 @@ def _identify_candidate(quarter, previous, selected, mode, membership, retained_
 def _incremental_candidate(quarter, previous, active, selected, membership, mode, context, objects, state, observer):
     """C5, then C6 before the gate and pointer steps."""
     from .equivalence import validate_incremental_candidate
+    for ref in selected:
+        _require_rows(ref)
     delta = incremental.build_incremental(quarter, active, selected, membership, mode, context, objects)
     retained, fingerprint, generation_id, existing = _identify_candidate(
         quarter, previous, selected, mode, membership, delta.counts['retained'], objects, state, observer)
