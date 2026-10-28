@@ -7,6 +7,7 @@ import unittest
 from dataclasses import replace
 from datetime import date
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -138,6 +139,16 @@ class EquivalenceTests(unittest.TestCase):
         rows.insert(3, rows[2])
         with self.assertRaisesRegex(ValueError, 'generation keys are duplicate or unsorted'):
             self.check(lane, forge(lane, candidate, data=rows, row_count=4), base)
+
+    def test_refuses_a_duplicated_touched_row_by_its_count_alone(self):
+        # With the order check skipped, the row count from the full resolution is a second, independent defence.
+        lane, base, candidate = self.open_addition()
+        rows = lane.rows(candidate)
+        rows.insert(3, rows[2])
+        forged = forge(lane, candidate, data=rows, row_count=len(rows))
+        with patch.object(equivalence, '_strictly_sorted'), \
+                self.assertRaisesRegex(ValueError, 'incremental counts differ from the full resolution'):
+            self.check(lane, forged, base)
 
     def test_refuses_a_changed_touched_change_row(self):
         lane, base, candidate = self.open_addition()
