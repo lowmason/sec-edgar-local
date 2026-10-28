@@ -245,18 +245,24 @@ through checked publication after a crash.
 
 Atomicity is per quarter, not across the complete historical catalog. Readers capture a generation
 with `capture_quarter`, then use `read_quarter` to validate its manifest, files, and counts before
-exposing rows. The engine checks a generation or an observation that a committed pointer, a retained
-capture or a checked result names by its exact manifest and file hashes, without reading rows; the
-full content check runs once, before a full rebuild's pointer commits, and again in `read_quarter`,
-`approve` and `rollback`. A quarter that only gains new sources is rebuilt from its base generation
-and the new rows, and an equivalence check against the full path's resolution of every key that can
-change runs before its pointer commits. A candidate that the equivalence check refuses stays in the
+exposing rows. Retained captures remain stable when active pointers change. A reproducible
+multi-quarter read records every capture; it does not scan all retained Parquet generations.
+
+The engine checks a generation or an observation that a committed pointer, a retained capture or a
+checked result names by its exact manifest and file hashes, without reading rows; the full content
+check runs once, before a full rebuild's pointer commits, and again in `read_quarter`, `approve` and
+`rollback`, and on a stored candidate that a retry or a replay finds. A quarter takes the incremental
+path only when it has a `clear` active generation with the same quarter mode, parser and schema, keeps
+that generation's sources and membership authority, and gains only sources that are new to it. Such a
+quarter is rebuilt from its base generation and the new rows, and an equivalence check against the
+full path's resolution of every key that can change runs before its pointer commits. Every other
+quarter takes the full rebuild. A candidate that the equivalence check refuses stays in the
 write-once store. A retry with the same inputs runs the full check on it, and when that check fails
 it reports `invalid_source`, even after a code fix, unless that fix changes the retained basis.
-Otherwise the quarter recovers only when its source set or base changes, or when an operator removes
-that candidate's objects from the object store. (Stage 1b, plan 5; C1–C6, C11.) Retained captures
-remain stable when active pointers change. A reproducible multi-quarter read records every capture;
-it does not scan all retained Parquet generations.
+Otherwise the quarter recovers only when its source set or base changes. Removing the candidate's
+objects is not a supported recovery step. §4.7 forbids deleting objects to reset state, and no
+command exists for it. Such a removal needs a separately reviewed operational decision.
+(Stage 1b, plan 5; C1–C6 and C11 in the [1b spec](sec-filing-index-per-member-cost.md).)
 
 ### 4.7 Invocation evidence, recovery, and operators
 
@@ -327,8 +333,9 @@ The selected manifest is:
 ```
 
 Stage 1b (plan 5) selected the 1b release
-`9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` and the measured reserve at
-commit `6d80da4d9e1f30461c45a826fecbf8eefc899201`. The effective-config SHA-256 is
+`9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` at commit
+`6d80da4d9e1f30461c45a826fecbf8eefc899201`. The reserve stays at 1800 s, which Stage 1a set. The
+Stage 1b [measurement](evidence/stage1b/measurement.md) now backs it. The effective-config SHA-256 is
 `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.
 
 Before that, Stage 1a (plan 4) selected the D5 release
@@ -377,8 +384,8 @@ D5-origin pending work. Selecting the D5 release again is supported for a store 
 first-generation (full-rebuild) generations and 1b and sibling-completion receipts. This was tested
 once, on fixture packs. D5 reading an incremental 1b generation is not tested. It rests on the byte
 identity of an incremental generation with the full rebuild (C5). A D5 publish on top of a 1b
-generation is also not tested. (Stage 1b, plan 5;
-[two-release evidence](evidence/stage1b/two-release.md).)
+generation is also not tested. (Stage 1b, plan 5; C5 and C7 in the
+[1b spec](sec-filing-index-per-member-cost.md); [two-release evidence](evidence/stage1b/two-release.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,

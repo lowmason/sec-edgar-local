@@ -71,7 +71,7 @@ Out of scope:
 |---|---|
 | `etl/manifest.py` | C1 integrity check (`check_candidate_integrity`). Full checks unchanged. |
 | `etl/reader.py` | `checked_manifest`, the C1 check of a pinned capture, beside `validated_manifest`; `capture_quarter` uses it (C2). `read_quarter` unchanged (C3). |
-| `etl/transform.py` | C11 integrity check (`checked_observation`). `_read_manifest` keeps the full readback for the `transform` child. |
+| `etl/transform.py` | C11 integrity check (`checked_observation`). The full readback stays in the `transform` child (`_read_manifest`), the full content check (`manifest._validate_row_origins`) and the full rebuild's reads of source rows (`catalog._load_observations`, through `read_observations`). |
 | `etl/commands.py` `_affected_quarters` | C1 (C2). |
 | `workflows/completion.py`, `workflows/checked.py`, `workflows/runner.py` | Engine call sites move to C1 (C2) and C11. `workflows/processing.py` and `workflows/results.py` reach C1 and C11 through these modules and do not change. |
 | `etl/publication.py` `publish_quarter` | C1 for the previous generation and for the built candidate. C11 for its incoming references. |
@@ -122,9 +122,11 @@ Out of scope:
    not C6's re-derivation. When that check fails, `publish` reports `invalid_source`, which is not
    retryable. The tested case is a wrong company name in an incremental row. A fix to C5 does not
    change this result, unless the fix changes the retained basis, which is part of the fingerprint.
-   Otherwise the block ends only when the source set or the base changes, or when an operator removes
-   the candidate's objects from the object store. The code has no command for that removal. Each
-   blocked retry costs one full check. For a full-size quarter, one full check took about 415 s in
+   Otherwise the block ends only when the source set or the base changes. Removing the candidate's
+   objects is not a supported recovery step. Parent §4.7 forbids deleting objects to reset state, and
+   the code has no command for that removal. Such a removal needs a separately reviewed operational
+   decision (owner, plan 5 D12, 2026-10-28). Each blocked retry costs one full check. For a
+   full-size quarter, one full check took about 415 s in
    the Stage 1b diagnosis probe (`specs/evidence/stage1b/diagnosis.md`, §1).
 6. **Validator changes.** A generation is checked before its pointer commits: by the full content
    check, or by C6 for an incremental candidate. A validator fix in a later release is not re-applied
