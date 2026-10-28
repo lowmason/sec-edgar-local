@@ -97,6 +97,11 @@ class PublishBudgetTests(unittest.TestCase):
         result, count = self.counted(revised)
         self.assertEqual((result.outcome, count), ('awaiting_approval', 1))
 
+    def test_an_incremental_rebuild_is_not_fully_checked(self):
+        self.publish(self.lane.observation('2026-10-01', 'daily', row()))
+        result, count = self.counted(self.lane.observation('2026-10-02', 'daily', row(number=2)))
+        self.assertEqual((result.outcome, count), ('published', 0))
+
 
 if __name__ == '__main__':
     unittest.main()
