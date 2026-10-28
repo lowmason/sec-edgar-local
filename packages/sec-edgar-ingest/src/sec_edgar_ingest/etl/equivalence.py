@@ -15,7 +15,8 @@ import pyarrow.compute as pc
 
 from ..models import RunContext, canonical_json
 from ..storage.contracts import ObjectStore
-from .columnar import generation_table, key_mask, quarter_observations, table_keys
+from .columnar import (generation_table, key_column, key_mask, quarter_key_column, quarter_observations,
+                       table_keys)
 from .contracts import Candidate, GenerationCapture, IndexRow
 from .manifest import _row, check_candidate_integrity
 from .reader import checked_manifest
@@ -42,9 +43,10 @@ def _recomputed_keys(manifest, delta, base_data, objects) -> set:
             for obs in quarter_observations(ref, objects, manifest.quarter)}
     if manifest.quarter_mode == 'open' and manifest.membership_source is not None:
         # Locality exception (A1): any base key the authority does not list may become absent.
-        members = {(obs.row.cik, obs.row.archive_path)
-                   for obs in quarter_observations(manifest.membership_source, objects, manifest.quarter)}
-        keys |= table_keys(base_data) - members
+        # Membership stays in Arrow, so only the non-member base rows become Python keys.
+        members = quarter_key_column(manifest.membership_source, objects, manifest.quarter).combine_chunks()
+        listed = pc.is_in(key_column(base_data), value_set=members)
+        keys |= table_keys(base_data.filter(pc.invert(listed)))
     return keys
 
 

@@ -6,11 +6,14 @@ import hashlib
 import unittest
 from dataclasses import replace
 from datetime import date
+from types import SimpleNamespace
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 from support_catalog import Lane, capture, row
+from sec_edgar_ingest.etl import equivalence
+from sec_edgar_ingest.etl.columnar import generation_table
 from sec_edgar_ingest.etl.contracts import canonical_schema, change_schema
 from sec_edgar_ingest.etl.equivalence import validate_incremental_candidate
 from sec_edgar_ingest.etl.manifest import generation_base, generation_identity, source_fingerprint
@@ -163,6 +166,26 @@ class EquivalenceTests(unittest.TestCase):
         lane, base, candidate = self.open_addition()
         with self.assertRaisesRegex(ValueError, 'counts differ'):
             self.check(lane, forge(lane, candidate, updated=candidate.manifest.updated + 1), base)
+
+    def test_recomputes_every_base_key_that_the_authority_does_not_list_in_the_quarter(self):
+        lane = self.lane()
+        base = lane.build([lane.observation('2026-10-01', 'daily', row() + row(number=2) + row(number=4))])
+        data = generation_table(next(ref for ref in base.manifest.files if ref.role == 'data'), lane.objects)
+        chunked = pa.concat_tables([data.slice(0, 1), data.slice(1)])  # `is_in` must accept a chunked key column.
+        daily = lane.observation('2026-10-02', 'daily', row(number=3))
+        key = lambda number: ('0000123456', f'edgar/data/123456/0000123456-26-{number:06}.txt')
+        cases = {
+            'no authority row in the quarter': (row(number=1, day='2026-09-30') + row(number=2, day='2026-09-30'),
+                                                {key(1), key(2), key(3), key(4)}),
+            'key 2 listed only outside the quarter': (row(number=1) + row(number=4) + row(number=2, day='2026-09-30'),
+                                                      {key(2), key(3)}),
+        }
+        for label, (rows, expected) in cases.items():
+            with self.subTest(label):
+                authority = lane.observation(rows=rows, seconds=len(expected))
+                manifest = SimpleNamespace(quarter='2026Q4', quarter_mode='open', membership_source=authority)
+                for table in (data, chunked):
+                    self.assertEqual(equivalence._recomputed_keys(manifest, [daily], table, lane.objects), expected)
 
     def test_refuses_a_candidate_checked_against_another_base(self):
         lane, base, candidate = self.open_addition()

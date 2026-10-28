@@ -16,7 +16,8 @@ import pyarrow.parquet as pq
 
 from ..models import RunContext, canonical_json, parse_json
 from ..storage.contracts import ObjectStore
-from .columnar import Key, generation_table, key_mask, quarter_observations, table_keys
+from .columnar import (KEY_SEPARATOR, Key, generation_table, key_column, key_mask, quarter_key_column,
+                       quarter_observations, table_keys)
 from .contracts import (ABSENCE_REASON, BUSINESS_FIELDS, WITHDRAWAL_REASON, GenerationManifest, IndexRow,
                         ObservationRef, arrow_row, canonical_schema, change_schema)
 from .transform import BATCH_ROWS, PARQUET_VERSION, _check_deadline
@@ -118,12 +119,17 @@ def build_incremental(quarter: str, active: GenerationManifest, selected: tuple[
         _check_deadline(context)
     touched = set(delta)
     unresolved_rows, unresolved = _change_keys(base_changes, 'unresolved_absence')
-    added = (_change_keys(base_changes, 'added')[1] - touched) if mode == 'open' and membership else set()
-    members = set()
+    members, flips = set(), set()
     if membership is not None:
-        members = {(obs.row.cik, obs.row.archive_path)
-                   for obs in quarter_observations(membership, objects, quarter, touched | added)}
-    flips = added - members  # Locality exception (A1).
+        # The authority's keys stay in Arrow, so only touched keys and flips become Python keys.
+        listed = quarter_key_column(membership, objects, quarter).combine_chunks()
+        ordered = sorted(touched)
+        hits = pc.is_in(pa.array([cik + KEY_SEPARATOR + path for cik, path in ordered], pa.string()), value_set=listed)
+        members = {key for key, hit in zip(ordered, hits.to_pylist()) if hit}
+        if mode == 'open':  # Locality exception (A1): untouched base `added` keys that the authority does not list.
+            added = base_changes.filter(pc.equal(base_changes['change_type'], 'added'))
+            untouched = added.filter(pc.invert(key_mask(added, touched)))
+            flips = table_keys(untouched.filter(pc.invert(pc.is_in(key_column(untouched), value_set=listed))))
     base_rows = {}
     for value in base_data.filter(key_mask(base_data, touched | flips)).to_pylist():
         row = IndexRow(**value)

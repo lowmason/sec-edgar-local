@@ -14,7 +14,8 @@ import pyarrow as pa
 from support_catalog import Lane, row
 from sec_edgar_ingest.etl import transform
 from sec_edgar_ingest.etl.catalog import _database, _load_observations
-from sec_edgar_ingest.etl.columnar import generation_table, key_mask, quarter_observations, table_keys
+from sec_edgar_ingest.etl.columnar import (KEY_SEPARATOR, generation_table, key_mask, quarter_key_column,
+                                           quarter_observations, table_keys)
 from sec_edgar_ingest.etl.manifest import iter_file_rows
 from sec_edgar_ingest.etl.transform import read_observations
 from sec_edgar_ingest.models import quarter_for
@@ -64,6 +65,16 @@ class ColumnarReaderTests(unittest.TestCase):
         self.changed(self.ref.rows_ref)
         with self.assertRaisesRegex(Conflict, 'observation bytes differ from manifest hash or length'):
             list(quarter_observations(self.ref, self.lane.objects, '2026Q4'))
+
+    def test_the_quarter_key_column_holds_the_keys_of_the_quarter_rows(self):
+        for quarter in ('2026Q4', '2026Q3', '2026Q2'):
+            with self.subTest(quarter=quarter):
+                expected = [obs.row.cik + KEY_SEPARATOR + obs.row.archive_path
+                            for obs in quarter_observations(self.ref, self.lane.objects, quarter)]
+                self.assertEqual(quarter_key_column(self.ref, self.lane.objects, quarter).to_pylist(), expected)
+        self.changed(self.ref.rows_ref)
+        with self.assertRaisesRegex(Conflict, 'observation bytes differ from manifest hash or length'):
+            quarter_key_column(self.ref, self.lane.objects, '2026Q4')
 
     def test_key_masks_select_exact_pairs(self):
         table = pa.table({'cik': ['1', '1', '2'], 'archive_path': ['a', 'b', 'a']})

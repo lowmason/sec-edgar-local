@@ -67,19 +67,28 @@ def _quarter_bounds(quarter: str) -> tuple[date, date]:
     return start, date(year + 1, 1, 1) if ordinal == 4 else date(year, 3 * ordinal + 1, 1)
 
 
-def quarter_observations(ref: ObservationRef, objects: ObjectStore, quarter: str,
-                         keys: Iterable[Key] | None = None) -> Iterator[Observation]:
-    """One source's rows filed in `quarter` (only `keys` when given), in file order, after the rows file hash."""
+def _quarter_table(ref: ObservationRef, objects: ObjectStore, quarter: str) -> pa.Table:
     table = _read_table(ref.rows_ref, ref.rows_sha256, ref.rows_bytes, objects, observation_schema(),
                         'observation bytes differ from manifest hash or length', 'observation Parquet schema differs')
     if table.num_rows != ref.source_row_count:
         raise ValueError('observation readback counts differ')
     start, end = _quarter_bounds(quarter)
-    mask = pc.and_(pc.greater_equal(table['filing_date'], pa.scalar(start, pa.date32())),
-                   pc.less(table['filing_date'], pa.scalar(end, pa.date32())))
+    return table.filter(pc.and_(pc.greater_equal(table['filing_date'], pa.scalar(start, pa.date32())),
+                                pc.less(table['filing_date'], pa.scalar(end, pa.date32()))))
+
+
+def quarter_key_column(ref: ObservationRef, objects: ObjectStore, quarter: str) -> pa.ChunkedArray:
+    """The keys of one source's rows filed in `quarter`, in file order, as Arrow strings (no Python rows)."""
+    return key_column(_quarter_table(ref, objects, quarter))
+
+
+def quarter_observations(ref: ObservationRef, objects: ObjectStore, quarter: str,
+                         keys: Iterable[Key] | None = None) -> Iterator[Observation]:
+    """One source's rows filed in `quarter` (only `keys` when given), in file order, after the rows file hash."""
+    table = _quarter_table(ref, objects, quarter)
     if keys is not None:
-        mask = pc.and_(mask, key_mask(table, keys))
-    for value in table.filter(mask).to_pylist():
+        table = table.filter(key_mask(table, keys))
+    for value in table.to_pylist():
         original = tuple(value.pop('original_fields'))
         line_number = value.pop('line_number')
         yield Observation(IndexRow(**value), original, line_number)

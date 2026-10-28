@@ -3,12 +3,13 @@ from network_guard import install
 install()
 
 import unittest
+from collections import Counter
 from datetime import date
 from unittest.mock import patch
 
 from support_catalog import Lane, row
 from support_incremental import Twin
-from sec_edgar_ingest.etl import incremental
+from sec_edgar_ingest.etl import equivalence, incremental
 from sec_edgar_ingest.etl.publication import publish_quarter
 from sec_edgar_ingest.models import canonical_json, parse_json
 
@@ -88,6 +89,15 @@ class OracleTests(TwinCase):
         g3 = self.step(t, [t.observation('2026-10-04', 'daily', row('Again', number=2))], g2)
         self.assertEqual(g3[0].manifest.unresolved_absence, 2)
 
+    def test_an_authority_row_filed_outside_the_quarter_is_not_a_member(self):
+        t = self.twin()
+        g0 = self.step(t, [t.observation(rows=row() + row(number=2, day='2026-09-30'))], incremental_expected=False)
+        g1 = self.step(t, [t.observation('2026-10-02', 'daily', row(number=2))], g0)
+        self.assertEqual((g1[0].manifest.added, g1[0].manifest.unresolved_absence), (1, 0))
+        # Key 2's only authority row is filed in 2026Q3, so key 2 is not a member and flips (A1).
+        g2 = self.step(t, [t.observation('2026-10-03', 'daily', row(number=3))], g1)
+        self.assertEqual((g2[0].manifest.added, g2[0].manifest.unresolved_absence), (1, 1))
+
     def test_closed_daily_only_quarter(self):
         t = self.twin(CLOSED)
         g1 = self.step(t, [t.observation('2026-10-01', 'daily', row() + row(number=2))], incremental_expected=False)
@@ -141,6 +151,61 @@ class FallbackTests(TwinCase):
         self.assertEqual(g3[0].manifest.gate, 'awaiting_approval')
         daily = t.observation('2027-01-02', 'daily', row('Daily', day='2026-10-03'))
         self.step(t, [daily], g3, incremental_expected=False)
+
+
+class MembershipWorkTests(unittest.TestCase):
+    """I2: the membership authority is read as Arrow keys. Only touched keys and flips become Python rows."""
+
+    def setUp(self):
+        self.lane = Lane()
+        self.addCleanup(self.lane.close)
+
+    def counted(self, module, authority, counts):
+        original = module.quarter_observations
+
+        def spy(ref, *args, **kwargs):
+            for obs in original(ref, *args, **kwargs):
+                if ref.source.source_id == authority.source.source_id:
+                    counts[module.__name__] += 1
+                yield obs
+        return patch.object(module, 'quarter_observations', spy)
+
+    def test_an_authority_member_reads_no_more_rows_than_its_touched_keys_and_flips(self):
+        lane = self.lane
+        in_quarter = b''.join(row(number=number) for number in range(1, 41))
+        outside = b''.join(row(number=number, day='2026-09-30') for number in range(41, 46))
+        authority = lane.observation(rows=in_quarter + outside)
+        g0 = lane.build([authority])
+        self.assertEqual(g0.manifest.added, 40)
+        daily = lane.observation('2026-10-02', 'daily', row('Changed', number=1) + row(number=100))
+        counts = Counter()
+        with self.counted(incremental, authority, counts), self.counted(equivalence, authority, counts), \
+                patch.object(incremental, 'build_incremental', wraps=incremental.build_incremental) as built:
+            g1 = lane.build([daily], g0)
+        self.assertEqual(built.call_count, 1)
+        # The authority outranks the daily row for key 1; key 100 is a touched non-member.
+        self.assertEqual((g1.manifest.updated, g1.manifest.added, g1.manifest.unresolved_absence), (0, 1, 0))
+        read = {'C5': counts[incremental.__name__], 'C6': counts[equivalence.__name__]}
+        bound = 2  # Two touched keys and no flips; the authority lists 40 keys in the quarter.
+        self.assertLessEqual(max(read.values()), bound, f'authority rows read as Python: {read}')
+
+    def empty_authority_case(self):
+        """A base that added keys 1 and 2, a delta that adds key 3, and an authority with no row in 2026Q4."""
+        lane = self.lane
+        g0 = lane.build([lane.observation('2026-10-01', 'daily', row() + row(number=2))])
+        authority = lane.observation(rows=row(number=1, day='2026-09-30') + row(number=2, day='2026-09-30'))
+        daily = lane.observation('2026-10-02', 'daily', row(number=3))
+        return g0, authority, daily
+
+    def test_an_authority_without_rows_in_the_quarter_flips_every_base_added_key(self):
+        g0, authority, daily = self.empty_authority_case()
+        selected = tuple(sorted((*g0.manifest.sources, daily, authority), key=lambda ref: ref.source.source_id))
+        delta = incremental.build_incremental('2026Q4', g0.manifest, selected, authority, 'open',
+                                              self.lane.context, self.lane.objects)
+        self.assertEqual([(value['change_type'], value['archive_path'][-10:]) for value in delta.changes.to_pylist()],
+                         [('unresolved_absence', '000001.txt'), ('unresolved_absence', '000002.txt'),
+                          ('added', '000003.txt')])
+        self.assertEqual((delta.counts['unresolved_absence'], delta.counts['retained'], delta.counts['data']), (2, 2, 3))
 
 
 class PrePointerRefusalTests(unittest.TestCase):
