@@ -101,7 +101,8 @@ _ORIGINS: dict[tuple[str, str, str], VerifiedRelease] = {}
 def origin_release(project: Path, cache: Path, revision: str = ORIGIN_REVISION) -> VerifiedRelease:
     """Build one source revision (default: that of fc68adef…) into its own committed repository and install it.
 
-    Release identity covers the Git revision, so this release ID differs from fc68adef…; its
+    Release identity covers the Git revision, and each build commits `revision` into a new
+    repository, so this release ID differs from the retained release of that revision; its
     application payload is that revision's. The checkout's later code never enters it.
     """
     project = project.absolute()
