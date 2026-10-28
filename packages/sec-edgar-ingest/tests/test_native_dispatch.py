@@ -323,6 +323,7 @@ class SupervisedProcessTests(unittest.TestCase):
         self.assertEqual(len(result.stdout), CHILD_OUTPUT_LIMIT)
 
     def test_overflow_survives_a_parent_that_reads_slowly(self):
+        # Reproduces the macOS race: a late SIGTERM reaches a dead child group and gets EPERM.
         import sys
         import time
         from datetime import datetime, timedelta, timezone
