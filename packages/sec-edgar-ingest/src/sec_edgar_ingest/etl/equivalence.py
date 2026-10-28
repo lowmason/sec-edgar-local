@@ -104,10 +104,11 @@ def validate_incremental_candidate(candidate: Candidate, previous: GenerationCap
     re_emitted = outside(base_changes.filter(pc.equal(base_changes['change_type'], 'unresolved_absence')))
     if not outside(changes).equals(re_emitted):
         raise ValueError('incremental change rows outside its recomputed keys differ from re-emitted absences')
-    expected = {'row_count': len(expected_rows) + outside(base_data).num_rows, 'added': counts['added'], 'updated': counts['updated'],
+    row_count = len(expected_rows) + outside(base_data).num_rows  # The full resolution's row count.
+    expected = {'row_count': row_count, 'added': counts['added'], 'updated': counts['updated'],
                 'withdrawn': counts['withdrawn'], 'provenance_refreshed': counts['provenance_refreshed'],
                 'unresolved_absence': counts['unresolved_absence'] + re_emitted.num_rows}
-    if any(getattr(manifest, name) != value for name, value in expected.items()):
+    if data.num_rows != row_count or any(getattr(manifest, name) != value for name, value in expected.items()):
         raise ValueError('incremental counts differ from the full resolution')
     retained = previous.generation_id if manifest.unresolved_absence else None
     gate = 'awaiting_approval' if manifest.quarter_mode == 'closed' and manifest.withdrawn else 'clear'

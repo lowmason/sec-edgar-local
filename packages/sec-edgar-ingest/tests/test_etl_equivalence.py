@@ -142,13 +142,20 @@ class EquivalenceTests(unittest.TestCase):
 
     def test_refuses_a_duplicated_touched_row_by_its_count_alone(self):
         # With the order check skipped, the row count from the full resolution is a second, independent defence.
-        lane, base, candidate = self.open_addition()
-        rows = lane.rows(candidate)
-        rows.insert(3, rows[2])
-        forged = forge(lane, candidate, data=rows, row_count=len(rows))
-        with patch.object(equivalence, '_strictly_sorted'), \
-                self.assertRaisesRegex(ValueError, 'incremental counts differ from the full resolution'):
-            self.check(lane, forged, base)
+        # It must equal both the manifest's row count and the data file's row count.
+        cases = {'the manifest counts the duplicate': lambda rows: {'row_count': len(rows)},
+                 'the manifest keeps the full-resolution count': lambda rows: {}}
+        for label, fields in cases.items():
+            with self.subTest(label):
+                lane, base, candidate = self.open_addition()
+                rows = lane.rows(candidate)
+                rows.insert(3, rows[2])
+                forged = forge(lane, candidate, data=rows, **fields(rows))
+                self.assertEqual((forged.manifest.row_count, len(rows)),
+                                 (len(rows) if fields(rows) else candidate.manifest.row_count, 4))
+                with patch.object(equivalence, '_strictly_sorted'), \
+                        self.assertRaisesRegex(ValueError, 'incremental counts differ from the full resolution'):
+                    self.check(lane, forged, base)
 
     def test_refuses_a_changed_touched_change_row(self):
         lane, base, candidate = self.open_addition()
