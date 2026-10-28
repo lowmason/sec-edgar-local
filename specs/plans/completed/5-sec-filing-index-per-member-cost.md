@@ -21,7 +21,7 @@ The code lands on a feature branch. It merges to `main` after the full gate and 
 
 **Tech Stack:** Python 3.14 (CPython 3.14.0, macOS arm64). PyArrow 25.0.1 (`pyarrow.compute`, `pyarrow.parquet`). SQLite through `sqlite3`. Stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. `uv` offline and locked. Installed releases under `releases/sha256=<id>/`.
 
-**Spec:** [specs/sec-filing-index-per-member-cost.md](../sec-filing-index-per-member-cost.md) (Stage 1b). Parent spec: [specs/sec-filing-index-ingestion-spec.md](../sec-filing-index-ingestion-spec.md). Inputs: [engine-gap diagnosis](../evidence/stage1b/diagnosis.md), [D5 measurement](../evidence/d5-release/measurement.md), [completed plan 4](completed/4-sec-filing-index-bounded-drain.md).
+**Spec:** [specs/completed/sec-filing-index-per-member-cost.md](../../completed/sec-filing-index-per-member-cost.md) (Stage 1b). Parent spec: [specs/sec-filing-index-ingestion-spec.md](../../sec-filing-index-ingestion-spec.md). Inputs: [engine-gap diagnosis](../../evidence/stage1b/diagnosis.md), [D5 measurement](../../evidence/d5-release/measurement.md), [completed plan 4](4-sec-filing-index-bounded-drain.md).
 
 ## Global Constraints
 

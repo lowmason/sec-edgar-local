@@ -262,7 +262,7 @@ it reports `invalid_source`, even after a code fix, unless that fix changes the 
 Otherwise the quarter recovers only when its source set or base changes. Removing the candidate's
 objects is not a supported recovery step. §4.7 forbids deleting objects to reset state, and no
 command exists for it. Such a removal needs a separately reviewed operational decision.
-(Stage 1b, plan 5; C1–C6 and C11 in the [1b spec](sec-filing-index-per-member-cost.md).)
+(Stage 1b, plan 5; C1–C6 and C11 in the [1b spec](completed/sec-filing-index-per-member-cost.md).)
 
 ### 4.7 Invocation evidence, recovery, and operators
 
@@ -385,7 +385,7 @@ first-generation (full-rebuild) generations and 1b and sibling-completion receip
 once, on fixture packs. D5 reading an incremental 1b generation is not tested. It rests on the byte
 identity of an incremental generation with the full rebuild (C5). A D5 publish on top of a 1b
 generation is also not tested. (Stage 1b, plan 5; C5 and C7 in the
-[1b spec](sec-filing-index-per-member-cost.md); [two-release evidence](evidence/stage1b/two-release.md).)
+[1b spec](completed/sec-filing-index-per-member-cost.md); [two-release evidence](evidence/stage1b/two-release.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,

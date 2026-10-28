@@ -1,14 +1,16 @@
 # Per-member cost and the 1b release — Stage 1b Design Spec
 
-**Status:** approved; awaiting its plan (writing-plans).
+**Status: COMPLETE (2026-10-28)** — implemented by plan 5
+([completed per-member-cost plan](../plans/completed/5-sec-filing-index-per-member-cost.md)); deferred items in
+`specs/deferred_items.md`.
 **Approval:** Approved by the owner, 2026-10-27, as committed at `35f96b9`. Owner's words: "I approve the
 written Stage 1b spec as committed at 35f96b9."
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
-**Parent spec:** [SEC filing-index ingestion](sec-filing-index-ingestion-spec.md) (§§3 R5, R9, R12; 4.2, 4.6–4.9; 5–6; 9).
-**Roadmap:** [ingestion roadmap](sec-filing-index-ingestion-roadmap.md), Stage 1b.
-**Inputs:** [D5 measurement](evidence/d5-release/measurement.md), [finish measurement](evidence/d5-release/finish-measurement.json),
-[plan 4](plans/completed/4-sec-filing-index-bounded-drain.md) D2, D4 and Handoff, `specs/deferred_items.md`
-section `4-sec-filing-index-bounded-drain — 2026-10-27`, and the [engine-gap diagnosis](evidence/stage1b/diagnosis.md).
+**Parent spec:** [SEC filing-index ingestion](../sec-filing-index-ingestion-spec.md) (§§3 R5, R9, R12; 4.2, 4.6–4.9; 5–6; 9).
+**Roadmap:** [ingestion roadmap](../sec-filing-index-ingestion-roadmap.md), Stage 1b.
+**Inputs:** [D5 measurement](../evidence/d5-release/measurement.md), [finish measurement](../evidence/d5-release/finish-measurement.json),
+[plan 4](../plans/completed/4-sec-filing-index-bounded-drain.md) D2, D4 and Handoff, `specs/deferred_items.md`
+section `4-sec-filing-index-bounded-drain — 2026-10-27`, and the [engine-gap diagnosis](../evidence/stage1b/diagnosis.md).
 
 ## 1. Purpose
 
@@ -231,7 +233,7 @@ projection and a revisit trigger (S4).
 
 ## 8. Parent-spec amendments
 
-The plan's last task applies these to [the parent spec](sec-filing-index-ingestion-spec.md):
+The plan's last task applies these to [the parent spec](../sec-filing-index-ingestion-spec.md):
 
 - §4.6: the engine's integrity check (C1, C2), the incremental path (C4–C6), and that `read_quarter`
   still fully checks before it exposes rows.
