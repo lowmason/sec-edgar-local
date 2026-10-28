@@ -143,7 +143,7 @@ to live execution, not prerequisites to writing the plan that defines them.
   > Stage 1a: COMPLETE (2026-10-27) — implemented by plan 4 ([completed bounded-drain plan](plans/completed/4-sec-filing-index-bounded-drain.md)). Its Handoff section names what Stages 2–5 consume.
   > Next: resume the roadmap.
 
-- [ ] Stage 1b: Per-member cost and its release (approved at resume, 2026-10-27)
+- [x] Stage 1b: Per-member cost and its release (approved at resume, 2026-10-27)
       Objective: Ship a reviewed native release on which every member a Stage 2 or Stage 3 invocation dispatches finishes inside one invocation, under a reserve set from measured costs.
       Spec: §3 R5, R9, R12; §§4.2, 4.6–4.9, 5–6, 9; plan 4 D2, D4.
       Gap closed: None directly; removes the plan 4 D2 per-member-cost limit that keeps G2 and G3 open.
@@ -151,6 +151,9 @@ to live execution, not prerequisites to writing the plan that defines them.
       Produces: A stage spec and plan; a diagnosis of the engine gap; measurements of the marks plan 4 never reached, or a spec record that they are not needed; the cost change with offline tests; a reviewed release with setup, preflight and review evidence; the reviewed live-config selection with a reserve set from measured costs and its effective-config SHA-256; and a plan Handoff that names every value the plan 2 revision must change.
       Exit: Offline evidence on the new release shows full-size quarterly members and open-quarter daily members at the high marks finishing within the launcher default minus the reserve, or the owner approves a named, measured limit; the offline checker and preflight pass on it, with the D5 release and older releases retained (§4.9); the provenance and reader contracts hold or an explicit versioned transition is reviewed (§9); no SEC request was sent.
       ROUTING: brainstorming
+
+  > Stage 1b: COMPLETE (2026-10-28) — implemented by plan 5 (specs/plans/completed/5-sec-filing-index-per-member-cost.md). Its Handoff section names what Stages 2–5 consume.
+  > Next: resume the roadmap.
 
 - [ ] Stage 2: Baseline campaign and coverage decision
       Objective: Produce an accepted written finding on the requested historical baseline, including every unresolved exception.

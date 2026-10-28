@@ -1,5 +1,7 @@
 # Per-Member Cost and the 1b Release Implementation Plan
 
+**Status: COMPLETE (2026-10-28)** — executed via subagent-driven-development; deferred items in specs/deferred_items.md
+
 **Approval:** Approved by the owner, 2026-10-27, with A1, A2 and P1–P8 as proposed (D1 below). This plan authorizes no SEC request.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -72,6 +74,17 @@ Execution environment (planning facts, not spec text):
 ## Decisions
 
 - **D1** (owner, plan review, 2026-10-27): A1, A2 and P1–P8 accepted as proposed. That settles: C5 and C6 cover the open-quarter locality exception (A1); the new requirement C11 checks observations by hash on engine paths and in the `publish` child (A2); and the plan-level defaults P1–P8. The amendment tags in Task 1 keep the date 2026-10-27. Owner's words: "D1: I approve plan 5 with A1, A2 and P1–P8 as proposed. Commit it on main." Applied in: Global Constraints, Before Task 1, and Tasks 1–14.
+- **D2** (owner, execution pre-flight, 2026-10-27): factor the identity-and-replay block that `build_candidate` and `_incremental_candidate` share into one helper in `catalog.py` (Task 7), and the scenario report header that `run`, `run_finish_only` and `run_scenario` share into one helper in `measure-d5-drain.py` (Task 9). Each implementer logs a `> Deviation:` line. Owner's words: "Extract both". Applied in: Task 7 (`catalog._identify_candidate`), Task 9 (`start_report`).
+- **D3** (owner, Task 8 review, 2026-10-28): rewrite the §4.9 consequence in `two-release.md` to what was tested, and fix the evidence-label Minors and the stale `support_release.py` docstring. The stronger incremental-generation scenario is not added. Owner's words: "Narrow the wording". Applied in: Task 8 (dfb5385), Task 14 Step 4.
+- **D4** (owner, Task 9 Step 5, 2026-10-28): run Task 9 Step 5 in the owner's Terminal panel, because the agent's worktree guard cannot see it. The script `step5-smoke.sh` has literal paths, uses fixture packs only, and writes only `fixture-data/s1b-smoke-*` in the main checkout and a log in the worktree `.sdd`. No git command runs in the main checkout. Owner's words: "I run it in your Terminal (Recommended)". Applied in: Task 9 Step 5.
+- **D5** (owner, Task 9 review, 2026-10-28): fix the three Important findings plus two guards. I1: `summarize` refuses a proposal unless each invocation has its expected exit and one wall per dispatched member. I2: a `history_counts` test and a four-report `summarize` test. I3: the plans are built lazily inside the `try`, so a failure report is always written. Guards: `--work` must be under the project root and not under `<project>/data`, and the history partition is matched exactly. Owner's words: "Fix all three, plus two guards". Applied in: Task 9 (d8352a9).
+- **D6** (owner, Task 10 Step 3, 2026-10-28): a Codex second-opinion review is approved for this repository and session. It sends the branch diff and the files that Codex reads to OpenAI. Owner's words: "Yes, run Codex". Applied in: Task 10 Step 3.
+- **D7** (owner, Task 10 review batch, 2026-10-28): I2: make the A1 membership check Arrow-only now. C5 and C6 find the non-member base keys with an Arrow filter, no merge logic changes, and C5 and C6 stay independent. I1: test and document the retry block of a C6-refused candidate (a second-publish assertion, the recovery limit in spec §4.3 item 5, the parent §4.6 text and the runbook), with no code change, and correct the "until the C5 bug is fixed" claim. M4: compute C6's expected `row_count` from the full resolution, which rewrites plan-given code. Owner's words, one for each item: I2 "Arrow-only check now (Recommended)"; I1 "Test and document (Recommended)"; M4 "Yes, add it (Recommended)". Applied in: Tasks 6 and 7 code (fe6bca0, 9fef691, dc0418b), Task 10 fix wave (897af75, 6e8e86f), Task 14 Step 1.
+- **D8** (owner, Task 10 gate, 2026-10-28): fix the `runtime.py` `forward` race (EPERM from `os.killpg`) on this branch, in one separate commit, test first, then a full gate re-run. Options not chosen: fix on `main` first, or merge with the failure recorded. Owner's words: "Fix it on this branch (Recommended)". Applied in: Task 10 (17d78da, 8c1c321, gate run 6).
+- **D9** (owner, Task 10 Step 5, 2026-10-28): merge approved. Owner's words: "Approved: fast-forward merge stage1b-per-member-cost into main, then continue with Task 11." Applied in: Task 10 Step 6 (`main` at 50423a4).
+- **D10** (owner, Task 12 Step 4, 2026-10-28): the C8 floor stays 480 s, so `config.py` does not change and Task 12 Step 5 does not apply. The reserve is 1800 s. The fit gate passed (slowest member 1,010.9 s ≤ 1,500 s), so no named limit is needed. Owner's words: "D10: Approved. Floor 480 s and reserve 1800 s. Record it as a Decision and continue with Task 13." Applied in: Tasks 12, 13 and 14 (Steps 2 and 5).
+- **D11** (owner, Task 13 Step 3, 2026-10-28): the live config selects the 1b release `9fa189a0…` with `execution.dispatch_reserve_seconds` 1800 (D10). The approval authorizes no SEC traffic (spec §10). Owner's words: "D11: Approved. Select the 1b release in the live config. Record it as a Decision, commit it, and continue with Task 14." Applied in: Task 13 Step 4 (6d80da4).
+- **D12** (owner, plan-completion gate, 2026-10-28): four answers. (1) Recovery text: "Reword to the review rule (Recommended)". A blocked quarter recovers when its source set or base changes. Object removal is not a supported step and needs a separately reviewed operational decision. Apply this to §4.6 and the runbook row. (2) The six Task 14 documentation Minors: "Fix them now (Recommended)", in one docs-only commit with a scoped re-review and no code change. (3) Code and test Minors from Tasks 2–9: "Defer as grouped items (Recommended)". (4) The B4 single-candidate item: "Keep it open with this check (Recommended)". Applied in: c9125fd (answers 1 and 2), `specs/deferred_items.md` (answers 3 and 4).
 
 ## Defaults for owner review
 
@@ -85,6 +98,7 @@ Planning checked two points against the code and found that each one changes the
   - Alternative: add "an open quarter with a membership authority" to the C4 exclusions. That is simpler, but every daily member of an open quarter whose quarterly index already exists then takes the full path. On SEC, `full-index/<year>/QTR<n>/` exists for the open quarter, so that is the common live case for Stages 3 and 5.
   - Cost not measured: the §6 `open` scenario has no open-quarter quarterly index, so it does not run the A1 path. On that path C6 reads the authority's full key list for each member (a columnar read of two columns). The `open` scenario does not widen without the owner.
   - Applied in: Tasks 1, 6 and 7.
+  > Defect: "a columnar read of two columns" did not match the plan's C5 and C6 code (Tasks 6 and 7), which read the whole authority as Python rows for each member (whole-branch review, finding I2). Fixed under D7 in fe6bca0: C5 and C6 use an Arrow filter on the authority's key column.
 - **A2 — Repeated observation readbacks (spec-level).** The diagnosis counted only `_validate_row_origins`. A second planning count (F4) shows a second repeated full read of the same size.
   - `transform._read_manifest` and `read_observations` re-parse every row of an observation with `parse_fields` and fill a SQLite table.
   - The engine does this outside the full content check 1,238 times over 246,403 rows in one smoke run.
@@ -102,6 +116,7 @@ Planning checked two points against the code and found that each one changes the
   - Separate files also make C6's independence from C5 easy to review. They share only the readers in `columnar.py`, which hold no merge logic.
   - Applied in: Tasks 5–7.
 - **P2 — The §5 item 2 count is split (plan-level).** Workflow children are native processes (`support_process.CheckedRunner`), so a patch in the test process counts engine calls only. Default: one test runs a fixture workflow and asserts zero `_validate_row_origins` calls in the engine process, and then one call per `read_quarter`. Another test calls `publish_quarter` directly and asserts exactly one call for a full rebuild and none for an incremental build, an unchanged quarter or a replayed candidate. Together they prove the §5 item 2 statement. Applied in: Tasks 3 and 4.
+  > Defect: "none for … a replayed candidate" contradicts C3. A replay goes through `catalog._existing`, which runs the full check. No zero-count assertion was written. After the whole-branch review (finding I3), c8949bc added `test_full_check_budget.PublishBudgetTests.test_a_replayed_incremental_candidate_is_fully_checked_once`.
 - **P3 — Two callers that C2 and C3 do not name (plan-level).** `publication.repair_publication` (a `publish`-child repair after a committed pointer) uses C1. `history.quarter_history` reaches C1 through `capture_quarter`. It reads manifests only and exposes no rows. Applied in: Tasks 3 and 4.
 - **P4 — The full path's pre-manifest `validate_files` stays (plan-level).** It is part of the one full rebuild and is not a repeated check. C3 counts `_validate_row_origins`. The incremental path does not run it. C6's row-level check of the delta rows replaces it. Applied in: Tasks 4 and 7.
 - **P5 — Byte identity of the incremental writer (plan-level).** `catalog._write_parquet` makes one `write_table` call for each 8,192-row batch (`BATCH_ROWS`). The incremental writer writes the sorted table in the same slices, each made single-chunk with `combine_chunks()`, with the same `ParquetWriter` settings. Key order is the byte order of `cik` and `archive_path`, as SQLite `BINARY` collation gives. The oracle tests include a quarter of more than 8,192 rows and a delta that moves rows across a batch boundary. Applied in: Task 7.
@@ -233,7 +248,7 @@ git add specs/plans/5-sec-filing-index-per-member-cost.md
 git commit -m "docs(specs): add plan 5 for roadmap Stage 1b"
 ```
 
-- [ ] **Step 3: Create the worktree and the shadow venv.** Use the using-git-worktrees skill for branch `stage1b-per-member-cost` at `.claude/worktrees/stage1b-per-member-cost`. Then run the shadow-venv commands in Global Constraints, "Execution environment".
+- [x] **Step 3: Create the worktree and the shadow venv.** Use the using-git-worktrees skill for branch `stage1b-per-member-cost` at `.claude/worktrees/stage1b-per-member-cost`. Then run the shadow-venv commands in Global Constraints, "Execution environment".
 
 ---
 
@@ -248,7 +263,7 @@ Run on the branch, in the worktree. Each amendment tag carries the plan-review d
 - Consumes: the owner's plan-review answer (logged as D1).
 - Produces: the amended requirement text that Tasks 2–7 implement. C11 is a new requirement ID.
 
-- [ ] **Step 1: A2, §2.** Replace:
+- [x] **Step 1: A2, §2.** Replace:
 
 ```text
 - An integrity check that reads no rows, and the move of engine-side checks to it (C1, C2).
@@ -261,7 +276,7 @@ with:
   same check for observations (C11; owner, plan 5, 2026-10-27).
 ```
 
-- [ ] **Step 2: A1, row C5.** In the C5 row, replace:
+- [x] **Step 2: A1, row C5.** In the C5 row, replace:
 
 ```text
 when the quarter has a membership authority, that source's observations limited by a columnar filter to the touched keys.
@@ -285,7 +300,7 @@ with:
 The absent set is the base change file's `unresolved_absence` keys minus the touched keys that gain a proposed row. In an open quarter with a membership authority, it also holds every untouched key of a base `added` change row that the authority does not list, because `_resolve`'s open-quarter non-member rule makes that key absent at the next rebuild (owner, plan 5, 2026-10-27).
 ```
 
-- [ ] **Step 3: A1, row C6.** In the C6 row, replace:
+- [x] **Step 3: A1, row C6.** In the C6 row, replace:
 
 ```text
 For the touched keys, the expected rows, change rows and counts come from
@@ -297,13 +312,13 @@ with:
 For the recomputed keys (the touched keys and, in an open quarter with a membership authority, every base key that the authority does not list; owner, plan 5, 2026-10-27), the expected rows, change rows and counts come from
 ```
 
-- [ ] **Step 4: A2, row C11.** After the C10 row of the §3 table, add:
+- [x] **Step 4: A2, row C11.** After the C10 row of the §3 table, add:
 
 ```text
 | C11 | An integrity check of an observation reads its manifest with today's address, canonical-form, producer and identity checks, and verifies the rows file SHA-256 and byte count. It reads no rows. It refuses with the same error classes as `transform._read_manifest`. Engine paths use it for an observation reached through a Processing row, a transformed workset or a capture: `evaluate_member`, `validate_capture` and `checked._transformed_input`. The `publish` child uses it for its incoming references. The full readback stays in the `transform` child, the full content check, and the full rebuild's reads of source rows. (owner, plan 5, 2026-10-27) |
 ```
 
-- [ ] **Step 5: A1, §4.3 item 4.** Replace:
+- [x] **Step 5: A1, §4.3 item 4.** Replace:
 
 ```text
    its membership row (if any), and whether the base change file names it `unresolved_absence`. Untouched
@@ -321,7 +336,7 @@ with:
    proof). The plan proves this against `_resolve` before it builds C5. Oracle
 ```
 
-- [ ] **Step 6: A2 and A1, §5.** Replace:
+- [x] **Step 6: A2 and A1, §5.** Replace:
 
 ```text
 Reads no rows (patched `iter_file_rows` is not called).
@@ -348,7 +363,7 @@ a non-member touched key; a closed daily-only quarter; an open quarter with a me
    untouched key that the base added and the authority does not list (owner, plan 5, 2026-10-27).
 ```
 
-- [ ] **Step 7: Check and commit.** Leave the status line unchanged. Run:
+- [x] **Step 7: Check and commit.** Leave the status line unchanged. Run:
 
 ```bash
 grep -o "owner, plan 5" specs/sec-filing-index-per-member-cost.md | wc -l
@@ -381,7 +396,7 @@ git commit -m "docs(specs): amend the Stage 1b spec for locality and observation
   - `transform.checked_observation(path: str, objects: ObjectStore) -> ObservationRef` (C11).
   - `support_catalog.Lane(day=date(2026, 10, 7), command='transform')` with `pin(day)`, `observation(period='2026Q4', kind='quarterly', rows=None, seconds=0) -> ObservationRef`, `build(refs, previous=None, quarter='2026Q4') -> Candidate`, `rows(candidate, role='data') -> list[dict]`, `path(name) -> Path`, `close()`; `support_catalog.capture(candidate) -> GenerationCapture`; `support_catalog.row(name='Example', number=1, day='2026-10-01', form='10-K', cik=123456) -> bytes`.
 
-- [ ] **Step 1: Write the shared test fixture.** Create `packages/sec-edgar-ingest/tests/support_catalog.py`:
+- [x] **Step 1: Write the shared test fixture.** Create `packages/sec-edgar-ingest/tests/support_catalog.py`:
 
 ```python
 """One fresh store with the catalog test fixtures (Stage 1b tests share it; it holds no test cases)."""
@@ -465,7 +480,7 @@ class Lane:
         return self.root / 'objects' / name
 ```
 
-- [ ] **Step 2: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_integrity.py`:
+- [x] **Step 2: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_integrity.py`:
 
 ```python
 """Stage 1b C1 and C11: integrity checks read manifests and file hashes, never rows."""
@@ -605,12 +620,12 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail.**
+- [x] **Step 3: Run the tests to verify they fail.**
 
 Run: the test command with target `test_etl_integrity`.
 Expected: an `ImportError` for `check_candidate_integrity`.
 
-- [ ] **Step 4: Add C1 to `etl/manifest.py`.** After `validate_candidate` (end of file), add:
+- [x] **Step 4: Add C1 to `etl/manifest.py`.** After `validate_candidate` (end of file), add:
 
 ```python
 def check_candidate_integrity(candidate: Candidate, objects: ObjectStore) -> None:
@@ -626,7 +641,7 @@ def check_candidate_integrity(candidate: Candidate, objects: ObjectStore) -> Non
         raise Conflict('candidate gate record differs from exact generation/base/hash')
 ```
 
-- [ ] **Step 5: Add C1 for captures to `etl/reader.py`.** Change the import line 13 to:
+- [x] **Step 5: Add C1 for captures to `etl/reader.py`.** Change the import line 13 to:
 
 ```python
 from .manifest import (check_candidate_integrity, gate_ref, generation_base, iter_file_rows, read_approval,
@@ -660,7 +675,7 @@ def checked_manifest(capture: GenerationCapture, objects: ObjectStore) -> Genera
     return _pinned_manifest(capture, objects, check_candidate_integrity)
 ```
 
-- [ ] **Step 6: Add C11 to `etl/transform.py`.** Replace `_read_manifest` (lines 108–125) with:
+- [x] **Step 6: Add C11 to `etl/transform.py`.** Replace `_read_manifest` (lines 108–125) with:
 
 ```python
 def _observation_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, bytes]:
@@ -699,12 +714,12 @@ def checked_observation(path: str, objects: ObjectStore) -> ObservationRef:
     return ref
 ```
 
-- [ ] **Step 7: Run the tests to verify they pass.**
+- [x] **Step 7: Run the tests to verify they pass.**
 
 Run: the test command with target `test_etl_integrity`, then with `test_etl_transform test_etl_catalog test_etl_publication test_etl_rollback test_etl_approval`.
 Expected: all pass. Nothing else calls the new functions yet.
 
-- [ ] **Step 8: Commit.**
+- [x] **Step 8: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/tests/support_catalog.py packages/sec-edgar-ingest/tests/test_etl_integrity.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/manifest.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/reader.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/transform.py
@@ -727,7 +742,7 @@ git commit -m "feat(etl): add integrity checks for generations and observations"
 - Consumes: `checked_manifest`, `check_candidate_integrity` and `checked_observation` (Task 2).
 - Produces: an engine that runs no full content check and no observation readback. `test_full_check_budget.py` holds the `EngineBudgetTests` class, and Task 4 adds `PublishBudgetTests` to the same module.
 
-- [ ] **Step 1: Write the failing test.** Create `packages/sec-edgar-ingest/tests/test_full_check_budget.py`:
+- [x] **Step 1: Write the failing test.** Create `packages/sec-edgar-ingest/tests/test_full_check_budget.py`:
 
 ```python
 """Stage 1b §5 item 2, split by process (plan 5, P2).
@@ -794,20 +809,20 @@ if __name__ == '__main__':
 
 The harness store keeps its objects under `<root>/.fixture-state/objects/`, as `test_workflow_checked.py` uses them.
 
-- [ ] **Step 2: Run the test to verify it fails.**
+- [x] **Step 2: Run the test to verify it fails.**
 
 Run: the test command with target `test_full_check_budget`.
 Expected: `test_the_engine_runs_no_full_check_and_readers_still_do` fails, because both counts are above 0. The second test may already pass.
 
-- [ ] **Step 3: `etl/reader.py`.** In `capture_quarter`, replace `manifest = validated_manifest(capture, objects)` with:
+- [x] **Step 3: `etl/reader.py`.** In `capture_quarter`, replace `manifest = validated_manifest(capture, objects)` with:
 
 ```python
     manifest = checked_manifest(capture, objects)
 ```
 
-- [ ] **Step 4: `etl/commands.py`.** Change line 17 to `from .reader import capture_from_pointer, checked_manifest`. In `_affected_quarters`, replace `manifest = validated_manifest(capture, objects)` with `manifest = checked_manifest(capture, objects)`.
+- [x] **Step 4: `etl/commands.py`.** Change line 17 to `from .reader import capture_from_pointer, checked_manifest`. In `_affected_quarters`, replace `manifest = validated_manifest(capture, objects)` with `manifest = checked_manifest(capture, objects)`.
 
-- [ ] **Step 5: `workflows/completion.py`.**
+- [x] **Step 5: `workflows/completion.py`.**
   - Change line 16 to `from ..etl.reader import capture_quarter, checked_manifest`.
   - Change line 18 to `from ..etl.transform import checked_observation`.
   - Replace each of the six `validated_manifest(` calls (lines 428, 688, 705, 770, 789, 825) with `checked_manifest(`.
@@ -825,7 +840,7 @@ grep -n "validated_manifest\|_read_manifest" packages/sec-edgar-ingest/src/sec_e
 
   Expected: no output.
 
-- [ ] **Step 6: `workflows/checked.py`.** Change lines 26–28 to:
+- [x] **Step 6: `workflows/checked.py`.** Change lines 26–28 to:
 
 ```python
 from ..etl.manifest import check_candidate_integrity, read_manifest
@@ -859,15 +874,15 @@ grep -n "validated_manifest\|validate_candidate\b\|_read_manifest\|read_observat
 
 Expected: no output. If `_pinned_members` is unused after the change, remove it from the import too.
 
-- [ ] **Step 7: `workflows/runner.py`.** Change line 12 to `from ..etl.reader import capture_from_pointer, capture_quarter, checked_manifest`. In `source_revert_gaps`, replace `validated_manifest(capture, objects)` with `checked_manifest(capture, objects)`.
+- [x] **Step 7: `workflows/runner.py`.** Change line 12 to `from ..etl.reader import capture_from_pointer, capture_quarter, checked_manifest`. In `source_revert_gaps`, replace `validated_manifest(capture, objects)` with `checked_manifest(capture, objects)`.
 
-- [ ] **Step 8: Run the test to verify it passes, then the affected modules.**
+- [x] **Step 8: Run the test to verify it passes, then the affected modules.**
 
 Run: the test command with target `test_full_check_budget`. Expected: PASS.
 
 Then run it with `test_workflow_completion test_workflow_checked test_workflow_runner test_workflow_processing test_workflow_results test_workflow_drain test_workflow_acceptance test_local_failures test_etl_cli test_etl_history test_reconcile_workflow`. Expected: all pass. A failure that expects an engine path to refuse a forged but hash-consistent generation follows P8. Move that assertion to `read_quarter` and record a `> Deviation:` line under this step. Any other failure is a bug: stop and use systematic-debugging.
 
-- [ ] **Step 9: Commit.**
+- [x] **Step 9: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/tests/test_full_check_budget.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/reader.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/commands.py packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/completion.py packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/checked.py packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/runner.py
@@ -887,7 +902,7 @@ git commit -m "perf(workflows): check generations and observations by hash on en
 - Consumes: Task 2's checks; `support_catalog.Lane(command='publish')`.
 - Produces: `publish_quarter` with exactly one `_validate_row_origins` call for a full-rebuild candidate, and none for an unchanged quarter. Task 7 adds the incremental case to `PublishBudgetTests`.
 
-- [ ] **Step 1: Write the failing tests.** Add these imports to `test_full_check_budget.py`:
+- [x] **Step 1: Write the failing tests.** Add these imports to `test_full_check_budget.py`:
 
 ```python
 from datetime import date
@@ -938,12 +953,14 @@ class PublishBudgetTests(unittest.TestCase):
         self.assertEqual((result.outcome, count), ('awaiting_approval', 1))
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail.**
+- [x] **Step 2: Run the tests to verify they fail.**
 
 Run: the test command with target `test_full_check_budget.PublishBudgetTests`.
 Expected: the first, third and fourth tests fail with counts of 2 or 3. The unchanged test fails with a count of 1, from `validated_manifest(previous)`.
 
-- [ ] **Step 3: `etl/publication.py`.** Change lines 11–14 to:
+> Deviation: the RED counts were first publication 2, replacement 4, gated rebuild 5 and unchanged 1, not "2 or 3" (the plan's counts were wrong, found in the pre-flight scan). Each test still failed for the stated reason (task 4 report).
+
+- [x] **Step 3: `etl/publication.py`.** Change lines 11–14 to:
 
 ```python
 from .manifest import check_candidate_integrity
@@ -978,7 +995,7 @@ In `publish_quarter`, make three replacements:
 
 The last one replaces `validate_candidate(candidate, objects)`.
 
-- [ ] **Step 4: `etl/catalog.py`.** Change the `.manifest` import (lines 18–19) to:
+- [x] **Step 4: `etl/catalog.py`.** Change the `.manifest` import (lines 18–19) to:
 
 ```python
 from .manifest import (check_candidate_integrity, gate_payload, gate_ref, generation_base, generation_identity,
@@ -1006,13 +1023,13 @@ with:
 
 The `_existing` and full-rebuild `validate_candidate_content` calls stay (C3).
 
-- [ ] **Step 5: Run the tests to verify they pass, then the affected modules.**
+- [x] **Step 5: Run the tests to verify they pass, then the affected modules.**
 
 Run: the test command with target `test_full_check_budget`. Expected: PASS.
 
 Then run it with `test_etl_publication test_etl_catalog test_etl_approval test_etl_rollback test_etl_history test_etl_processes test_etl_cli test_local_etl_contracts test_workflow_checked`. Expected: all pass. A failure follows the Task 3 Step 8 rule (P8).
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/tests/test_full_check_budget.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/publication.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/catalog.py
@@ -1037,7 +1054,7 @@ git commit -m "perf(etl): fully check a full-rebuild candidate once in the publi
   - `columnar.key_mask(table: pa.Table, keys: Iterable[Key]) -> pa.ChunkedArray` and `columnar.table_keys(table: pa.Table) -> set[Key]`.
   - `catalog._load_observations(db, selected, quarter, membership, objects, context, read=read_observations)`. `read(ref, objects)` returns a closable iterator of `Observation`.
 
-- [ ] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_columnar.py`:
+- [x] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_columnar.py`:
 
 ```python
 """Stage 1b readers: hash-checked columnar reads give the rows that the full readers give (S1)."""
@@ -1133,12 +1150,12 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail.**
+- [x] **Step 2: Run the tests to verify they fail.**
 
 Run: the test command with target `test_etl_columnar`.
 Expected: `ModuleNotFoundError: No module named 'sec_edgar_ingest.etl.columnar'`.
 
-- [ ] **Step 3: Write `etl/columnar.py`.**
+- [x] **Step 3: Write `etl/columnar.py`.**
 
 ```python
 """Hash-checked columnar reads for the incremental build (C5) and its equivalence check (C6).
@@ -1228,7 +1245,7 @@ def quarter_observations(ref: ObservationRef, objects: ObjectStore, quarter: str
         yield Observation(IndexRow(**value), original, line_number)
 ```
 
-- [ ] **Step 4: Add the reader seam to `etl/catalog.py`.** Replace the first lines of `_load_observations`:
+- [x] **Step 4: Add the reader seam to `etl/catalog.py`.** Replace the first lines of `_load_observations`:
 
 ```python
 def _load_observations(db, selected, quarter, membership, objects, context):
@@ -1250,12 +1267,12 @@ def _load_observations(db, selected, quarter, membership, objects, context, read
 
 The rest of the function does not change.
 
-- [ ] **Step 5: Run the tests to verify they pass.**
+- [x] **Step 5: Run the tests to verify they pass.**
 
 Run: the test command with target `test_etl_columnar`, then with `test_etl_catalog test_etl_publication`.
 Expected: all pass.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/columnar.py packages/sec-edgar-ingest/tests/test_etl_columnar.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/catalog.py
@@ -1277,9 +1294,9 @@ C6 is written and tested before C5, against full-rebuild candidates. Under C5 an
 - Consumes: `columnar.generation_table`, `key_mask`, `quarter_observations`, `table_keys` (Task 5); `catalog._database`, `_load_observations`, `_resolve`; `manifest._row`, `check_candidate_integrity`; `reader.checked_manifest`; `transform.checked_observation`.
 - Produces: `equivalence.validate_incremental_candidate(candidate: Candidate, previous: GenerationCapture, context: RunContext, objects: ObjectStore) -> None`. It raises `ValueError` (or `Conflict` from the integrity checks) when the candidate is not the full rebuild of its eligible base.
 
-- [ ] **Step 1: Record the locality proof.** Create `specs/evidence/stage1b/locality.md` with a title line `# Locality of an eligible addition (Stage 1b, plan 5)`, a line `Source: plan 5, section "Locality proof"; spec §4.3 item 4 as amended (A1).`, and the plan's "Locality proof" section copied without change. Add the F3 probe result as a last section, `## Probe`. This is the record that spec §4.3 item 4 asks for before C5.
+- [x] **Step 1: Record the locality proof.** Create `specs/evidence/stage1b/locality.md` with a title line `# Locality of an eligible addition (Stage 1b, plan 5)`, a line `Source: plan 5, section "Locality proof"; spec §4.3 item 4 as amended (A1).`, and the plan's "Locality proof" section copied without change. Add the F3 probe result as a last section, `## Probe`. This is the record that spec §4.3 item 4 asks for before C5.
 
-- [ ] **Step 2: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_equivalence.py`:
+- [x] **Step 2: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_equivalence.py`:
 
 ```python
 """Stage 1b C6: an incremental candidate must equal the full rebuild on every key it can change."""
@@ -1403,12 +1420,14 @@ if __name__ == '__main__':
 
 In `open_addition`, the candidate's data rows sort as keys 1, 2, 3 (F9). Row index 1 is key 2 (untouched), and row index 2 is key 3 (touched).
 
-- [ ] **Step 3: Run the tests to verify they fail.**
+> Deviation: review fix round 1 (0a261ae, tests only) added five tests beyond the plan's set: a duplicated touched row, touched-key change rows, a forged delta observation reference, a forged retained basis, and an accepted untouched re-emitted absence. `test_etl_equivalence` then had 14 tests, not 9.
+
+- [x] **Step 3: Run the tests to verify they fail.**
 
 Run: the test command with target `test_etl_equivalence`.
 Expected: `ModuleNotFoundError: No module named 'sec_edgar_ingest.etl.equivalence'`.
 
-- [ ] **Step 4: Write `etl/equivalence.py`.**
+- [x] **Step 4: Write `etl/equivalence.py`.**
 
 ```python
 """C6: an incremental candidate equals the full rebuild on every key that the delta can change.
@@ -1528,12 +1547,14 @@ def validate_incremental_candidate(candidate: Candidate, previous: GenerationCap
 
 `catalog` is imported inside `_expected` because `catalog` will import this module (P1).
 
-- [ ] **Step 5: Run the tests to verify they pass.**
+> Deviation: the plan's `equivalence.py` code was changed after the whole-branch review (D7). fe6bca0 finds the non-member base keys with an Arrow filter on the authority's key column (`columnar.quarter_key_column`), not one `IndexRow` per authority row. 9fef691 and dc0418b take the expected row count from the full resolution and require it to equal both `data.num_rows` and `manifest.row_count`.
+
+- [x] **Step 5: Run the tests to verify they pass.**
 
 Run: the test command with target `test_etl_equivalence`.
 Expected: all 9 pass. If an accept test fails, the full rebuild and C6 disagree on an eligible input. That is a C6 bug or a locality case the proof missed. Stop and use systematic-debugging. Do not loosen a comparison to make it pass.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/equivalence.py packages/sec-edgar-ingest/tests/test_etl_equivalence.py specs/evidence/stage1b/locality.md
@@ -1562,7 +1583,7 @@ git commit -m "feat(etl): add the C6 equivalence check for incremental candidate
   - `contracts.BUSINESS_FIELDS`, `contracts.ABSENCE_REASON`, `contracts.WITHDRAWAL_REASON`, `contracts.arrow_row(value) -> dict`.
   - `support_incremental.Twin(day)`: `fast` and `full` lanes; `observation(...) -> (fast_ref, full_ref)`; `build(pairs, previous=None, quarter='2026Q4') -> ((fast, full), incremental_build_count)`; `pin(day)`; `close()`.
 
-- [ ] **Step 1: Write the oracle harness.** Create `packages/sec-edgar-ingest/tests/support_incremental.py`:
+- [x] **Step 1: Write the oracle harness.** Create `packages/sec-edgar-ingest/tests/support_incremental.py`:
 
 ```python
 """Twin lanes for the Stage 1b oracle (§5 item 3): the same inputs in two fresh stores.
@@ -1602,7 +1623,7 @@ class Twin:
         return (fast, full), built.call_count
 ```
 
-- [ ] **Step 2: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_incremental.py`:
+- [x] **Step 2: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_etl_incremental.py`:
 
 ```python
 """Stage 1b §5 items 3–5: incremental generations are byte-identical to full rebuilds (C4–C6)."""
@@ -1788,12 +1809,12 @@ Add this test to `PublishBudgetTests` in `test_full_check_budget.py`:
         self.assertEqual((result.outcome, count), ('published', 0))
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail.**
+- [x] **Step 3: Run the tests to verify they fail.**
 
 Run: the test command with target `test_etl_incremental`.
 Expected: `ImportError` for `sec_edgar_ingest.etl.incremental`.
 
-- [ ] **Step 4: Move the shared names to `etl/contracts.py`.** At the end of `contracts.py`, add:
+- [x] **Step 4: Move the shared names to `etl/contracts.py`.** At the end of `contracts.py`, add:
 
 ```python
 BUSINESS_FIELDS = ('cik', 'company_name', 'form_type', 'archive_path', 'filing_date', 'accession_number')
@@ -1813,7 +1834,7 @@ In `catalog.py`:
 - In `_write_parquet`, replace both `_arrow_row(` calls with `arrow_row(`.
 - Run `grep -rn "_arrow_row\|catalog.BUSINESS_FIELDS" packages/sec-edgar-ingest`. Expected: no output.
 
-- [ ] **Step 5: Write `etl/incremental.py`.**
+- [x] **Step 5: Write `etl/incremental.py`.**
 
 ```python
 """Stage 1b C4 and C5: rebuild an eligible quarter from its base tables and its delta rows.
@@ -1983,7 +2004,9 @@ def write_table(table: pa.Table, path: Path, schema: pa.Schema, context: RunCont
 
 The delta rows come from `quarter_observations`, the hash-checked reader, not from `read_observations` (S1, A2). The `publish` child checked each incoming reference with C11, and the `transform` child read every row back when it wrote them.
 
-- [ ] **Step 6: Wire C4, C5 and C6 into `etl/catalog.py`.**
+> Deviation: the plan's C5 code was changed after the whole-branch review (D7, finding I2). fe6bca0 reads the membership authority only as an Arrow key column (`columnar.quarter_key_column`), with no full authority row read as Python.
+
+- [x] **Step 6: Wire C4, C5 and C6 into `etl/catalog.py`.**
 
 Add `from . import incremental` to the imports, and `from .transform import _file_identity` if it is not already imported (it is, in the `.transform` import line). Add, after `_candidate`:
 
@@ -2101,17 +2124,20 @@ Then replace everything from `base = generation_base(quarter, generation_id)` to
 
 The full path keeps its order: files, `validate_files`, `retained-base.json`, manifest, the one full check (C3), then the gate.
 
-- [ ] **Step 7: Run the tests to verify they pass.**
+> Deviation: D2. The identity-and-replay block that `build_candidate` and `_incremental_candidate` share is one helper, `catalog._identify_candidate`, not two copies (task 7 report, 80bd84d).
+> Deviation: after the whole-branch review, c8949bc runs `_validate_identity` before the incremental `_store_manifest` (finding M1), and 4c73269 refuses an empty source before the incremental build stages files, through the shared `catalog._require_rows` (finding N3).
+
+- [x] **Step 7: Run the tests to verify they pass.**
 
 Run: the test command with target `test_etl_incremental`, then `test_full_check_budget test_etl_equivalence test_etl_columnar`.
 Expected: all pass. A byte-identity failure in `OracleTests` is a C5 bug (or a P5 writer difference). Stop and use systematic-debugging. Compare `pq.ParquetFile(...).metadata` of the two lanes' files row group by row group. Never relax `assertEqual(pair[0], pair[1])`.
 
-- [ ] **Step 8: Run the existing ETL and workflow modules.** Many existing tests now take the incremental path, so they are a second oracle.
+- [x] **Step 8: Run the existing ETL and workflow modules.** Many existing tests now take the incremental path, so they are a second oracle.
 
 Run: the test command with `test_etl_catalog test_etl_publication test_etl_approval test_etl_rollback test_etl_history test_etl_processes test_etl_cli test_local_etl_contracts test_workflow_acceptance test_workflow_drain test_workflow_checked test_workflow_completion test_reconcile_workflow test_reconcile_acceptance`.
 Expected: all pass. The rule for failures is the same as Step 7, and P8 applies to forged-generation tests.
 
-- [ ] **Step 9: Commit.**
+- [x] **Step 9: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/incremental.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/contracts.py packages/sec-edgar-ingest/src/sec_edgar_ingest/etl/catalog.py packages/sec-edgar-ingest/tests/support_incremental.py packages/sec-edgar-ingest/tests/test_etl_incremental.py packages/sec-edgar-ingest/tests/test_full_check_budget.py
@@ -2131,7 +2157,7 @@ git commit -m "feat(etl): rebuild an eligible quarter incrementally behind the C
 - Consumes: plan 4's `test_release_origin.OriginReleaseTests` helpers (`configured`, `origin_run`, `current_run`, `continued`, `scratch`).
 - Produces: `support_release.D5_REVISION`; `origin_release(project, cache, revision=ORIGIN_REVISION)`; the two-release record that Task 14 cites in §4.9.
 
-- [ ] **Step 1: Parameterize the origin release.** In `support_release.py`, after `ORIGIN_REVISION`, add:
+- [x] **Step 1: Parameterize the origin release.** In `support_release.py`, after `ORIGIN_REVISION`, add:
 
 ```python
 D5_REVISION = 'd68787fe8602e9d81a26d2012feec9bfad5c52df'  # source revision of the D5 release aa8de1ac…
@@ -2143,7 +2169,9 @@ Change `origin_release` in four places:
 - The cache key becomes `key = str(project), str(cache), revision`.
 - `ORIGIN_REVISION` becomes `revision` in the `git archive` call and in the commit message (`'Origin source revision ' + revision`).
 
-- [ ] **Step 2: Write the tests.** Create `packages/sec-edgar-ingest/tests/test_release_1b.py`:
+> Deviation: the `_ORIGINS` key annotation changed to a three-part tuple, to match the new cache key. The plan does not name this change (task 8 report).
+
+- [x] **Step 2: Write the tests.** Create `packages/sec-edgar-ingest/tests/test_release_1b.py`:
 
 ```python
 """Stage 1b §5 item 6: the 1b code continues D5-origin pending work, and D5 runs again on a store that 1b wrote.
@@ -2190,7 +2218,7 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 3: Run the module three times.** Member order is not pinned (plan 4 R2), so one run proves little.
+- [x] **Step 3: Run the module three times.** Member order is not pinned (plan 4 R2), so one run proves little.
 
 Run: the test command with target `test_release_1b` three times. Record each result.
 Expected: all pass in each run. The first run builds both releases (several minutes).
@@ -2199,7 +2227,9 @@ If an inherited test fails because it encodes `fc68adef…` behavior, override i
 - A format or receipt difference contradicts C7. That is a bug: fix it with a test.
 - A limit that C7 does not cover (for example a D5 refusal of a 1b child result) is a finding. Stop and ask the owner. On approval, change the test to assert the observed limit, and record it for §4.9.
 
-- [ ] **Step 4: Record and commit.** Create `specs/evidence/stage1b/two-release.md` with these sections:
+> Deviation: the release IDs were not printed from the test code. A watcher script outside the repository (`$TMPDIR/s1b-t8/run.sh`) captured them while each of the three runs went (task 8 report; two-release.md).
+
+- [x] **Step 4: Record and commit.** Create `specs/evidence/stage1b/two-release.md` with these sections:
   1. `## Inputs`: the D5 revision, the origin and current release IDs that the test built (print `cls.origin.release_id` and `cls.current.release_id` in one run).
   2. `## Results`: the three runs. For each, list pass or fail per test and the origin-first count (as plan 4's record did).
   3. `## Consequence for §4.9`: "The 1b release continues D5-origin pending work. Selecting the D5 release again for a store that the 1b release wrote is supported (tested)." Write the observed limit instead, if Step 3 found one.
@@ -2209,6 +2239,8 @@ If an inherited test fails because it encodes `fc68adef…` behavior, override i
 git add packages/sec-edgar-ingest/tests/support_release.py packages/sec-edgar-ingest/tests/test_release_1b.py specs/evidence/stage1b/two-release.md
 git commit -m "test(release): prove D5-origin continuation and D5 on a 1b-written store"
 ```
+
+> Deviation: D3. dfb5385 narrowed the §4.9 consequence in `two-release.md` to what was tested: only first-generation full-rebuild 1b generations, and no D5 publish on top of a 1b generation. No new scenario was added. The fix round also corrected the evidence labels and the `support_release.py` docstring.
 
 ---
 
@@ -2226,7 +2258,7 @@ git commit -m "test(release): prove D5-origin continuation and D5 on a 1b-writte
   - `cost_proposal(finish_seconds, slowest_seconds) -> dict` with `p4_floor_seconds`, `floor_seconds`, `floor_changes`, `reserve_seconds`, `slowest_member_wall_seconds`, `fit_gate_passes`.
   - The D5 `run`, `count` and `rebuild` subcommands keep their behavior.
 
-- [ ] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_measure_cost.py`:
+- [x] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_measure_cost.py`:
 
 ```python
 """Stage 1b §6 rules in scripts/measure-d5-drain.py: the C8 floor, the reserve and the fit gate."""
@@ -2283,12 +2315,12 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail.**
+- [x] **Step 2: Run the tests to verify they fail.**
 
 Run: the test command with target `test_measure_cost`.
 Expected: `AttributeError: module 'measure_cost_script' has no attribute 'cost_proposal'`.
 
-- [ ] **Step 3: Extend the script.** Make these changes to `scripts/measure-d5-drain.py`:
+- [x] **Step 3: Extend the script.** Make these changes to `scripts/measure-d5-drain.py`:
 
 1. Change the module docstring's first line to `"""Offline drain and per-member cost measurement (Stage 1a bounded-drain spec §6; Stage 1b spec §6).`, and add a paragraph to the docstring: `` `scenario` runs one Stage 1b scenario in this process and always writes its report. `summarize` combines the reports and applies the C8 floor and reserve rules. ``
 2. Add `import os` to the imports.
@@ -2584,12 +2616,18 @@ def summarize(work: Path) -> dict:
         return 0
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass.**
+> Deviation: D2. One helper, `start_report`, builds the report header for `run`, `run_finish_only` and `run_scenario` (task 9 report).
+> Deviation: the plan's `history_counts` query (`table_name = 'WorkflowChildCall'`) matched no row, because record kinds share physical tables. f1cd024 matches the `partition` suffix in `SourceState` instead. d8352a9 makes the match exact.
+> Deviation: D5. d8352a9 makes `summarize` refuse a proposal unless each invocation has its expected exit and one wall per dispatched member, builds the scenario plans inside the `try` so that a failure report is always written, and requires `--work` under the project root and not under `<project>/data`. 54601ff (whole-branch review and Codex) refuses mixed release, flags or scale across reports, reads a minimal failed report safely, and case-folds the `data` check.
+
+- [x] **Step 4: Run the tests to verify they pass.**
 
 Run: the test command with target `test_measure_cost`.
 Expected: 4 pass.
 
-- [ ] **Step 5: Smoke-check the mechanics on the D5 interpreter.** This checks the script, not the release. It runs from the main checkout's installed D5 release, with the worktree's script:
+> Deviation: after D5 (d8352a9), `test_measure_cost` has 21 tests, not 4.
+
+- [x] **Step 5: Smoke-check the mechanics on the D5 interpreter.** This checks the script, not the release. It runs from the main checkout's installed D5 release, with the worktree's script:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2610,12 +2648,16 @@ Then check that the D5 `run` path keeps its behavior after the refactor:
 
 Expected: four `"status": "complete"` lines and a summary whose `proposal` is not null. The D5 `run` prints its measures and exits 0. `incomplete_scenarios` is empty, and every scenario has walls, children and history counts. In `authority`, step 1 has only daily members, and step 2 has one quarterly member. If a scenario fails or the authority members differ, fix the script and run the smoke again. Do not commit smoke output.
 
-- [ ] **Step 6: Commit.**
+> Deviation: D4. The agent's worktree guard refused the D5 interpreter in the main checkout, so the owner ran the smoke in the Terminal panel (`step5-smoke.sh`). The re-run after d8352a9 (`step5-smoke-2.sh`) put `W` under the worktree's `fixture-data/`, because the new `--work` guard anchors on the script's own checkout. Both runs passed: four scenarios complete, authority exits [0, 10], proposal not null, D5 `run` exit 0.
+
+- [x] **Step 6: Commit.**
 
 ```bash
 git add scripts/measure-d5-drain.py packages/sec-edgar-ingest/tests/test_measure_cost.py
 git commit -m "feat(scripts): measure Stage 1b member costs one scenario per process"
 ```
+
+> Deviation: the controller made the Step 6 commit (f1cd024), because the implementer stopped at Step 5.
 
 ---
 
@@ -2628,7 +2670,7 @@ git commit -m "feat(scripts): measure Stage 1b member costs one scenario per pro
 - Consumes: the branch after Tasks 1–9.
 - Produces: `main` holding the reviewed change, from which Task 11 builds.
 
-- [ ] **Step 1: Run the full gate in the background.** From the worktree root, with `run_in_background`. Plan 4's pre-merge gate used this environment (`specs/evidence/d5-release/gate.md`, "Environment deviation"): the shadow venv as the uv project environment, no sync, and `PYTHONDONTWRITEBYTECODE` unset.
+- [x] **Step 1: Run the full gate in the background.** From the worktree root, with `run_in_background`. Plan 4's pre-merge gate used this environment (`specs/evidence/d5-release/gate.md`, "Environment deviation"): the shadow venv as the uv project environment, no sync, and `PYTHONDONTWRITEBYTECODE` unset.
 
 ```bash
 env -u PYTHONDONTWRITEBYTECODE UV_PROJECT_ENVIRONMENT=/tmp/s1b-venv UV_NO_SYNC=1 SEC_LOCAL_PROOF_CACHE=/Users/lowell/Projects/sec-edgar-local/releases/artifact-cache sh scripts/check-sec-edgar-ingest.sh > /Users/lowell/Projects/sec-edgar-local/fixture-data/stage1b-gate.log 2>&1; echo "exit $?" >> /Users/lowell/Projects/sec-edgar-local/fixture-data/stage1b-gate.log
@@ -2636,16 +2678,20 @@ env -u PYTHONDONTWRITEBYTECODE UV_PROJECT_ENVIRONMENT=/tmp/s1b-venv UV_NO_SYNC=1
 
 Expected: the log ends with `exit 0`, and unittest prints `OK`. The count is 1020 plus the new tests, in 71 modules: 64 plus the seven new `test_*` modules (`test_etl_integrity`, `test_full_check_budget`, `test_etl_columnar`, `test_etl_equivalence`, `test_etl_incremental`, `test_release_1b`, `test_measure_cost`). Support modules are not counted. The gate runs before the merge, because the Step 5 checkpoint approves the merge on it. If this environment fails for a reason other than a test, stop and ask. Do not move the gate after the merge.
 
-- [ ] **Step 2: Record the gate.** Create `specs/evidence/stage1b/gate.md` with the commit, the start and end times, the `Ran N tests in S s` line, `OK` and the module count. Commit:
+> Deviation: run 1 wrote its log under the worktree, not the main checkout, and from run 5 a wrapper kept the gate's exit code. An untracked `.venv` symlink to the main `.venv` was needed for two `InstalledLauncherTests`. Runs 1 to 3 were stopped because `src` changed. Runs 4 and 5 on 8a7e9c3 failed one test on a `runtime.py` `killpg` EPERM race. Run 6 on 8c1c321 passed after the D8 fix: `Ran 1108 tests`, `OK`, 71 modules (specs/evidence/stage1b/gate.md).
+
+- [x] **Step 2: Record the gate.** Create `specs/evidence/stage1b/gate.md` with the commit, the start and end times, the `Ran N tests in S s` line, `OK` and the module count. Commit:
 
 ```bash
 git add specs/evidence/stage1b/gate.md
 git commit -m "docs(evidence): record the Stage 1b branch gate"
 ```
 
-- [ ] **Step 3: Whole-branch review.** Use the requesting-code-review skill. It dispatches the `code-reviewer` agent on `main..stage1b-per-member-cost`, against the spec (as amended in Task 1), this plan and its Decisions. Name C5 and C6 independence, the locality proof and P8 as review focus. Fix each accepted finding with a test, re-run the affected modules, and commit. If a fix changes code, re-run Step 1 and update `gate.md`.
+- [x] **Step 3: Whole-branch review.** Use the requesting-code-review skill. It dispatches the `code-reviewer` agent on `main..stage1b-per-member-cost`, against the spec (as amended in Task 1), this plan and its Decisions. Name C5 and C6 independence, the locality proof and P8 as review focus. Fix each accepted finding with a test, re-run the affected modules, and commit. If a fix changes code, re-run Step 1 and update `gate.md`.
 
-- [ ] **Step 4: Check that the branch carries no platform member.**
+> Deviation: the review had two seats: the `code-reviewer` agent and a Codex read-only second opinion (D6). Under D7 the fix wave (6e8e86f, then dd1f0fc and 8a7e9c3) made the Arrow-only A1 membership check, a replay full-check test, a retry test and recovery text for a refused C6 candidate, and the full-resolution row count. Under D8, 17d78da and 8c1c321 fixed the `runtime.py` `forward` EPERM race, outside the plan's file list.
+
+- [x] **Step 4: Check that the branch carries no platform member.**
 
 ```bash
 git -C /Users/lowell/Projects/sec-edgar-local show stage1b-per-member-cost:pyproject.toml | grep -n 'members'
@@ -2654,9 +2700,9 @@ git -C /Users/lowell/Projects/sec-edgar-local diff --stat d68787fe8602e9d81a26d2
 
 Expected: `members = ["packages/sec-edgar-ingest"]`, and no diff output.
 
-- [ ] **Step 5: Owner checkpoint (HUMAN).** Show the owner the gate record, the review result and `git log --oneline main..stage1b-per-member-cost`. Ask for approval to merge the branch into `main` before the release build. Stop until the owner answers. Log the answer as a Decision.
+- [x] **Step 5: Owner checkpoint (HUMAN).** Show the owner the gate record, the review result and `git log --oneline main..stage1b-per-member-cost`. Ask for approval to merge the branch into `main` before the release build. Stop until the owner answers. Log the answer as a Decision.
 
-- [ ] **Step 6: Merge.** In the main checkout:
+- [x] **Step 6: Merge.** In the main checkout:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2680,7 +2726,7 @@ Run in the main checkout on `main`.
 - Consumes: clean committed `main` after Task 10.
 - Produces: `releases/sha256=<1B>/`. Its ID, manifest path and `git_revision` feed Tasks 12–14.
 
-- [ ] **Step 1: Confirm a clean tree.**
+- [x] **Step 1: Confirm a clean tree.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2690,7 +2736,7 @@ git rev-parse HEAD
 
 Expected: no status output. Record the revision.
 
-- [ ] **Step 2: Build.**
+- [x] **Step 2: Build.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2701,7 +2747,7 @@ UV_OFFLINE=1 uv run --offline --locked --package sec-edgar-ingest python scripts
 
 Expected: one printed path, `…/releases/sha256=<1B>`. Record `<1B>`.
 
-- [ ] **Step 3: Check identity, lock and export (C9).** Plan 4 found that `runtime-requirements.txt` holds a comment with a random temporary path, so compare the requirement lines only.
+- [x] **Step 3: Check identity, lock and export (C9).** Plan 4 found that `runtime-requirements.txt` holds a comment with a random temporary path, so compare the requirement lines only.
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2715,7 +2761,7 @@ python3 -c "import json,sys; i=json.load(open(sys.argv[1]))['identity']; print(i
 
 Expected: `lock-identical`, `export-lines-identical`, `inputs-identical`. Version `0.2.0`. `git_revision` equals Step 1's revision. The dependency names equal the D5 list, with no platform package.
 
-- [ ] **Step 4: Offline verification on the 1b interpreter.** Plan 4 found that the harness guard refuses any path inside a checkout, and that the verifier's children inherit the working directory. So the harness and evidence go under a directory outside the checkout:
+- [x] **Step 4: Offline verification on the 1b interpreter.** Plan 4 found that the harness guard refuses any path inside a checkout, and that the verifier's children inherit the working directory. So the harness and evidence go under a directory outside the checkout:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2744,7 +2790,7 @@ cp -R "$outside/evidence" "$project/fixture-data/s1b-verify-evidence"
 
 Expected: the verifier prints JSON with `"exit": 0` and `"release_id": "<1B>"`. `preflight_current` prints `<1B>`.
 
-- [ ] **Step 5: Confirm retention.**
+- [x] **Step 5: Confirm retention.**
 
 ```bash
 ls /Users/lowell/Projects/sec-edgar-local/releases
@@ -2752,7 +2798,7 @@ ls /Users/lowell/Projects/sec-edgar-local/releases
 
 Expected: `sha256=49b7a2ed…`, `sha256=900952a8…`, `sha256=d718ae5f…`, `sha256=fc68adef…`, `sha256=aa8de1ac…` and `sha256=<1B>` are all present.
 
-- [ ] **Step 6: Write the release evidence.** Create `specs/evidence/stage1b/release.md` with:
+- [x] **Step 6: Write the release evidence.** Create `specs/evidence/stage1b/release.md` with:
 1. The 1b release ID, its manifest path and its `git_revision` (§7 item 1).
 2. The Step 3 results: identical lock, export lines and inputs, version `0.2.0`, and no platform package (§7 item 2).
 3. The verifier JSON, the preflight output and the evidence directory, with D5, `fc68adef…` and older releases kept (§7 item 3).
@@ -2777,9 +2823,11 @@ Run in the main checkout on `main`.
 - Consumes: `<1B>` from Task 11; the Task 9 script.
 - Produces: the measured floor and reserve, the fit-gate result, and the owner's decision. Tasks 13 and 14 consume them. If the floor changes, a rebuilt release `<1B'>` replaces `<1B>` in Tasks 13 and 14.
 
-- [ ] **Step 0: Check the machine load.** Spec §6 names load as the known risk: the slowest member may pass on a quiet machine and fail at the D5 run's load. Run `sysctl vm.loadavg` and record the output. Do not start while a full gate, a release build or another heavy session runs on this machine. If the 1-minute load is above 2, ask the owner whether to wait.
+- [x] **Step 0: Check the machine load.** Spec §6 names load as the known risk: the slowest member may pass on a quiet machine and fail at the D5 run's load. Run `sysctl vm.loadavg` and record the output. Do not start while a full gate, a release build or another heavy session runs on this machine. If the 1-minute load is above 2, ask the owner whether to wait.
 
-- [ ] **Step 1: Run the four scenarios one after another, in the background.** Run them in sequence, not in parallel, so that they do not slow each other. With `run_in_background`:
+> Deviation: the 1-minute load was 1.81 to 1.94, under the limit of 2. Another project's Python job (PID 71263) still used about one core. It was not stopped. measurement.md "Limits" records it.
+
+- [x] **Step 1: Run the four scenarios one after another, in the background.** Run them in sequence, not in parallel, so that they do not slow each other. With `run_in_background`:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2794,7 +2842,9 @@ done
 
 Expected: `driver.log` holds four `exit 0` lines. This can take more than 12 hours. A failed scenario still leaves its `<name>-report.json`. Do not re-run a scenario before reading why it failed.
 
-- [ ] **Step 2: Summarize.**
+> Deviation: the loop ran from a driver script, `fixture-data/run-s1b-measure.sh`, under `caffeinate -i`. The driver also logged the load at each scenario end. Four `exit 0` lines, in 4 h 35 min.
+
+- [x] **Step 2: Summarize.**
 
 ```bash
 "$R/venv/bin/python" -I -B -X pycache_prefix=/dev/null scripts/measure-d5-drain.py summarize --work "$W"
@@ -2803,7 +2853,7 @@ cp "$W/measurement.json" specs/evidence/stage1b/measurement.json
 
 Expected: a non-null `proposal`. If a scenario is incomplete, `proposal` is null. Report this at Step 4, and do not invent values.
 
-- [ ] **Step 3: Write `specs/evidence/stage1b/measurement.md`.** Use these sections:
+- [x] **Step 3: Write `specs/evidence/stage1b/measurement.md`.** Use these sections:
   - `## Inputs`: the release ID, the work directory, the bodies (quarterly 370,321 rows, daily 3,652 rows), and the flags.
   - `## Results`: every measure, in a table for each scenario. Include the open marks at 1, 10, 40 and 80, the closed first publications, measure 1, the fan-out, the authority member, the finish steps, the slowest member, the history fits with the projections at 400 and 1,200 child calls, and the load range for each scenario.
   - `## Proposal`: the P4 floor rule's value, the C8 floor, the reserve, and the fit gate (`slowest ≤ 3,300 − reserve`).
@@ -2816,7 +2866,7 @@ git add specs/evidence/stage1b/measurement.md specs/evidence/stage1b/measurement
 git commit -m "docs(evidence): record the Stage 1b member-cost measurement"
 ```
 
-- [ ] **Step 4: Owner checkpoint (HUMAN).** Show the owner `measurement.md`: the slowest member, the proposed floor and reserve, and the fit-gate result. Ask for the floor and reserve integers.
+- [x] **Step 4: Owner checkpoint (HUMAN).** Show the owner `measurement.md`: the slowest member, the proposed floor and reserve, and the fit-gate result. Ask for the floor and reserve integers.
   - **If the fit gate fails, the plan stops here** (spec §6). The owner either approves a named, measured limit, or adds a columnar full-rebuild path as a new roadmap stage. Do not widen this stage. Record the answer as a Decision. Continue only if the owner approves a named limit.
   - Stop until the owner answers. Log the answer as a Decision, with the owner's words.
 
@@ -2843,6 +2893,8 @@ git commit -m "fix(config): set the dispatch-reserve floor from the Stage 1b mea
 
 Then repeat Task 11 Steps 1–5 to rebuild and re-verify. Append a section `## Rebuilt for the floor` to `release.md`. It names both release IDs (`<1B>` measured, `<1B'>` rebuilt), the floor commit, and the line "The floor change touches only the constant, so the member and finish timings taken on `<1B>` stay valid for `<1B'>` (spec §6)." Commit `release.md`. From here on, `<1B>` means the rebuilt release.
 
+> Skipped: the owner approved floor 480 s (decision D10), which is not above 480, so config.py stays. Not deferred.
+
 ---
 
 ### Task 13: Select the 1b release in the live config (C10; spec §7 item 5; HUMAN checkpoint)
@@ -2855,9 +2907,11 @@ Then repeat Task 11 Steps 1–5 to rebuild and re-verify. Append a section `## R
 - Consumes: the Task 12 Decision's reserve; `<1B>`.
 - Produces: the new effective-config SHA-256, which Task 14 and the Handoff name.
 
-- [ ] **Step 1: Edit the config.** In `conf/sec-edgar-local.json`, set `execution.dispatch_reserve_seconds` to the approved reserve, and `runtime.release_manifest` to `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1B>/release.json`. Change nothing else.
+- [x] **Step 1: Edit the config.** In `conf/sec-edgar-local.json`, set `execution.dispatch_reserve_seconds` to the approved reserve, and `runtime.release_manifest` to `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1B>/release.json`. Change nothing else.
 
-- [ ] **Step 2: Offline preflight and hash on the 1b interpreter.**
+> Deviation: only `runtime.release_manifest` changed. `execution.dispatch_reserve_seconds` was already 1800 (plan 4 D4), which D10 approved.
+
+- [x] **Step 2: Offline preflight and hash on the 1b interpreter.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -2878,9 +2932,9 @@ git diff conf/sec-edgar-local.json
 
 Expected: `floor` and `reserve` are the approved integers, `release` is `<1B>`, and `effective` is a new SHA-256 (before: `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e`). The diff shows at most two changed values. `binding` holds no `execution` field. Run no launcher command: `prepare_invocation` writes logs.
 
-- [ ] **Step 3: Owner checkpoint (HUMAN).** Show the owner the diff and the Step 2 output. Ask for approval of the live-config selection. Stop until the owner answers. Log the answer as a Decision.
+- [x] **Step 3: Owner checkpoint (HUMAN).** Show the owner the diff and the Step 2 output. Ask for approval of the live-config selection. Stop until the owner answers. Log the answer as a Decision.
 
-- [ ] **Step 4: Record and commit.** Append a section `## Live-config selection` to `release.md`, with the effective-config SHA-256, the floor, the reserve, the binding output, and the line "No SEC request was sent in this stage." Then:
+- [x] **Step 4: Record and commit.** Append a section `## Live-config selection` to `release.md`, with the effective-config SHA-256, the floor, the reserve, the binding output, and the line "No SEC request was sent in this stage." Then:
 
 ```bash
 git add conf/sec-edgar-local.json specs/evidence/stage1b/release.md
@@ -2901,7 +2955,7 @@ Add the commit hash to `release.md` in the Task 14 commit, not by amending.
 **Interfaces:**
 - Consumes: `<1B>`, the Task 12 and 13 Decisions, the Task 13 SHA-256 and commit, and the Task 8 result.
 
-- [ ] **Step 1: §4.6.** Replace:
+- [x] **Step 1: §4.6.** Replace:
 
 ```text
 Atomicity is per quarter, not across the complete historical catalog. Readers capture a generation
@@ -2922,7 +2976,9 @@ the new rows, and an equivalence check against the full path's resolution of eve
 runs before its pointer commits. (Stage 1b, plan 5; C1–C6, C11.)
 ```
 
-- [ ] **Step 2: §4.8 table.** Replace the `| Dispatch reserve | …` row with:
+> Deviation: §4.6 also carries the owner-approved recovery sentences for a refused incremental candidate (D7, finding I1), and says "the equivalence check", not "C6". c9125fd (D12) later reworded the recovery text: removing objects is not a supported step. It also named the stored-candidate full check and the C4 conditions.
+
+- [x] **Step 2: §4.8 table.** Replace the `| Dispatch reserve | …` row with:
 
 ```text
 | Dispatch reserve | `execution.dispatch_reserve_seconds=RESERVE`, set from measured member costs (Stage 1b, plan 5; [measurement](evidence/stage1b/measurement.md)). Required for a new live workflow run. The value must be at least the floor of FLOOR seconds (release constant) and below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4; Stage 1b, plan 5.) |
@@ -2930,7 +2986,7 @@ runs before its pointer commits. (Stage 1b, plan 5; C1–C6, C11.)
 
 Write the approved integers in place of `RESERVE` and `FLOOR`. If the owner approved a named limit at Task 12, add one sentence that names it.
 
-- [ ] **Step 3: §4.8 selection.** Replace the selected-manifest code block's path line with `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1B>/release.json`. Before the paragraph that begins `Stage 1a (plan 4) selected the D5 release`, add:
+- [x] **Step 3: §4.8 selection.** Replace the selected-manifest code block's path line with `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1B>/release.json`. Before the paragraph that begins `Stage 1a (plan 4) selected the D5 release`, add:
 
 ```text
 Stage 1b (plan 5) selected the 1b release `<1B>` and the measured reserve at commit `<Task 13 commit>`.
@@ -2939,7 +2995,9 @@ The effective-config SHA-256 is `<Task 13 SHA-256>`, confirmed by offline prefli
 
 Then change the next paragraph's first words, `Stage 1a (plan 4) selected`, to `Before that, Stage 1a (plan 4) selected`. Write the full release ID, commit hash and SHA-256 in place of the bracketed names.
 
-- [ ] **Step 4: §4.9.** After the paragraph that ends `[two-release evidence](evidence/d5-release/two-release.md).)`, add:
+> Deviation: c9125fd (D12) rewrote the selection sentence. 6d80da4 selected the release only. The reserve stays at 1800 s, set in Stage 1a and now backed by the measurement.
+
+- [x] **Step 4: §4.9.** After the paragraph that ends `[two-release evidence](evidence/d5-release/two-release.md).)`, add:
 
 ```text
 The 1b release changes no generation, manifest, receipt, selection or config format (C7). It continues
@@ -2949,9 +3007,11 @@ supported (tested offline). (Stage 1b, plan 5; [two-release evidence](evidence/s
 
 If Task 8 recorded a limit instead, write that limit.
 
-- [ ] **Step 5: Runbook.** In `docs/runbooks/local-ingestion.md` line 37, replace `The floor is 480 s and the live reserve is 1800 s (provisional).` with `The floor is FLOOR s and the live reserve is RESERVE s, set from measured member costs (Stage 1b).` Write the approved integers.
+> Deviation: D3. §4.9 carries the narrowed wording of `two-release.md`, not the plan's "is supported (tested offline)". It says "sibling-completion receipts", because the parent spec does not define B4.
 
-- [ ] **Step 6: Verify and commit.**
+- [x] **Step 5: Runbook.** In `docs/runbooks/local-ingestion.md` line 37, replace `The floor is 480 s and the live reserve is 1800 s (provisional).` with `The floor is FLOOR s and the live reserve is RESERVE s, set from measured member costs (Stage 1b).` Write the approved integers.
+
+- [x] **Step 6: Verify and commit.**
 
 ```bash
 grep -n "Stage 1b, plan 5" specs/sec-filing-index-ingestion-spec.md
@@ -2964,6 +3024,8 @@ Expected: three matches for the first grep (§4.6, the §4.8 row, §4.9), and no
 git add specs/sec-filing-index-ingestion-spec.md docs/runbooks/local-ingestion.md specs/evidence/stage1b/release.md specs/plans/5-sec-filing-index-per-member-cost.md
 git commit -m "docs(specs): amend the parent spec for the 1b release"
 ```
+
+> Deviation: e0c21c3 also changed `docs/runbooks/local-recovery.md` (new row "Refused incremental candidate") and did not add this plan file. A second commit, 8aa41e0, aligned the 1b spec's §4.1 table and its C5 and C6 rows with the built code. c9125fd fixed six Task 14 review Minors after D12.
 
 ---
 
@@ -2987,3 +3049,19 @@ Run the writing-plans Plan Completion Protocol, step 3a included.
 - Plan 3 DF6: the 1b release is built, so the platform member may merge to `main` under plan 3's Merge gate. That merge belongs to the platform roadmap.
 
 Remove the `stage1b-per-member-cost` worktree and `/tmp/s1b-venv` after the retire commit (finishing-a-development-branch).
+
+## Handoff to later stages
+
+The 1b spec is `specs/completed/sec-filing-index-per-member-cost.md` after the retire commit. Deferred items that a later stage inherits are in `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`.
+
+- **Stage 2 (baseline campaign; the plan 2 revision).** Consumes, as built:
+  - Release `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` (manifest `releases/sha256=9fa189a0…/release.json`, `git_revision` `50423a404fb50a959b3ca4077301117d32804cc6`), selected in the live config at commit `6d80da4d9e1f30461c45a826fecbf8eefc899201`. Effective-config SHA-256 `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`. Reserve 1800 s. Floor 480 s (release constant, unchanged). Evidence: `specs/evidence/stage1b/release.md`, `measurement.md`, `gate.md`.
+  - The plan 2 revision must change: its Global Constraints (release, effective-config SHA-256, reserve, floor); `conf/stage2/*.json`, regenerated with the 1b manifest and the reserve key; `scripts/baseline-campaign.py`, re-verified against the 1b release (plan 2 Task 1 Steps 4–5); and the `campaign.md` Release gate, read against the 1b release. Stop rules still read durable result fields.
+  - Changed modules: `etl/catalog.py`, `publication.py`, `reader.py`, `commands.py`, `transform.py`, `manifest.py`, `contracts.py`; new `etl/columnar.py`, `incremental.py`, `equivalence.py`; `workflows/completion.py`, `checked.py`, `runner.py`; `runtime.py` (the D8 EPERM fix). No result, generation, manifest, receipt, selection or config format changed (C7; 1b spec §2).
+  - Difference from the roadmap `Produces`: no named measured limit was approved, because the fit gate passed (slowest member 1,010.9 s ≤ 3,300 − 1,800 s). The reserve value did not change from the plan 4 provisional 1800 s. The measurement now backs it (D10).
+  - Traps: (a) S1 trust model (1b spec §9 S1; parent §4.6). An engine path accepts a generation by its exact hashes, so it no longer detects a hash-consistent content fault. `read_quarter`, `approve`, `rollback` and `catalog._existing` still run the full check. (b) The §4.9 two-release result covers only stores with first-generation full-rebuild 1b generations (`specs/evidence/stage1b/two-release.md`, "Limits of the proof"; D3). (c) The measurement used fixture acquisition only, so its timings can only underestimate native cost (plan 2 F11). The native `collect` child is not measured. (d) A full-size closed-quarter first publication still takes about 912–1,011 s on the full path (1b spec §2: no columnar full rebuild). (e) A candidate that C6 refuses blocks its own retry as `invalid_source`, which is not retryable. Object removal is not a supported recovery step (1b spec §4.3 item 5; `docs/runbooks/local-recovery.md`; D12). (f) Per-member engine time grows with the history scan (S4, measured, not fixed).
+  - Deferred into this stage: the history-scan cost, the refused-C6-candidate retry block and the first-generation two-release limit (section `5-sec-filing-index-per-member-cost — 2026-10-28`). The B4 single-candidate limit stays open in section `4-sec-filing-index-bounded-drain — 2026-10-27`, and its revisit trigger names Stage 2.
+- **Stage 3 (daily catch-up).** Consumes the same release, config, reserve and floor as Stage 2. The reserve now covers the measured member classes (`specs/evidence/stage1b/measurement.md`): open-quarter daily members at n = 1 to 80 sources, measure 1, the 14-quarter fan-out and full-size quarterly members. A member running at the cutoff still completes (parent §4.7). Traps: (a) An open-quarter member whose quarter has a quarterly membership authority (the A1 path) is not measured. That is the common live case once SEC posts the open quarter's quarterly index. (b) Traps (a), (c), (e) and (f) of the Stage 2 bullet. Deferred into this stage: the unmeasured A1 member class and the history-scan cost (section `5-sec-filing-index-per-member-cost — 2026-10-28`).
+- **Stage 4 (manual reconciliation).** Consumes the selected release and config, and the retained candidate, approval and rollback contracts. As built: `approve` and `rollback` keep the full content check (C3), and no format changed (C7). A quarter with a gate other than `clear`, a revert, a replacement snapshot or an incoming quarterly authority takes the full rebuild (C4). Traps: trap (a) of the Stage 2 bullet, and the refused-C6-candidate block (trap (e)), which needs a recovery disposition when it occurs. Removing the candidate's objects needs a separately reviewed operational decision (D12). Deferred into this stage: the refused-C6-candidate retry block (section `5-sec-filing-index-per-member-cost — 2026-10-28`).
+- **Stage 5 (local scheduling).** Consumes the same release, config, reserve and floor, and the cutoff semantics of parent §4.7: a member running at the cutoff still completes. Traps: the unmeasured A1 member class and the history-scan growth (Stage 3 bullet). A schedule that lets the store's `WorkflowChildCall` rows grow raises per-member engine time (1b spec §6; measurement.md, "History scan (S4)"). Deferred into this stage: the history-scan cost and the unmeasured A1 member class (section `5-sec-filing-index-per-member-cost — 2026-10-28`).
+- **Platform roadmap (not a stage of this roadmap).** Plan 3 DF6: the 1b release is built, so the platform member may merge to `main` under plan 3's Merge gate. That merge belongs to the platform roadmap.
