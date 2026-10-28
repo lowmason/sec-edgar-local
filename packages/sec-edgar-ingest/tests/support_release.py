@@ -94,11 +94,12 @@ def proof_releases(project: Path, cache: Path) -> tuple[VerifiedRelease, Verifie
 
 
 ORIGIN_REVISION = '3ca50c78558bbf072a4eb75412af7d58a9e0f61b'  # source revision of release fc68adef…
-_ORIGINS: dict[tuple[str, str], VerifiedRelease] = {}
+D5_REVISION = 'd68787fe8602e9d81a26d2012feec9bfad5c52df'  # source revision of the D5 release aa8de1ac…
+_ORIGINS: dict[tuple[str, str, str], VerifiedRelease] = {}
 
 
-def origin_release(project: Path, cache: Path) -> VerifiedRelease:
-    """Build the fc68adef… source revision into its own committed repository and install it.
+def origin_release(project: Path, cache: Path, revision: str = ORIGIN_REVISION) -> VerifiedRelease:
+    """Build one source revision (default: that of fc68adef…) into its own committed repository and install it.
 
     Release identity covers the Git revision, so this release ID differs from fc68adef…; its
     application payload is that revision's. The checkout's later code never enters it.
@@ -108,7 +109,7 @@ def origin_release(project: Path, cache: Path) -> VerifiedRelease:
     cache = Path(override) if override else cache
     if not cache.is_absolute():
         raise ValueError('proof cache path must be absolute')
-    key = str(project), str(cache)
+    key = str(project), str(cache), revision
     if key in _ORIGINS:
         return _ORIGINS[key]
     temporary = tempfile.TemporaryDirectory(prefix='sec-native-origin-')
@@ -116,7 +117,7 @@ def origin_release(project: Path, cache: Path) -> VerifiedRelease:
     root = Path(temporary.name)
     source = root / 'source'
     source.mkdir()
-    archive = subprocess.run(['git', '-C', str(project), 'archive', '--format=tar', ORIGIN_REVISION],
+    archive = subprocess.run(['git', '-C', str(project), 'archive', '--format=tar', revision],
                              check=True, capture_output=True).stdout
     subprocess.run(['tar', '-x', '-C', str(source)], input=archive, check=True)
     # The origin revision's own lock, not the checkout's, decides which artifacts it needs.
@@ -125,7 +126,7 @@ def origin_release(project: Path, cache: Path) -> VerifiedRelease:
     subprocess.run(['git', '-C', str(source), 'add', '.'], check=True)
     subprocess.run(['git', '-C', str(source), '-c', 'user.name=Native release proof',
                     '-c', 'user.email=proof@example.invalid', 'commit', '-qm',
-                    'Origin source revision ' + ORIGIN_REVISION], check=True)
+                    'Origin source revision ' + revision], check=True)
     release = preflight(build_release(source, root / 'releases', python=Path(sys.executable),
                                       artifact_cache=cache, offline=True) / 'release.json')
     assert_release_inventory(release)
