@@ -49,6 +49,10 @@ RESERVE_FACTOR = 1.25
 HISTORY_MARKS = (400, 1200)
 WALLS: list[dict] = []
 OPEN_MEMBER: dict = {}
+SELECTED: list[int] = []  # Members in each frozen selection, one entry for each engine call.
+AUTHORITY_GATE_STEP = ('authority', 1)  # This step ends at the withdrawal gate by design (exit 10, findings §2).
+COORDINATION_NAMESPACE = 'sec-owner-lowell-mason'  # The namespace that the package requires of every config.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def count_rows(body: bytes, kind: str) -> int:
@@ -158,7 +162,7 @@ def write_config(path: Path, root: Path, manifest: Path, *, start: str, end: str
                 'requests_per_second': 3, 'max_active_collectors': 1},
         'http': dict(HTTP_POLICY),
         'coordination': {'lease_seconds': 60, 'renew_every_seconds': 20,
-                         'namespace': 'sec-owner-lowell-mason', 'clock_uncertainty_seconds': 2},
+                         'namespace': COORDINATION_NAMESPACE, 'clock_uncertainty_seconds': 2},
         'storage': {'backend': 'local', 'root': str(root / 'store')},
         'acquisition': {'mode': 'fixture'},
         'runtime': {'kind': 'native', 'release_manifest': str(manifest)},
@@ -240,15 +244,17 @@ def scenario(name: str, work: Path, manifest: Path, leaves, steps: list,
     invocations = []
     for index, (command, ranges) in enumerate(steps):
         config = write_config(root / f'config-{index}.json', root, manifest, max_run_seconds=max_run_seconds, **ranges)
-        first_timing, first_member, first_wall = len(TIMINGS), len(MEMBERS), len(WALLS)
+        first_timing, first_member, first_wall, first_selected = len(TIMINGS), len(MEMBERS), len(WALLS), len(SELECTED)
         call = invoke(config, command, f'measure-{name}-{index}', packs[index], max_run_seconds)
         timings = TIMINGS[first_timing:]
         members = MEMBERS[first_member:]
         walls = WALLS[first_wall:]
+        selected = SELECTED[first_selected:]
         for member in (*members, *walls):
             member['children'] = {t['command']: t['seconds'] for t in timings
                                   if t['label'] == 'child' and t['step_id'].endswith('-' + member['member_id'])}
-        call.update(timings=timings, members=members, walls=walls)
+        # `selected_members` is None when the selection was not observed (the D5 `run` path does not observe it).
+        call.update(timings=timings, members=members, walls=walls, selected_members=sum(selected) if selected else None)
         invocations.append(call)
     return {'invocations': invocations}
 
@@ -390,12 +396,14 @@ def history_counts(state: Path) -> dict:
     if not state.exists():
         return {'WorkflowChildCall': 0, 'Attempts': 0}
     connection = sqlite3.connect('file:' + str(state) + '?mode=ro', uri=True)
-    def tally(where: str) -> int:
-        return connection.execute('select count(*) from records where ' + where).fetchone()[0]
+
+    def tally(where: str, *values: str) -> int:
+        return connection.execute('select count(*) from records where ' + where, values).fetchone()[0]
 
     try:
-        # A record kind is the suffix of `partition`, and its table is `table_for(kind)` (storage.contracts).
-        return {'WorkflowChildCall': tally("table_name = 'SourceState' and partition like '%:WorkflowChildCall'"),
+        # A record kind is the second half of `partition`, and its table is `table_for(kind)` (storage.contracts).
+        return {'WorkflowChildCall': tally("table_name = 'SourceState' and partition = ?",
+                                           COORDINATION_NAMESPACE + ':WorkflowChildCall'),
                 'Attempts': tally("table_name = 'Attempts'")}
     finally:
         connection.close()
@@ -404,10 +412,16 @@ def history_counts(state: Path) -> dict:
 def instrument_members(state: Path) -> None:
     """Member wall (§6): from the member's `sibling_completion` call to the return of its durable receipt.
 
-    Machine load and the history row counts are sampled at each member boundary.
+    Machine load and the history row counts are sampled at each member boundary. The frozen selection's member
+    count is kept for each engine call: a member that the run defers or halts never gets a wall.
     """
     from sec_edgar_ingest.workflows import members, runner
-    sibling, record = runner.sibling_completion, members.WorkflowMembers.record
+    sibling, record, freeze = runner.sibling_completion, members.WorkflowMembers.record, runner.freeze_selection
+
+    def frozen(*args, **kwargs):
+        selection = freeze(*args, **kwargs)
+        SELECTED.append(len(selection['jobs']))
+        return selection
 
     def entered(value, *args, **kwargs):
         OPEN_MEMBER.clear()
@@ -425,31 +439,38 @@ def instrument_members(state: Path) -> None:
         return descriptor
 
     runner.sibling_completion = entered
+    runner.freeze_selection = frozen
     members.WorkflowMembers.record = recorded
 
 
 def run_scenario(name: str, manifest: Path, work: Path, counts: dict, scale: str) -> dict:
     """One Stage 1b scenario in this process. Its report is written even when the run fails."""
-    sizes = SCALES[scale]
-    report = start_report(COST_FORMAT, 'scenario', scale, manifest, counts, scenario=name,
-                          max_run_seconds=COST_MAX_RUN_SECONDS, status='running')
-    quarterly_rows, daily_rows = report['inputs']['quarterly_rows'], report['inputs']['daily_rows']
-    instrument()
-    instrument_members(work / name / 'store' / 'state.sqlite3')
-    plans = {
-        'open': (open_leaves(sizes, daily_rows),
-                 [('daily', {'start': '2026Q4', 'end': 'open', 'daily_start': '2026-10-01'})]),
-        'closed': (closed_leaves(sizes, quarterly_rows, daily_rows),
-                   [('backfill', {'start': sizes['closed_start'], 'end': '2026Q3', 'daily_start': '2026-12-01'}),
-                    ('daily', {'start': sizes['closed_start'], 'end': 'open', 'daily_start': '2026-12-01'})]),
-        'authority': (authority_leaves(sizes, quarterly_rows, daily_rows),
-                      [('daily', {'start': '2026Q3', 'end': 'open', 'daily_start': '2026-07-01'}),
-                       ('backfill', {'start': '2026Q3', 'end': '2026Q3', 'daily_start': '2026-07-01'})]),
-        'finish': (finish_leaves(sizes),
-                   [('backfill', {'start': sizes['finish_start'], 'end': 'open', 'daily_start': '2026-12-31'})]),
-    }
-    leaves, steps = plans[name]
+    # Whatever fails below, the `finally` writes this much: `start_report` may be what fails.
+    report = {'format_version': COST_FORMAT, 'kind': 'scenario', 'scenario': name, 'scale': scale,
+              'status': 'running', 'scenarios': {}}
     try:
+        sizes = SCALES[scale]
+        report.update(start_report(COST_FORMAT, 'scenario', scale, manifest, counts, scenario=name,
+                                   max_run_seconds=COST_MAX_RUN_SECONDS, status='running'))
+        quarterly_rows, daily_rows = report['inputs']['quarterly_rows'], report['inputs']['daily_rows']
+        instrument()
+        instrument_members(work / name / 'store' / 'state.sqlite3')
+        plans = {  # Each plan builds its leaves when called, so only the scenario that runs builds them.
+            'open': lambda: (open_leaves(sizes, daily_rows),
+                             [('daily', {'start': '2026Q4', 'end': 'open', 'daily_start': '2026-10-01'})]),
+            'closed': lambda: (closed_leaves(sizes, quarterly_rows, daily_rows),
+                               [('backfill', {'start': sizes['closed_start'], 'end': '2026Q3',
+                                              'daily_start': '2026-12-01'}),
+                                ('daily', {'start': sizes['closed_start'], 'end': 'open',
+                                           'daily_start': '2026-12-01'})]),
+            'authority': lambda: (authority_leaves(sizes, quarterly_rows, daily_rows),
+                                  [('daily', {'start': '2026Q3', 'end': 'open', 'daily_start': '2026-07-01'}),
+                                   ('backfill', {'start': '2026Q3', 'end': '2026Q3', 'daily_start': '2026-07-01'})]),
+            'finish': lambda: (finish_leaves(sizes),
+                               [('backfill', {'start': sizes['finish_start'], 'end': 'open',
+                                              'daily_start': '2026-12-31'})]),
+        }
+        leaves, steps = plans[name]()
         report['scenarios'][name] = scenario(name, work, manifest, leaves, steps, COST_MAX_RUN_SECONDS)
         report['status'] = 'complete'
     except BaseException as error:
@@ -484,12 +505,38 @@ def history_fit(walls: list[dict]) -> dict | None:
             'projected_engine_seconds': {str(mark): intercept + slope * mark for mark in HISTORY_MARKS}}
 
 
+def unsound(name: str, report: dict | None) -> str | None:
+    """Why this scenario report must not feed the proposal, or None.
+
+    A run that defers members (deadline) or stops at a halt gives them no wall, and the slowest wall of the rest
+    would under-state the reserve. So every engine call must end as expected and have one wall for each member
+    that its selection holds.
+    """
+    if report is None:
+        return 'no report'
+    if report['status'] != 'complete':
+        return 'run ' + report['status'] + (': ' + report['error'] if report.get('error') else '')
+    for index, call in enumerate(report['scenarios'][name]['invocations']):
+        gate = (name, index) == AUTHORITY_GATE_STEP
+        if call['exit'] != (10 if gate else 0) or (gate and call['outcome'] != 'awaiting_approval'):
+            return f"step {index} ended with exit {call['exit']} and outcome {call['outcome']}"
+        if call.get('selected_members') != len(call['walls']):
+            return (f"step {index} has {len(call['walls'])} member walls "
+                    f"for {call.get('selected_members')} selected members")
+    return None
+
+
 def summarize(work: Path) -> dict:
-    """Combine the scenario reports into the §6 measures and the C8 and reserve proposal."""
+    """Combine the scenario reports into the §6 measures and the C8 and reserve proposal.
+
+    Only a scenario that `unsound` accepts feeds the measures and the proposal. The others are named, with a reason.
+    """
     reports = {name: json.loads((work / f'{name}-report.json').read_text()) for name in COST_SCENARIOS
                if (work / f'{name}-report.json').exists()}
-    calls = {name: report['scenarios'][name]['invocations'] for name, report in reports.items()
-             if report['status'] == 'complete'}
+    reasons = {name: reason for name in COST_SCENARIOS if (reason := unsound(name, reports.get(name)))}
+    finished = {name: report['scenarios'][name]['invocations'] for name, report in reports.items()
+                if report['status'] == 'complete'}
+    calls = {name: value for name, value in finished.items() if name not in reasons}
 
     def walls(name: str, index: int) -> list[dict]:
         return calls[name][index]['walls'] if name in calls and index < len(calls[name]) else []
@@ -504,6 +551,7 @@ def summarize(work: Path) -> dict:
     slowest = max(every, key=lambda wall: wall['wall_seconds']) if every else None
     measures = {
         'incomplete_scenarios': [name for name in COST_SCENARIOS if name not in calls],
+        'incomplete_reasons': reasons,
         'open_member_wall_seconds': {str(mark): open_walls[mark]['wall_seconds'] for mark in OPEN_MARKS
                                      if mark < len(open_walls)},
         'closed_first_publication_wall_seconds': {wall['period']: wall['wall_seconds'] for wall in walls('closed', 0)
@@ -518,7 +566,7 @@ def summarize(work: Path) -> dict:
         'history': {name: history_fit([wall for call in value for wall in call['walls']]) for name, value in calls.items()},
         'load_at_start': {name: [min(w['load_at_start'][0] for w in ws), max(w['load_at_start'][0] for w in ws)]
                           for name, ws in ((n, [w for c in v for w in c['walls']]) for n, v in calls.items()) if ws},
-        'exits': {name: [call['exit'] for call in value] for name, value in calls.items()},
+        'exits': {name: [call['exit'] for call in value] for name, value in finished.items()},
     }
     complete = not measures['incomplete_scenarios'] and finish_seconds and slowest is not None
     proposal = cost_proposal(max(finish_seconds.values()), slowest['wall_seconds']) if complete else None
@@ -640,6 +688,16 @@ def rebuild(work: Path) -> dict:
     return report
 
 
+def measurement_work(path: Path) -> Path:
+    """`scenario` and `summarize` keep their stores inside the project root and outside its live `data/`."""
+    work = path.resolve()
+    if work.is_relative_to('/tmp') or work.is_relative_to('/private/tmp'):
+        raise SystemExit('measurement work must be under the project, not /tmp')
+    if not work.is_relative_to(PROJECT_ROOT) or work.is_relative_to(PROJECT_ROOT / 'data'):
+        raise SystemExit(f'measurement work must be inside {PROJECT_ROOT} and not inside {PROJECT_ROOT / "data"}')
+    return work
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog='measure-d5-drain')
     commands = parser.add_subparsers(dest='command', required=True)
@@ -670,9 +728,7 @@ def main(argv=None) -> int:
         sys.stdout.write(json.dumps(count(args.config, args.evidence), sort_keys=True, indent=1) + '\n')
         return 0
     if args.command in ('scenario', 'summarize'):
-        work = args.work.resolve()
-        if work.is_relative_to('/tmp') or work.is_relative_to('/private/tmp'):
-            raise SystemExit('measurement work must be under the project, not /tmp')
+        work = measurement_work(args.work)
         if args.command == 'summarize':
             summary = summarize(work)
             (work / 'measurement.json').write_text(json.dumps(summary, sort_keys=True, indent=1) + '\n')
