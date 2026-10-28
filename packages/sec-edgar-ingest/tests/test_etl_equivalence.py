@@ -143,16 +143,18 @@ class EquivalenceTests(unittest.TestCase):
     def test_refuses_a_duplicated_touched_row_by_its_count_alone(self):
         # With the order check skipped, the row count from the full resolution is a second, independent defence.
         # It must equal both the manifest's row count and the data file's row count.
-        cases = {'the manifest counts the duplicate': lambda rows: {'row_count': len(rows)},
-                 'the manifest keeps the full-resolution count': lambda rows: {}}
-        for label, fields in cases.items():
+        cases = {'the manifest counts the duplicate': ({'row_count': 4}, 4),
+                 'the manifest keeps the full-resolution count': ({}, 3)}
+        for label, (fields, manifest_rows) in cases.items():
             with self.subTest(label):
                 lane, base, candidate = self.open_addition()
+                self.assertEqual(candidate.manifest.row_count, 3)  # The full resolution has 3 rows.
                 rows = lane.rows(candidate)
                 rows.insert(3, rows[2])
-                forged = forge(lane, candidate, data=rows, **fields(rows))
-                self.assertEqual((forged.manifest.row_count, len(rows)),
-                                 (len(rows) if fields(rows) else candidate.manifest.row_count, 4))
+                forged = forge(lane, candidate, data=rows, **fields)
+                data = next(ref for ref in forged.manifest.files if ref.role == 'data')
+                self.assertEqual((forged.manifest.row_count, data.row_count, len(lane.rows(forged))),
+                                 (manifest_rows, 4, 4))
                 with patch.object(equivalence, '_strictly_sorted'), \
                         self.assertRaisesRegex(ValueError, 'incremental counts differ from the full resolution'):
                     self.check(lane, forged, base)
