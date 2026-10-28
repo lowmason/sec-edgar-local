@@ -526,14 +526,30 @@ def unsound(name: str, report: dict | None) -> str | None:
     return None
 
 
+HEADER_FIELDS = ('scale', 'release_id', 'flags', 'inputs')
+
+
+def mixed_header(reports: dict) -> str | None:
+    """Why the reports cannot be combined, or None. A field that a report lacks (a failed header) is not compared."""
+    for field in HEADER_FIELDS:
+        values = {json.dumps(report[field], sort_keys=True) for report in reports.values() if field in report}
+        if len(values) > 1:
+            return f'the reports differ in {field}: ' + ', '.join(sorted(values))
+    return None
+
+
 def summarize(work: Path) -> dict:
     """Combine the scenario reports into the §6 measures and the C8 and reserve proposal.
 
     Only a scenario that `unsound` accepts feeds the measures and the proposal. The others are named, with a reason.
+    Reports that differ in scale, release, interpreter flags or inputs make every scenario unsound.
     """
     reports = {name: json.loads((work / f'{name}-report.json').read_text()) for name in COST_SCENARIOS
                if (work / f'{name}-report.json').exists()}
     reasons = {name: reason for name in COST_SCENARIOS if (reason := unsound(name, reports.get(name)))}
+    if mixed := mixed_header(reports):
+        reasons = {name: reasons.get(name, mixed) for name in COST_SCENARIOS}
+    scales = sorted({report['scale'] for report in reports.values() if 'scale' in report})
     finished = {name: report['scenarios'][name]['invocations'] for name, report in reports.items()
                 if report['status'] == 'complete'}
     calls = {name: value for name, value in finished.items() if name not in reasons}
@@ -571,7 +587,8 @@ def summarize(work: Path) -> dict:
     complete = not measures['incomplete_scenarios'] and finish_seconds and slowest is not None
     proposal = cost_proposal(max(finish_seconds.values()), slowest['wall_seconds']) if complete else None
     return {'format_version': COST_FORMAT, 'kind': 'summary', 'work': str(work),
-            'release_ids': sorted({report['release_id'] for report in reports.values()}),
+            'scale': scales[0] if len(scales) == 1 else None,
+            'release_ids': sorted({report['release_id'] for report in reports.values() if 'release_id' in report}),
             'measures': measures, 'proposal': proposal}
 
 
@@ -693,7 +710,9 @@ def measurement_work(path: Path) -> Path:
     work = path.resolve()
     if work.is_relative_to('/tmp') or work.is_relative_to('/private/tmp'):
         raise SystemExit('measurement work must be under the project, not /tmp')
-    if not work.is_relative_to(PROJECT_ROOT) or work.is_relative_to(PROJECT_ROOT / 'data'):
+    inside = work.is_relative_to(PROJECT_ROOT)
+    top = work.relative_to(PROJECT_ROOT).parts[:1] if inside else ()
+    if not inside or (top and top[0].casefold() == 'data'):  # APFS is case-insensitive: `DATA/` is `data/`.
         raise SystemExit(f'measurement work must be inside {PROJECT_ROOT} and not inside {PROJECT_ROOT / "data"}')
     return work
 

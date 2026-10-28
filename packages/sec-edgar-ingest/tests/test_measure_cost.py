@@ -2,7 +2,9 @@
 from network_guard import install
 install()
 
+import contextlib
 import importlib.util
+import io
 import json
 import tempfile
 import unittest
@@ -139,6 +141,34 @@ class SummarizeTests(unittest.TestCase):
         self.assertEqual(summary['measures']['incomplete_scenarios'], ['open'])
         self.assertIsNone(summary['proposal'])
 
+    def headed(self, changes=None):
+        """Four sound reports with the same header, except `changes` for the `finish` report."""
+        header = {'scale': 'smoke', 'release_id': 'r', 'inputs': {'quarterly_rows': 1000, 'daily_rows': 20},
+                  'flags': {'isolated': 1, 'dont_write_bytecode': True, 'pycache_prefix': '/dev/null'}}
+        for name, calls in sound_scenarios().items():
+            report = {**header, 'status': 'complete', 'scenarios': {name: {'invocations': calls}}}
+            if name == 'finish':
+                report.update(changes or {})
+            (self.work / f'{name}-report.json').write_text(json.dumps(report))
+        return self.measure.summarize(self.work)
+
+    def test_reports_with_one_header_give_a_proposal_and_name_their_scale(self):
+        summary = self.headed()
+        self.assertEqual((summary['scale'], summary['release_ids']), ('smoke', ['r']))
+        self.assertIsNotNone(summary['proposal'])
+
+    def test_reports_that_disagree_on_scale_release_flags_or_inputs_give_no_proposal(self):
+        cases = {'scale': {'scale': 'full'}, 'release_id': {'release_id': 'other'},
+                 'flags': {'flags': {'isolated': 0, 'dont_write_bytecode': True, 'pycache_prefix': '/dev/null'}},
+                 'inputs': {'inputs': {'quarterly_rows': 370321, 'daily_rows': 20}}}
+        for field, changes in cases.items():
+            with self.subTest(field):
+                summary = self.headed(changes)
+                self.assertIsNone(summary['proposal'])
+                self.assertEqual(summary['measures']['incomplete_scenarios'], ['open', 'closed', 'authority', 'finish'])
+                for reason in summary['measures']['incomplete_reasons'].values():
+                    self.assertIn(field, reason)
+
 
 class HistoryCountsTests(unittest.TestCase):
     def setUp(self):
@@ -263,6 +293,26 @@ class WorkGuardTests(unittest.TestCase):
             with self.subTest(command):
                 self.assertIn('not inside ' + str(self.root / 'data'),
                               self.refused(command, self.root / 'data' / 'sec' / 'work'))
+
+    def test_work_inside_the_live_data_directory_in_another_case_is_refused(self):
+        # APFS is case-insensitive, so `DATA/` is the live `data/` directory.
+        for name in ('DATA/sec/work', 'Data'):
+            with self.subTest(name):
+                self.assertIn('not inside ' + str(self.root / 'data'), self.refused('summarize', self.root / name))
+
+    def test_a_minimal_failed_report_is_summarized_with_its_reason(self):
+        measure = self.measure
+        measure.instrument = lambda: None
+        measure.instrument_members = lambda state: None
+        work = self.root / 'scratch' / 'work'
+        work.mkdir(parents=True)
+        with self.assertRaises(FileNotFoundError):  # `start_report` never returns, so the report has no release id.
+            measure.run_scenario('finish', self.root / 'missing.json', work, {'sources': {}}, 'smoke')
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = measure.main(['summarize', '--work', str(work)])
+        summary = json.loads((work / 'measurement.json').read_text())
+        self.assertEqual((code, summary['proposal'], summary['release_ids'], summary['scale']), (1, None, [], 'smoke'))
+        self.assertIn('FileNotFoundError', summary['measures']['incomplete_reasons']['finish'])
 
     def test_work_inside_the_project_root_but_outside_data_is_accepted(self):
         for name in ('fixture-data/s1b-smoke', 'scratch/work'):
