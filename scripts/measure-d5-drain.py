@@ -1,9 +1,12 @@
-"""Offline drain measurement for Stage 1a (bounded-drain spec §6).
+"""Offline drain and per-member cost measurement (Stage 1a bounded-drain spec §6; Stage 1b spec §6).
 
 Run with the installed release interpreter and -I -B -X pycache_prefix=/dev/null.
 `count` opens the live store with operator access only, and counts the rows of retained bodies.
 `run` builds fixture packs and fresh stores under --work, and drives the release's own workflow engine
 in this process with native child processes. Fixture acquisition sends no request.
+
+`scenario` runs one Stage 1b scenario in this process and always writes its report.
+`summarize` combines the reports and applies the C8 floor and reserve rules.
 """
 from __future__ import annotations
 
@@ -13,6 +16,7 @@ import hashlib
 import io
 import json
 import math
+import os
 import sys
 import time
 import zipfile
@@ -28,13 +32,23 @@ FINISH_LABELS = ('baseline_gaps', 'source_revert_gaps', 'summarize', 'write_work
 # closed_quarters: the 14 closed quarters that the retained 2026-10-15 daily file back-dates into (findings §4.7).
 SCALES = {
     'smoke': {'open_days': 3, 'finish_start': '2026Q1', 'finish_rows': 20, 'closed_start': '2025Q1',
-              'closed_quarters': ('2025Q1', '2025Q2')},
+              'closed_quarters': ('2025Q1', '2025Q2'), 'authority_days': 2},
     'full': {'open_days': 81, 'finish_start': '2015Q1', 'finish_rows': 50, 'closed_start': '2021Q1',
              'closed_quarters': ('2021Q1', '2021Q2', '2021Q3', '2021Q4', '2022Q1', '2022Q2', '2023Q3',
-                                 '2024Q4', '2025Q1', '2025Q2', '2025Q3', '2025Q4', '2026Q1', '2026Q3')},
+                                 '2024Q4', '2025Q1', '2025Q2', '2025Q3', '2025Q4', '2026Q1', '2026Q3'),
+             'authority_days': 10},
 }
 TIMINGS: list[dict] = []
 MEMBERS: list[dict] = []
+COST_FORMAT = 'sec-1b-cost-measurement-v1'
+COST_SCENARIOS = ('open', 'closed', 'authority', 'finish')
+COST_MAX_RUN_SECONDS = 43200  # The closed baseline's 14 first publications can exceed 6 hours under load (plan 5, P7).
+LAUNCHER_DEFAULT_SECONDS = 3300
+FLOOR_MINIMUM_SECONDS = 480
+RESERVE_FACTOR = 1.25
+HISTORY_MARKS = (400, 1200)
+WALLS: list[dict] = []
+OPEN_MEMBER: dict = {}
 
 
 def count_rows(body: bytes, kind: str) -> int:
@@ -132,7 +146,8 @@ def build_pack(root: Path, leaves: dict, repeats: int = 4) -> Path:
     return path
 
 
-def write_config(path: Path, root: Path, manifest: Path, *, start: str, end: str, daily_start: str) -> Path:
+def write_config(path: Path, root: Path, manifest: Path, *, start: str, end: str, daily_start: str,
+                 max_run_seconds: int = MAX_RUN_SECONDS) -> Path:
     from sec_edgar_ingest.config import HTTP_POLICY, Settings
     from sec_edgar_ingest.models import canonical_json, to_mapping_value
     value = {
@@ -148,7 +163,7 @@ def write_config(path: Path, root: Path, manifest: Path, *, start: str, end: str
         'acquisition': {'mode': 'fixture'},
         'runtime': {'kind': 'native', 'release_manifest': str(manifest)},
         'logging': {'root': str(root / 'logs')},
-        'execution': {'max_run_seconds': MAX_RUN_SECONDS},
+        'execution': {'max_run_seconds': max_run_seconds},
         'etl': {'parser_version': 'sec-index-parser-v1', 'schema_version': 'sec-index-v1'},
         'reconciliation': {'require_withdrawal_approval': True},
         'fixture': {'allow_clock_override': True, 'allow_deadline_override': False},
@@ -198,9 +213,9 @@ def instrument() -> None:
     runner.process_member = timed_member
 
 
-def invoke(config: Path, command: str, run_id: str, pack: Path) -> dict:
+def invoke(config: Path, command: str, run_id: str, pack: Path, max_run_seconds: int = MAX_RUN_SECONDS) -> dict:
     from sec_edgar_ingest.cli import main
-    deadline = datetime.now(timezone.utc) + timedelta(seconds=MAX_RUN_SECONDS - 600)
+    deadline = datetime.now(timezone.utc) + timedelta(seconds=max_run_seconds - 600)
     argv = [command, '--config', str(config), '--run-id', run_id, '--execution-id', 'measure',
             '--attempt-id', 'a', '--deadline', deadline.isoformat(), '--today', TODAY.isoformat(),
             '--fixture-pack', str(pack)]
@@ -215,21 +230,25 @@ def invoke(config: Path, command: str, run_id: str, pack: Path) -> dict:
             'result_ref': message['result_ref'], 'seconds': seconds}
 
 
-def scenario(name: str, work: Path, manifest: Path, leaves: dict, steps: list) -> dict:
+def scenario(name: str, work: Path, manifest: Path, leaves, steps: list,
+             max_run_seconds: int = MAX_RUN_SECONDS) -> dict:
+    """`leaves` is one pack for every step, or a list with one pack for each step."""
     root = work / name
     root.mkdir(parents=True)
-    pack = build_pack(root / 'pack', leaves)
+    packs = ([build_pack(root / 'pack', leaves)] * len(steps) if isinstance(leaves, dict)
+             else [build_pack(root / f'pack-{index}', value) for index, value in enumerate(leaves)])
     invocations = []
     for index, (command, ranges) in enumerate(steps):
-        config = write_config(root / f'config-{index}.json', root, manifest, **ranges)
-        first_timing, first_member = len(TIMINGS), len(MEMBERS)
-        call = invoke(config, command, f'measure-{name}-{index}', pack)
+        config = write_config(root / f'config-{index}.json', root, manifest, max_run_seconds=max_run_seconds, **ranges)
+        first_timing, first_member, first_wall = len(TIMINGS), len(MEMBERS), len(WALLS)
+        call = invoke(config, command, f'measure-{name}-{index}', packs[index], max_run_seconds)
         timings = TIMINGS[first_timing:]
         members = MEMBERS[first_member:]
-        for member in members:
+        walls = WALLS[first_wall:]
+        for member in (*members, *walls):
             member['children'] = {t['command']: t['seconds'] for t in timings
                                   if t['label'] == 'child' and t['step_id'].endswith('-' + member['member_id'])}
-        call.update(timings=timings, members=members)
+        call.update(timings=timings, members=members, walls=walls)
         invocations.append(call)
     return {'invocations': invocations}
 
@@ -244,47 +263,79 @@ def quarters(start: str, end: str) -> list[tuple[int, int]]:
     return found
 
 
-def run(manifest: Path, work: Path, counts: dict, scale: str) -> dict:
-    sizes = SCALES[scale]
-    sources = counts['sources']
-    quarterly_rows = sources['2024Q1']['rows'] if scale == 'full' else 1000
-    daily_rows = max(v['rows'] for v in sources.values() if v['kind'] == 'daily') if scale == 'full' else 20
-    instrument()
-    report = {'format_version': FORMAT, 'kind': 'run', 'scale': scale, 'python': sys.executable,
-              'flags': {'isolated': sys.flags.isolated, 'dont_write_bytecode': sys.dont_write_bytecode,
-                        'pycache_prefix': sys.pycache_prefix},
-              'release_id': json.loads(manifest.read_text())['release_id'],
-              'inputs': {'quarterly_rows': quarterly_rows, 'daily_rows': daily_rows, **sizes},
-              'started_at': datetime.now(timezone.utc).isoformat(), 'scenarios': {}}
+def start_report(format_version: str, kind: str, scale: str, manifest: Path, counts: dict | None = None,
+                 **extra) -> dict:
+    """The opening keys of every measurement report: interpreter flags, release id and inputs.
+
+    With `counts`, `inputs` also holds `quarterly_rows` and `daily_rows`, the rows of a full-size
+    quarterly and daily file. The caller reads them back from `inputs`.
+    """
+    inputs = dict(SCALES[scale])
+    if counts is not None:
+        sources = counts['sources']
+        inputs = {'quarterly_rows': sources['2024Q1']['rows'] if scale == 'full' else 1000,
+                  'daily_rows': max(v['rows'] for v in sources.values() if v['kind'] == 'daily')
+                  if scale == 'full' else 20, **inputs}
+    return {'format_version': format_version, 'kind': kind, 'scale': scale, 'python': sys.executable,
+            'flags': {'isolated': sys.flags.isolated, 'dont_write_bytecode': sys.dont_write_bytecode,
+                      'pycache_prefix': sys.pycache_prefix},
+            'release_id': json.loads(manifest.read_text())['release_id'], 'inputs': inputs,
+            'started_at': datetime.now(timezone.utc).isoformat(), 'scenarios': {}, **extra}
+
+
+def open_leaves(sizes: dict, daily_rows: int) -> dict:
     days = [date(2026, 10, 1) + timedelta(days=index) for index in range(sizes['open_days'])]
-    open_leaves = {('full-index', 2026, 4): [], ('daily-index', 2026, 3): [], ('daily-index', 2026, 4): [
+    return {('full-index', 2026, 4): [], ('daily-index', 2026, 3): [], ('daily-index', 2026, 4): [
         (f'master.{day:%Y%m%d}.idx', body('daily', [row('daily', 300000 + index, serial, day)
                                                      for serial in range(daily_rows)]))
         for index, day in enumerate(days)]}
-    report['scenarios']['open'] = scenario('open', work, manifest, open_leaves,
-        [('daily', {'start': '2026Q4', 'end': 'open', 'daily_start': '2026-10-01'})])
-    # Closed baseline: every quarter from closed_start to 2026Q3 has a quarterly source; the back-dated
-    # quarters are full size. Then two daily files: one back-dates one row into one closed quarter (the
-    # spec's measure 1), the other one row into each back-dated quarter (the fan-out of findings §4.7).
+
+
+def closed_leaves(sizes: dict, quarterly_rows: int, daily_rows: int) -> dict:
+    """A quarterly baseline from closed_start to 2026Q3, the back-dated quarters full size, then two daily files:
+    one back-dates one row into one closed quarter (measure 1), the other one row into each (findings §4.7)."""
     heavy = sizes['closed_quarters']
-    closed_leaves = {('full-index', 2026, 4): [], ('daily-index', 2026, 4): []}
+    leaves = {('full-index', 2026, 4): [], ('daily-index', 2026, 4): []}
     for index, (year, quarter) in enumerate(quarters(sizes['closed_start'], '2026Q3')):
         size = quarterly_rows if f'{year}Q{quarter}' in heavy else sizes['finish_rows']
         first = date(year, (quarter - 1) * 3 + 1, 2)
-        closed_leaves['full-index', year, quarter] = [('master.zip', body('quarterly', [
+        leaves['full-index', year, quarter] = [('master.zip', body('quarterly', [
             row('quarterly', 100000 + index * 50000 + serial % 40000, serial, first) for serial in range(size)]))]
-        closed_leaves['daily-index', year, quarter] = []
+        leaves['daily-index', year, quarter] = []
+
     def back_date(label: str) -> date:
         return date(int(label[:4]), (int(label[-1]) - 1) * 3 + 1, 12)
+
     single = [row('daily', 310000, serial, date(2026, 12, 1)) for serial in range(daily_rows)]
     single.append(row('daily', 900001, 1, back_date(heavy[0])))
     fanout = [row('daily', 320000, serial, date(2026, 12, 2)) for serial in range(daily_rows)]
     fanout.extend(row('daily', 900100 + index, 1, back_date(label)) for index, label in enumerate(heavy))
-    closed_leaves['daily-index', 2026, 4] = [('master.20261201.idx', body('daily', single)),
-                                             ('master.20261202.idx', body('daily', fanout))]
-    report['scenarios']['closed'] = scenario('closed', work, manifest, closed_leaves, [
-        ('backfill', {'start': sizes['closed_start'], 'end': '2026Q3', 'daily_start': '2026-12-01'}),
-        ('daily', {'start': sizes['closed_start'], 'end': 'open', 'daily_start': '2026-12-01'})])
+    leaves['daily-index', 2026, 4] = [('master.20261201.idx', body('daily', single)),
+                                      ('master.20261202.idx', body('daily', fanout))]
+    return leaves
+
+
+def finish_leaves(sizes: dict) -> dict:
+    leaves = {}
+    for index, (year, quarter) in enumerate(quarters(sizes['finish_start'], '2026Q4')):
+        first = date(year, (quarter - 1) * 3 + 1, 1)
+        leaves['full-index', year, quarter] = [('master.zip', body('quarterly', [
+            row('quarterly', 400000 + serial, index * 1000 + serial, first) for serial in range(sizes['finish_rows'])]))]
+        leaves['daily-index', year, quarter] = []
+    return leaves
+
+
+def run(manifest: Path, work: Path, counts: dict, scale: str) -> dict:
+    sizes = SCALES[scale]
+    instrument()
+    report = start_report(FORMAT, 'run', scale, manifest, counts)
+    quarterly_rows, daily_rows = report['inputs']['quarterly_rows'], report['inputs']['daily_rows']
+    report['scenarios']['open'] = scenario('open', work, manifest, open_leaves(sizes, daily_rows),
+        [('daily', {'start': '2026Q4', 'end': 'open', 'daily_start': '2026-10-01'})])
+    report['scenarios']['closed'] = scenario(
+        'closed', work, manifest, closed_leaves(sizes, quarterly_rows, daily_rows), [
+            ('backfill', {'start': sizes['closed_start'], 'end': '2026Q3', 'daily_start': '2026-12-01'}),
+            ('daily', {'start': sizes['closed_start'], 'end': 'open', 'daily_start': '2026-12-01'})])
     run_finish(report, work, manifest, sizes)
     report['ended_at'] = datetime.now(timezone.utc).isoformat()
     report['measures'] = measures(report)
@@ -293,13 +344,7 @@ def run(manifest: Path, work: Path, counts: dict, scale: str) -> dict:
 
 
 def run_finish(report: dict, work: Path, manifest: Path, sizes: dict) -> None:
-    finish_leaves = {}
-    for index, (year, quarter) in enumerate(quarters(sizes['finish_start'], '2026Q4')):
-        first = date(year, (quarter - 1) * 3 + 1, 1)
-        finish_leaves['full-index', year, quarter] = [('master.zip', body('quarterly', [
-            row('quarterly', 400000 + serial, index * 1000 + serial, first) for serial in range(sizes['finish_rows'])]))]
-        finish_leaves['daily-index', year, quarter] = []
-    report['scenarios']['finish'] = scenario('finish', work, manifest, finish_leaves,
+    report['scenarios']['finish'] = scenario('finish', work, manifest, finish_leaves(sizes),
         [('backfill', {'start': sizes['finish_start'], 'end': 'open', 'daily_start': '2026-12-31'})])
 
 
@@ -307,11 +352,7 @@ def run_finish_only(manifest: Path, work: Path, scale: str) -> dict:
     """The finish scenario alone (owner decision D2, 2026-10-23): the floor needs only the finish step's cost."""
     sizes = SCALES[scale]
     instrument()
-    report = {'format_version': FORMAT, 'kind': 'run-finish-only', 'scale': scale, 'python': sys.executable,
-              'flags': {'isolated': sys.flags.isolated, 'dont_write_bytecode': sys.dont_write_bytecode,
-                        'pycache_prefix': sys.pycache_prefix},
-              'release_id': json.loads(manifest.read_text())['release_id'], 'inputs': dict(sizes),
-              'started_at': datetime.now(timezone.utc).isoformat(), 'scenarios': {}}
+    report = start_report(FORMAT, 'run-finish-only', scale, manifest)
     run_finish(report, work, manifest, sizes)
     report['ended_at'] = datetime.now(timezone.utc).isoformat()
     call = report['scenarios']['finish']['invocations'][0]
@@ -320,6 +361,170 @@ def run_finish_only(manifest: Path, work: Path, scale: str) -> dict:
                           'finish_members': len(call['members']), 'invocation_seconds': call['seconds'],
                           'exits': {'finish': [call['exit']]}}
     return report
+
+
+def authority_leaves(sizes: dict, quarterly_rows: int, daily_rows: int) -> list[dict]:
+    """Findings §2: a closed quarter (2026Q3) with a daily-only generation gains its quarterly authority.
+
+    Step 1 publishes `authority_days` full-size daily files. Step 2's quarterly file lists 90% of their keys
+    and its own rows up to the full quarterly size, so the full rebuild loads the active rows, withdraws the
+    rest and stops at the gate.
+    """
+    days = [date(2026, 7, 1) + timedelta(days=index) for index in range(sizes['authority_days'])]
+    keys = [(500000 + index, serial, day) for index, day in enumerate(days) for serial in range(daily_rows)]
+    daily = [(f'master.{day:%Y%m%d}.idx', body('daily', [row('daily', cik, serial, filed)
+                                                          for cik, serial, filed in keys if filed == day]))
+             for day in days]
+    listed = [key for position, key in enumerate(keys) if position % 10]
+    rows = [row('quarterly', cik, serial, filed) for cik, serial, filed in listed]
+    rows.extend(row('quarterly', 600000 + serial % 40000, serial, date(2026, 7, 2))
+                for serial in range(quarterly_rows - len(listed)))
+    first = {('full-index', 2026, 3): [], ('full-index', 2026, 4): [],
+             ('daily-index', 2026, 3): daily, ('daily-index', 2026, 4): []}
+    return [first, {**first, ('full-index', 2026, 3): [('master.zip', body('quarterly', rows))]}]
+
+
+def history_counts(state: Path) -> dict:
+    """Rows of the history tables that `_obligations` and `reuse_exact_binding` scan (S4)."""
+    import sqlite3
+    if not state.exists():
+        return {'WorkflowChildCall': 0, 'Attempts': 0}
+    connection = sqlite3.connect('file:' + str(state) + '?mode=ro', uri=True)
+    def tally(where: str) -> int:
+        return connection.execute('select count(*) from records where ' + where).fetchone()[0]
+
+    try:
+        # A record kind is the suffix of `partition`, and its table is `table_for(kind)` (storage.contracts).
+        return {'WorkflowChildCall': tally("table_name = 'SourceState' and partition like '%:WorkflowChildCall'"),
+                'Attempts': tally("table_name = 'Attempts'")}
+    finally:
+        connection.close()
+
+
+def instrument_members(state: Path) -> None:
+    """Member wall (§6): from the member's `sibling_completion` call to the return of its durable receipt.
+
+    Machine load and the history row counts are sampled at each member boundary.
+    """
+    from sec_edgar_ingest.workflows import members, runner
+    sibling, record = runner.sibling_completion, members.WorkflowMembers.record
+
+    def entered(value, *args, **kwargs):
+        OPEN_MEMBER.clear()
+        OPEN_MEMBER.update(member_id=value['member_id'], kind=value['source']['kind'],
+                           period=value['source']['period'], started=time.monotonic(),
+                           load_at_start=list(os.getloadavg()), history=history_counts(state))
+        return sibling(value, *args, **kwargs)
+
+    def recorded(self, result, context, evidence):
+        descriptor = record(self, result, context, evidence)
+        if OPEN_MEMBER.get('member_id') == result.member_id:
+            WALLS.append({**OPEN_MEMBER, 'wall_seconds': time.monotonic() - OPEN_MEMBER['started'],
+                          'load_at_end': list(os.getloadavg()), 'outcome': result.outcome})
+            OPEN_MEMBER.clear()
+        return descriptor
+
+    runner.sibling_completion = entered
+    members.WorkflowMembers.record = recorded
+
+
+def run_scenario(name: str, manifest: Path, work: Path, counts: dict, scale: str) -> dict:
+    """One Stage 1b scenario in this process. Its report is written even when the run fails."""
+    sizes = SCALES[scale]
+    report = start_report(COST_FORMAT, 'scenario', scale, manifest, counts, scenario=name,
+                          max_run_seconds=COST_MAX_RUN_SECONDS, status='running')
+    quarterly_rows, daily_rows = report['inputs']['quarterly_rows'], report['inputs']['daily_rows']
+    instrument()
+    instrument_members(work / name / 'store' / 'state.sqlite3')
+    plans = {
+        'open': (open_leaves(sizes, daily_rows),
+                 [('daily', {'start': '2026Q4', 'end': 'open', 'daily_start': '2026-10-01'})]),
+        'closed': (closed_leaves(sizes, quarterly_rows, daily_rows),
+                   [('backfill', {'start': sizes['closed_start'], 'end': '2026Q3', 'daily_start': '2026-12-01'}),
+                    ('daily', {'start': sizes['closed_start'], 'end': 'open', 'daily_start': '2026-12-01'})]),
+        'authority': (authority_leaves(sizes, quarterly_rows, daily_rows),
+                      [('daily', {'start': '2026Q3', 'end': 'open', 'daily_start': '2026-07-01'}),
+                       ('backfill', {'start': '2026Q3', 'end': '2026Q3', 'daily_start': '2026-07-01'})]),
+        'finish': (finish_leaves(sizes),
+                   [('backfill', {'start': sizes['finish_start'], 'end': 'open', 'daily_start': '2026-12-31'})]),
+    }
+    leaves, steps = plans[name]
+    try:
+        report['scenarios'][name] = scenario(name, work, manifest, leaves, steps, COST_MAX_RUN_SECONDS)
+        report['status'] = 'complete'
+    except BaseException as error:
+        report['status'] = 'failed'
+        report['error'] = repr(error)
+        report['partial_walls'], report['partial_timings'] = WALLS, TIMINGS
+        raise
+    finally:
+        report['ended_at'] = datetime.now(timezone.utc).isoformat()
+        (work / f'{name}-report.json').write_text(json.dumps(report, sort_keys=True, indent=1) + '\n')
+    return report
+
+
+def cost_proposal(finish_seconds: float, slowest_seconds: float) -> dict:
+    """C8 floor and the §6 reserve rule. The owner sets the committed values at the checkpoint."""
+    p4_floor = max(60, math.ceil(3 * finish_seconds / 30) * 30)
+    floor = max(FLOOR_MINIMUM_SECONDS, p4_floor)
+    reserve = math.ceil((RESERVE_FACTOR * slowest_seconds + floor) / 60) * 60
+    return {'p4_floor_seconds': p4_floor, 'floor_seconds': floor, 'floor_changes': floor != FLOOR_MINIMUM_SECONDS,
+            'reserve_seconds': reserve, 'slowest_member_wall_seconds': slowest_seconds,
+            'fit_gate_passes': slowest_seconds <= LAUNCHER_DEFAULT_SECONDS - reserve}
+
+
+def history_fit(walls: list[dict]) -> dict | None:
+    """Per-member engine seconds (wall minus children) against `WorkflowChildCall` rows at member start (S4)."""
+    points = [(w['history']['WorkflowChildCall'], w['wall_seconds'] - sum(w['children'].values())) for w in walls]
+    if len({x for x, _ in points}) < 2:
+        return None
+    fit = linear_fit(points)
+    slope, intercept = fit['slope_seconds_per_source'], fit['intercept_seconds']
+    return {'slope_seconds_per_child_call': slope, 'intercept_seconds': intercept, 'points': fit['points'],
+            'projected_engine_seconds': {str(mark): intercept + slope * mark for mark in HISTORY_MARKS}}
+
+
+def summarize(work: Path) -> dict:
+    """Combine the scenario reports into the §6 measures and the C8 and reserve proposal."""
+    reports = {name: json.loads((work / f'{name}-report.json').read_text()) for name in COST_SCENARIOS
+               if (work / f'{name}-report.json').exists()}
+    calls = {name: report['scenarios'][name]['invocations'] for name, report in reports.items()
+             if report['status'] == 'complete'}
+
+    def walls(name: str, index: int) -> list[dict]:
+        return calls[name][index]['walls'] if name in calls and index < len(calls[name]) else []
+
+    def finish(call: dict) -> float:
+        return sum(t['seconds'] for t in call['timings'] if t['label'] in FINISH_LABELS)
+
+    every = [wall for value in calls.values() for call in value for wall in call['walls']]
+    open_walls, closed_daily = walls('open', 0), walls('closed', 1)
+    finish_seconds = {f'{name}-{index}': finish(call) for name in ('closed', 'finish') if name in calls
+                      for index, call in enumerate(calls[name])}
+    slowest = max(every, key=lambda wall: wall['wall_seconds']) if every else None
+    measures = {
+        'incomplete_scenarios': [name for name in COST_SCENARIOS if name not in calls],
+        'open_member_wall_seconds': {str(mark): open_walls[mark]['wall_seconds'] for mark in OPEN_MARKS
+                                     if mark < len(open_walls)},
+        'closed_first_publication_wall_seconds': {wall['period']: wall['wall_seconds'] for wall in walls('closed', 0)
+                                                  if wall['kind'] == 'quarterly'},
+        'closed_measure_1_wall_seconds': closed_daily[0]['wall_seconds'] if closed_daily else None,
+        'closed_fanout_wall_seconds': closed_daily[1]['wall_seconds'] if len(closed_daily) > 1 else None,
+        'authority_wall_seconds': next((wall['wall_seconds'] for wall in walls('authority', 1)
+                                        if wall['kind'] == 'quarterly'), None),
+        'finish_seconds': finish_seconds,
+        'slowest_member': None if slowest is None else {key: slowest[key] for key in
+                                                        ('kind', 'period', 'wall_seconds', 'children', 'outcome')},
+        'history': {name: history_fit([wall for call in value for wall in call['walls']]) for name, value in calls.items()},
+        'load_at_start': {name: [min(w['load_at_start'][0] for w in ws), max(w['load_at_start'][0] for w in ws)]
+                          for name, ws in ((n, [w for c in v for w in c['walls']]) for n, v in calls.items()) if ws},
+        'exits': {name: [call['exit'] for call in value] for name, value in calls.items()},
+    }
+    complete = not measures['incomplete_scenarios'] and finish_seconds and slowest is not None
+    proposal = cost_proposal(max(finish_seconds.values()), slowest['wall_seconds']) if complete else None
+    return {'format_version': COST_FORMAT, 'kind': 'summary', 'work': str(work),
+            'release_ids': sorted({report['release_id'] for report in reports.values()}),
+            'measures': measures, 'proposal': proposal}
 
 
 def measures(report: dict) -> dict:
@@ -449,12 +654,35 @@ def main(argv=None) -> int:
     running.add_argument('--counts', type=Path, required=True)
     running.add_argument('--scale', choices=sorted(SCALES), required=True)
     running.add_argument('--only', choices=['finish'], default=None)
+    scenario_parser = commands.add_parser('scenario')
+    scenario_parser.add_argument('--name', choices=COST_SCENARIOS, required=True)
+    scenario_parser.add_argument('--release-manifest', type=Path, required=True)
+    scenario_parser.add_argument('--work', type=Path, required=True)
+    scenario_parser.add_argument('--counts', type=Path, required=True)
+    scenario_parser.add_argument('--scale', choices=sorted(SCALES), required=True)
+    summarizing = commands.add_parser('summarize')
+    summarizing.add_argument('--work', type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == 'rebuild':
         sys.stdout.write(json.dumps(rebuild(args.work.resolve()), sort_keys=True, indent=1) + '\n')
         return 0
     if args.command == 'count':
         sys.stdout.write(json.dumps(count(args.config, args.evidence), sort_keys=True, indent=1) + '\n')
+        return 0
+    if args.command in ('scenario', 'summarize'):
+        work = args.work.resolve()
+        if work.is_relative_to('/tmp') or work.is_relative_to('/private/tmp'):
+            raise SystemExit('measurement work must be under the project, not /tmp')
+        if args.command == 'summarize':
+            summary = summarize(work)
+            (work / 'measurement.json').write_text(json.dumps(summary, sort_keys=True, indent=1) + '\n')
+            sys.stdout.write(json.dumps({'measures': summary['measures'], 'proposal': summary['proposal']},
+                                        sort_keys=True, indent=1) + '\n')
+            return 0 if summary['proposal'] is not None else 1
+        work.mkdir(parents=True, exist_ok=True)
+        report = run_scenario(args.name, args.release_manifest.resolve(), work,
+                              json.loads(args.counts.read_text()), args.scale)
+        sys.stdout.write(json.dumps({'scenario': args.name, 'status': report['status']}) + '\n')
         return 0
     work = args.work.resolve()
     if work.is_relative_to('/tmp') or work.is_relative_to('/private/tmp'):
