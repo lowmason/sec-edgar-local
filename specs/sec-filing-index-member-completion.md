@@ -73,7 +73,7 @@ Out of scope:
 | M1 | A new builder makes the legacy publish call descriptor without the complete-input refusal. It keeps every other check that `_legacy_publish_call` has today. `_legacy_publish_call` keeps its name, signature and behavior: it calls the builder, then refuses an incomplete input with today's message. The descriptor bytes, and so the call key, stay identical to today's for every Attempt that today's code accepts. (Builder check, my call.) |
 | M2 | The legacy loop of `_publish_calls` builds the descriptor for every `publish` Attempt that is not a checked child call, and keeps `_transformed_input` on every one, as today. It keeps a call when today's rule keeps it: no result, or a `WorkflowRepairObligation` row, or a repair authority under the call key. The complete-input check applies only to a kept call, with today's message. A finished Attempt with an incomplete input and no repair record is not kept and raises nothing. Only this loop uses the new builder. Every other caller keeps calling `_legacy_publish_call` unchanged: `read_legacy_publish`, `_call_context`, `_read_document` (`completion.py:228`) and `legacy.bootstrap_legacy` (`workflows/legacy.py:160`). |
 | M3 | The completion conflict at `processing.py:96` carries the evaluation's gaps in its message: the stock text, then for each gap its code and message, in order. The text stays one line and passes `require_text`, as `error_text` output does. The error `details` stay `{'type': 'Conflict'}`. No format changes (M6). |
-| M4 | After the replay check, `process_member` reads the gaps of its first `evaluate_member` call. If any gap has `retryable` false, it raises `Conflict` before any repair or child dispatch. The message names the member, then each such gap's code and message, in the M3 form. Retryable gaps (`acquisition_pending`, `transform_pending`, `publication_pending`) never stop a member. Obligations keep today's repair path. |
+| M4 | After the replay check, `process_member` reads the gaps of its first `evaluate_member` call. If it returned no obligations and any gap has `retryable` false, it raises `Conflict` before any child dispatch. When obligations are present, the repair runs as today, even with a non-retryable gap, and the `:96` check stays the final guard. (When `_obligations` itself raises, as in invocation 1, the obligations are empty, so the stop covers that case.) The message names the member, then each such gap's code and message, in the M3 form. Retryable gaps (`acquisition_pending`, `transform_pending`, `publication_pending`) never stop a member. Obligations keep today's repair path. |
 | M5 | On the 1c release, a store with the halted member's shape completes that member with no pointer moved a second time. Completion here means the engine's own definition: `evaluate_member` returns complete with no obligations, and the workflow result carries its capture under `already_complete`. No `WorkflowMemberResult` receipt is required (§4.2). The re-run takes the engine's normal path. No recovery command is added. |
 | M6 | Generations, manifests, receipts, member evidence, selection (`sec-local-workflow-selection-v1`), Attempts, effective config, outcomes and exit codes do not change format. Existing receipts stay valid byte for byte. Exact replay returns identical bytes. |
 | M7 | The 1c release is built by `build_release` from clean committed `main`. The package version stays `0.2.0`. `uv.lock` and the requirement lines of `uv export --package sec-edgar-ingest --no-dev --no-emit-workspace` are byte-identical to the 1b build inputs, with no platform member. The 1b release, the D5 release, `fc68adef…` and older releases are retained (§4.9). |
@@ -175,7 +175,7 @@ before its implementation.
 5. **M3.** The `:96` conflict message contains each gap's code and message, in order.
 6. **M4.** A non-retryable gap from the first evaluation raises before any dispatch: the fake
    dispatcher records no call, and no pointer moves. Retryable gaps dispatch as today. Obligations take
-   the repair path as today.
+   the repair path as today, also when a non-retryable gap comes with them (the mixed case).
 7. **Diagnosis replay.** `diag2.py` and `diag5.py` run against a fresh scratch copy of `data/` on the 1c
    interpreter, with the same root-binding method. `evaluate_member` for member `3554e8ef…` returns
    complete with no gaps, and the pointer list equals the diagnosis's. A hash list shows `data/`
@@ -250,6 +250,8 @@ Owner answers at brainstorming, 2026-10-29:
 
 Calls made in writing this spec, for the owner's review:
 
+- M4 does not stop a member whose first evaluation returned obligations, even with a non-retryable gap.
+  The runbook's repair path then still runs, and the `:96` check, now with gap text, is the final guard.
 - The stop is in `process_member` only, not also in the runner before `discover` (§4.1). On a poisoned
   store, the `discover` child still sends its requests before the first member stops.
 - The repair is the normal re-run, with no recovery command (M5, §4.2), because the diagnosis shows the

@@ -3,7 +3,7 @@
 import json, runpy, sys
 from pathlib import Path
 sys.argv = [sys.argv[0], sys.argv[1], sys.argv[2]]
-ns = runpy.run_path('/tmp/stage1c-scripts/diag7.py')
+ns = runpy.run_path(str(Path(__file__).with_name('diag7.py')))
 store, objects, comp = ns['store'], ns['objects'], ns['comp']
 receipts = {r.to_mapping()['value']['member_id'] for r in store.scan('WorkflowMemberResult', {})}
 complete = []
