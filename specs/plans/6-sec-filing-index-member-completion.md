@@ -1,6 +1,6 @@
 # Member-Completion Conflict Fix and the 1c Release Implementation Plan
 
-**Status: AWAITING OWNER REVIEW (2026-10-29).** This plan authorizes no SEC request.
+**Approval:** Approved by the owner, 2026-10-29, with P1–P8 as proposed (D4 below), as committed at `de4a85b`. This plan authorizes no SEC request.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -70,6 +70,7 @@ Execution environment (planning facts, not spec text):
 - **D1** (owner, brief, 2026-10-29): the Exit reproduction tests the real cause only. The F17 fixture stays deferred (spec S1). Applied in: Task 1, Global Constraints, After the last task (deferred items).
 - **D2** (owner, brief, 2026-10-29): the platform member stays off `main` until the 1c release is built (spec S2). Applied in: Global Constraints, Task 4 Step 4, Task 5 Step 3, Handoff (platform bullet).
 - **D3** (owner, brief, 2026-10-29): the approach is "fix + explain + stop", M1–M4 (spec S3). Applied in: Tasks 2 and 3.
+- **D4** (owner, plan review, 2026-10-29): plan 6 approved with P1–P8 as proposed, as committed at `de4a85b`. No plan-level or spec-level change. Owner's words: "Approve as proposed". Applied in: Before Task 1 Steps 1–2, and Tasks 1–4 (P1–P8).
 
 ## Defaults for owner review
 
