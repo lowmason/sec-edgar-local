@@ -1,7 +1,6 @@
 # Stage 2 baseline campaign: scope, budget and approval
 
-**Status:** Proposed for release `9fa189a0…`. Not approved. No live invocation may start until the
-Release gate section is open and the Approval section is complete and committed.
+**Status:** Approved for live execution within the limits above.
 **Plan:** [plan 2](../../plans/2-sec-filing-index-ingestion-spec.md), Revisions 1 and 2.
 **Spec:** §§4.2–4.9, 5–6, 7 G2 of the [ingestion spec](../../sec-filing-index-ingestion-spec.md).
 **History:** the version of this file at commit `ea482dd` proposed a campaign on release `fc68adef…`. Its
@@ -133,4 +132,16 @@ not a failure of the plan.
 
 ## Approval
 
-To be completed in Task 4 with the owner's exact words.
+The owner answered each item as a separate question in the operator session. Quoted text is the option the
+owner selected.
+
+- Owner: Lowell Mason. Approved on (UTC): 2026-10-29T13:13:49Z. The owner gave no timestamp; this is when
+  the operator recorded the answers.
+- Range: "Confirm 2020Q1–2026Q4". Slices, budget and stop rules: as proposed ("Confirm as proposed").
+- Runtime per invocation: 3300. Window: starts 2026-10-29T13:00:00Z, ends 2026-11-05T13:00:00Z.
+- Member-wall limit: 1056. Pilot as the first A1 measurement: "Pilot measures A1".
+- Refused incremental candidate: "Confirm as proposed" (halt, remove no objects, Stage 4 disposition).
+- Withdrawal policy and order effect: "Confirm as proposed". Retained daily sources: "Confirm as proposed".
+- Sole-issuer declaration: the owner selected this drafted wording: "During the campaign window, the
+  launcher on this machine is the only SEC client under my identity. No other machine and not the original
+  sec-edgar Azure project sends SEC requests under it."
