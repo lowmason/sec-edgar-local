@@ -1,9 +1,9 @@
-"""Read-only Stage 2 baseline-campaign evidence: file inventory, transport audit and coverage.
+"""Read-only Stage 2 baseline-campaign evidence: file inventory, transport audit, coverage and timing.
 
 Run under the selected release interpreter with -I -B -X pycache_prefix=/dev/null. The tool opens
 the store with operator access, sends no request and writes nothing under the store root. It uses
-release fc68adef... internals (workflow result validation, ETL readers); re-verify it before use
-with any other release.
+release internals (workflow result validation, ETL readers, durable child attempts). It is verified
+against releases fc68adef... and 9fa189a0...; re-verify it before use with any other release.
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import hashlib
 import json
 import sys
 from collections import Counter
+from datetime import datetime, timedelta
 from pathlib import Path
 
 FORMAT = 'sec-baseline-campaign-evidence-v1'
@@ -21,6 +22,8 @@ MUTABLE_STATE = frozenset({'state.sqlite3', 'state.sqlite3-wal', 'state.sqlite3-
 TRANSIENT_STATE = MUTABLE_STATE - {'state.sqlite3'}
 COVERED = frozenset({'covered', 'covered_open_quarter'})
 RANK = {'complete': 0, 'pending': 1, 'failed': 2}
+CHECKS = ('full', 'integrity')
+CHILD_COMMANDS = ('collect', 'transform', 'publish')
 BUDGET_TOTALS = (('attempts', 'max_request_attempts'), ('distinct_urls', 'max_distinct_urls'),
                  ('received_bytes', 'max_received_bytes'))
 
@@ -124,7 +127,11 @@ def unit_verdict(quarter: str, open_quarter: str | None, member: dict | None, vi
     if member['status'] != 'complete':
         return member['status']
     if (view['status'] != 'published' or view['membership_source_id'] != member['source_id']
-            or view['gate'] != 'clear' or view['row_count'] == 0 or view['validated_rows'] != view['row_count']):
+            or view['gate'] != 'clear' or view['row_count'] == 0):
+        return 'publication_mismatch'
+    if view['validated_rows'] is None:
+        return 'published_unchecked'  # An integrity-only view never counts as coverage.
+    if view['validated_rows'] != view['row_count']:
         return 'publication_mismatch'
     return 'covered_open_quarter' if quarter == open_quarter else 'covered'
 
@@ -155,14 +162,18 @@ def latest_members(results) -> dict:
     return latest
 
 
-def quarter_view(quarter: str, objects, state) -> dict:
-    from sec_edgar_ingest.etl.reader import capture_quarter, read_quarter, validated_manifest
+def quarter_view(quarter: str, objects, state, check: str = 'full') -> dict:
+    """`full` reads every row through the release's full content check (once); `integrity` checks
+    only the exact manifest and file hashes (C1) and reports `validated_rows` as null."""
+    from sec_edgar_ingest.etl.reader import capture_quarter, checked_manifest, read_quarter
+    if check not in CHECKS:
+        raise ValueError('unknown quarter check: ' + check)
     try:
         capture = capture_quarter(quarter, objects, state)
         if capture is None:
             return {'quarter': quarter, 'status': 'unpublished'}
-        manifest = validated_manifest(capture, objects)
-        rows = sum(1 for _ in read_quarter(capture, objects))
+        rows = sum(1 for _ in read_quarter(capture, objects)) if check == 'full' else None
+        manifest = checked_manifest(capture, objects)
     except Exception as error:  # Any refusal is evidence for this quarter, never a crash of the inventory.
         return {'quarter': quarter, 'status': 'capture_invalid', 'error': type(error).__name__ + ': ' + str(error)}
     membership = manifest.membership_source
@@ -191,7 +202,8 @@ def read_results(refs: list[str], store, objects) -> list:
     return sorted(results, key=lambda result: (result.context.started_at, result.context.run_id))
 
 
-def coverage(store, objects, refs: list[str], start: str, end: str, open_quarter: str | None) -> dict:
+def coverage(store, objects, refs: list[str], start: str, end: str, open_quarter: str | None,
+             check: str = 'full') -> dict:
     from sec_edgar_ingest.discovery import quarter_span
     from sec_edgar_ingest.etl.state import EtlState
     requested = quarter_span(start, end)
@@ -202,7 +214,7 @@ def coverage(store, objects, refs: list[str], start: str, end: str, open_quarter
     latest = latest_members(results)
     state = EtlState(store)
     published = sorted({row.to_mapping()['value']['quarter'] for row in store.scan('QuarterPublication', {})})
-    views = {quarter: quarter_view(quarter, objects, state) for quarter in sorted({*requested, *published})}
+    views = {quarter: quarter_view(quarter, objects, state, check) for quarter in sorted({*requested, *published})}
     units = []
     for quarter in requested:
         quarterly = [view for view in latest.values() if view['kind'] == 'quarterly' and view['period'] == quarter]
@@ -218,7 +230,7 @@ def coverage(store, objects, refs: list[str], start: str, end: str, open_quarter
                       'last_result_gaps': [] if last is None else sorted(
                           {gap.code for gap in last.gaps if gap.details.get('quarter') == quarter})})
     verdicts = Counter(unit['verdict'] for unit in units)
-    return {'format_version': FORMAT, 'kind': 'coverage', 'requested': {'start': start, 'end': end,
+    return {'format_version': FORMAT, 'kind': 'coverage', 'check': check, 'requested': {'start': start, 'end': end,
             'open_quarter': open_quarter, 'quarters': len(requested)},
             'results': [{'run_id': result.context.run_id, 'attempt_id': result.context.attempt_id,
                          'command': result.context.command, 'outcome': result.outcome,
@@ -229,6 +241,118 @@ def coverage(store, objects, refs: list[str], start: str, end: str, open_quarter
             'other_filing_quarters': [views[quarter] for quarter in published if quarter not in requested],
             'daily_sources': sorted((view for view in latest.values() if view['kind'] == 'daily'),
                                     key=lambda view: (view['period'], view['source_id']))}
+
+
+# ---- member timing --------------------------------------------------------------------------
+
+def _time(value) -> datetime:
+    return value if isinstance(value, datetime) else datetime.fromisoformat(value)
+
+
+def _seconds(start, end) -> float:
+    return round((_time(end) - _time(start)).total_seconds(), 3)
+
+
+def child_attempts(values: list[dict]) -> dict:
+    """Finished child `Attempt` values keyed by (run_id, command, attempt_id); the latest end wins."""
+    found = {}
+    for value in values:
+        context = value['context']
+        if (context['command'] not in CHILD_COMMANDS or value.get('ended_at') is None
+                or value.get('outcome') == 'received'):
+            continue
+        key = (context['run_id'], context['command'], context['attempt_id'])
+        held = found.get(key)
+        if held is None or _time(value['ended_at']) > _time(held['ended_at']):
+            found[key] = value
+    return found
+
+
+def member_timings(run_id: str, members: list[dict], attempts: dict) -> list[dict]:
+    """Per-member child seconds and wall for one workflow result.
+
+    A member starts at its first child's start. Members run one at a time, so a member's wall runs to
+    the next timed member's start. The last timed member's wall runs to its own last child's end, so no
+    member's wall holds the finish step (see `tail_seconds`). Engine seconds are the wall minus the
+    member's own child seconds. A child of another run (a reused child) is listed, not timed. A member
+    that ends `unchanged` with no child ref is a B4 sibling completion. A member deferred at the cutoff
+    has no child ref either, and is not B4.
+    """
+    rows = []
+    for member in members:
+        children, reused = {}, []
+        for ref in member['child_refs']:
+            _, _, ref_run, command, attempt_id, _ = ref.split('/')
+            if ref_run != run_id:
+                reused.append(ref)
+                continue
+            value = attempts.get((ref_run, command, attempt_id))
+            if value is None:
+                raise ValueError('child result has no finished attempt record: ' + ref)
+            started = value.get('started_at') or value['context']['started_at']
+            children[command] = {'outcome': value['outcome'], 'started_at': str(started),
+                                 'ended_at': str(value['ended_at']), 'seconds': _seconds(started, value['ended_at'])}
+        start = min((_time(child['started_at']) for child in children.values()), default=None)
+        end = max((_time(child['ended_at']) for child in children.values()), default=None)
+        rows.append({'source_id': member['source_id'], 'kind': member['kind'], 'period': member['period'],
+                     'outcome': member['outcome'], 'b4': not member['child_refs'] and member['outcome'] == 'unchanged',
+                     'ran_children': bool(member['child_refs']), 'reused_children': reused,
+                     'children': children, 'child_seconds': round(sum(c['seconds'] for c in children.values()), 3),
+                     'start': None if start is None else start.isoformat(),
+                     'last_child_end': None if end is None else end.isoformat(),
+                     'wall_seconds': None, 'engine_seconds': None})
+    timed = sorted((row for row in rows if row['start'] is not None), key=lambda row: row['start'])
+    for row, following in zip(timed, [*timed[1:], None]):
+        end = row['last_child_end'] if following is None else following['start']
+        row['wall_seconds'] = _seconds(row['start'], end)
+        row['engine_seconds'] = round(row['wall_seconds'] - row['child_seconds'], 3)
+    return rows
+
+
+def tail_seconds(rows: list[dict], ended_at) -> float | None:
+    """Seconds from the last child's end to the result's end: the finish step and deferral bookkeeping."""
+    ends = [row['last_child_end'] for row in rows if row['last_child_end'] is not None]
+    return None if not ends else _seconds(max(ends, key=_time), ended_at)
+
+
+def summarize_timings(rows: list[dict]) -> dict:
+    timed = [row for row in rows if row['wall_seconds'] is not None]
+    sources = Counter(row['source_id'] for row in rows if row['ran_children'])
+    slowest = max(timed, key=lambda row: row['wall_seconds'], default=None)
+    return {'timed_members': len(timed), 'b4_members': sum(row['b4'] for row in rows),
+            'repeated_sources': sorted(source for source, count in sources.items() if count > 1),
+            'max_member_wall': None if slowest is None else {
+                key: slowest[key] for key in ('source_id', 'kind', 'period', 'wall_seconds')}}
+
+
+def run_timing(store, objects, refs: list[str], max_wall: float | None) -> dict:
+    results = read_results(refs, store, objects)
+    attempts = child_attempts([row.to_mapping()['value'] for row in store.scan('Attempt', {})])
+    runs, breaches = [], []
+    for result in results:
+        context = result.context
+        members = [{'source_id': member.source.source_id, 'kind': member.source.kind,
+                    'period': member.source.period, 'outcome': member.outcome,
+                    'child_refs': list(member.child_refs)} for member in result.members]
+        rows = member_timings(context.run_id, members, attempts)
+        reserve = context.effective_config.get('execution', {}).get('dispatch_reserve_seconds')
+        deadline = _time(context.deadline)
+        runs.append({'run_id': context.run_id, 'command': context.command, 'outcome': result.outcome,
+                     'started_at': _time(context.started_at).isoformat(), 'deadline': deadline.isoformat(),
+                     'dispatch_cutoff': None if reserve is None else (deadline - timedelta(seconds=reserve)).isoformat(),
+                     'ended_at': _time(result.ended_at).isoformat(), 'tail_seconds': tail_seconds(rows, result.ended_at),
+                     'members': rows, **summarize_timings(rows)})
+        if max_wall is not None:
+            breaches += [{'run_id': context.run_id, 'source_id': row['source_id'], 'period': row['period'],
+                          'wall_seconds': row['wall_seconds'], 'limit': max_wall}
+                         for row in rows if row['wall_seconds'] is not None and row['wall_seconds'] > max_wall]
+    every = [row for run in runs for row in run['members']]
+    value = {'format_version': FORMAT, 'kind': 'timing', 'runs': runs,
+             'child_call_rows': sum(1 for _ in store.scan('WorkflowChildCall', {})),
+             'max_member_wall': summarize_timings(every)['max_member_wall']}
+    if max_wall is not None:
+        value['breaches'] = breaches
+    return value
 
 
 # ---- command line ---------------------------------------------------------------------------
@@ -263,6 +387,11 @@ def main(argv=None) -> int:
     report.add_argument('--start', required=True)
     report.add_argument('--end', required=True)
     report.add_argument('--open-quarter')
+    report.add_argument('--check', choices=CHECKS, default='full')
+    timing = commands.add_parser('timing')
+    timing.add_argument('--config', type=Path, required=True)
+    timing.add_argument('--result', action='append', default=[])
+    timing.add_argument('--max-member-wall', type=float)
     args = parser.parse_args(argv)
     if args.command == 'files':
         actual = file_inventory(args.root.resolve())
@@ -282,7 +411,11 @@ def main(argv=None) -> int:
                 value['breaches'] = breaches
             sys.stdout.write(dumps(value))
             return 1 if breaches else 0
-        value = coverage(opened[0], opened[1], args.result, args.start, args.end, args.open_quarter)
+        if args.command == 'timing':
+            value = run_timing(opened[0], opened[1], args.result, args.max_member_wall)
+            sys.stdout.write(dumps(value))
+            return 1 if value.get('breaches') else 0
+        value = coverage(opened[0], opened[1], args.result, args.start, args.end, args.open_quarter, args.check)
         sys.stdout.write(dumps(value))
         return 0
     finally:

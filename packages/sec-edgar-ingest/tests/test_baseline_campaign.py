@@ -112,6 +112,65 @@ class PureRuleTests(unittest.TestCase):
         self.assertEqual(verdict('2026Q3', '2026Q4', {**member, 'outcome': 'retry_exhausted', 'status': 'failed'},
                                  view, False), 'failed')
 
+    def test_an_integrity_only_view_is_never_coverage(self):
+        verdict = self.api['unit_verdict']
+        member = {'source_id': 's', 'outcome': 'success', 'status': 'complete', 'quarantined': False,
+                  'quarters': [{'quarter': '2026Q3', 'outcome': 'published'}]}
+        unchecked = {'status': 'published', 'membership_source_id': 's', 'gate': 'clear',
+                     'row_count': 3, 'validated_rows': None}
+        self.assertEqual(verdict('2026Q3', '2026Q4', member, unchecked, False), 'published_unchecked')
+        self.assertEqual(verdict('2026Q4', '2026Q4', member, unchecked, False), 'published_unchecked')
+        self.assertEqual(verdict('2026Q3', '2026Q4', member, {**unchecked, 'membership_source_id': None}, False),
+                         'publication_mismatch')
+        self.assertEqual(verdict('2026Q3', '2026Q4', member, {**unchecked, 'row_count': 0}, False),
+                         'publication_mismatch')
+
+    def test_member_timings_join_children_by_attempt_and_time_each_wall(self):
+        def attempt(run, command, attempt_id, start, end, outcome='success'):
+            return {'context': {'run_id': run, 'command': command, 'attempt_id': attempt_id,
+                                'started_at': '2026-11-02T10:' + start + '+00:00'},
+                    'started_at': '2026-11-02T10:' + start + '+00:00',
+                    'ended_at': None if end is None else '2026-11-02T10:' + end + '+00:00', 'outcome': outcome}
+        values = [attempt('r1', 'collect', 'c1', '00:00', '00:02'), attempt('r1', 'transform', 't1', '00:02', '00:05'),
+                  attempt('r1', 'publish', 'p1', '00:05', '00:10'), attempt('r1', 'publish', 'p1', '00:05', '00:06', 'received'),
+                  attempt('r1', 'collect', 'c2', '00:12', '00:13'), attempt('r1', 'collect', 'c3', '00:20', None),
+                  attempt('r1', 'discover', 'd1', '00:00', '00:01')]
+        attempts = self.api['child_attempts'](values)
+        self.assertEqual(sorted(attempts), [('r1', 'collect', 'c1'), ('r1', 'collect', 'c2'),
+                                            ('r1', 'publish', 'p1'), ('r1', 'transform', 't1')])
+        ref = lambda run, command, attempt_id: f'runs/sec/{run}/{command}/{attempt_id}/result.json'
+        members = [
+            {'source_id': 's1', 'kind': 'daily', 'period': '2026-10-01', 'outcome': 'success',
+             'child_refs': [ref('r1', 'collect', 'c1'), ref('r1', 'transform', 't1'), ref('r1', 'publish', 'p1')]},
+            {'source_id': 's1', 'kind': 'daily', 'period': '2026-10-01', 'outcome': 'unchanged', 'child_refs': []},
+            {'source_id': 's2', 'kind': 'quarterly', 'period': '2026Q3', 'outcome': 'retry_exhausted',
+             'child_refs': [ref('r0', 'collect', 'old'), ref('r1', 'collect', 'c2')]},
+            {'source_id': 's2', 'kind': 'quarterly', 'period': '2026Q3', 'outcome': 'success',
+             'child_refs': [ref('r1', 'publish', 'p1')]},
+            {'source_id': 's3', 'kind': 'quarterly', 'period': '2026Q4', 'outcome': 'pending', 'child_refs': []}]
+        rows = self.api['member_timings']('r1', [*members[:3], members[4]], attempts)
+        # The last timed member's wall ends at its own last child; the finish step is the run's tail.
+        self.assertEqual([(row['wall_seconds'], row['child_seconds'], row['engine_seconds'], row['b4'])
+                          for row in rows], [(12.0, 10.0, 2.0, False), (None, 0, None, True),
+                                             (1.0, 1.0, 0.0, False), (None, 0, None, False)])
+        self.assertEqual(self.api['tail_seconds'](rows, '2026-11-02T10:00:30+00:00'), 17.0)
+        self.assertIsNone(self.api['tail_seconds'](rows[1:2], '2026-11-02T10:00:30+00:00'))
+        self.assertEqual(rows[0]['children']['publish'], {'outcome': 'success', 'seconds': 5.0,
+                                                           'started_at': '2026-11-02T10:00:05+00:00',
+                                                           'ended_at': '2026-11-02T10:00:10+00:00'})
+        self.assertEqual(rows[2]['reused_children'], [ref('r0', 'collect', 'old')])
+        summary = self.api['summarize_timings'](rows)
+        self.assertEqual(summary, {'timed_members': 2, 'b4_members': 1, 'repeated_sources': [],
+                                   'max_member_wall': {'source_id': 's1', 'kind': 'daily',
+                                                       'period': '2026-10-01', 'wall_seconds': 12.0}})
+        twice = self.api['member_timings']('r1', [members[0], members[3]], attempts)
+        self.assertEqual(self.api['summarize_timings'](twice)['repeated_sources'], [])
+        again = [members[0], {**members[0], 'child_refs': [ref('r1', 'collect', 'c2')]}]
+        rows = self.api['member_timings']('r1', again, attempts)
+        self.assertEqual(self.api['summarize_timings'](rows)['repeated_sources'], ['s1'])
+        with self.assertRaises(ValueError):
+            self.api['member_timings']('r1', [{**members[0], 'child_refs': [ref('r1', 'collect', 'c3')]}], attempts)
+
     def test_budget_breaches_name_each_exceeded_limit(self):
         budget = {'format_version': 'sec-baseline-campaign-budget-v1', 'max_invocations': 1,
                   'max_request_attempts': 10, 'max_request_attempts_per_invocation': 4,
@@ -151,10 +210,51 @@ class FixtureStoreTests(unittest.TestCase):
             code = self.api['main'](list(argv))
         return code, json.loads(stdout.getvalue())
 
-    def coverage(self, h, *refs):
+    def coverage(self, h, *refs, check=()):
         flags = [item for ref in refs for item in ('--result', ref)]
         return self.run_tool(h, 'coverage', '--config', str(h.config), *flags,
-                             '--start', '2026Q2', '--end', '2026Q4', '--open-quarter', '2026Q4')
+                             '--start', '2026Q2', '--end', '2026Q4', '--open-quarter', '2026Q4', *check)
+
+    def test_integrity_coverage_reads_no_row_and_reports_no_coverage(self):
+        conflict = (row('111111', 'Second', '2026-04-01', 2), row('111111', 'Changed', '2026-04-01', 2))
+        h = self.harness({2: conflict, 3: Q3, 4: Q4})
+        code, message = h.invoke('backfill', run='r1', attempt='a1')
+        self.assertEqual(code, 3, h.calls[-1])
+        code, report = self.coverage(h, message['result_ref'], check=('--check', 'integrity'))
+        self.assertEqual(code, 0)
+        self.assertEqual(report['check'], 'integrity')
+        self.assertEqual({unit['quarter']: unit['verdict'] for unit in report['units']},
+                         {'2026Q2': 'quarantined', '2026Q3': 'published_unchecked',
+                          '2026Q4': 'published_unchecked'})
+        self.assertIsNone(report['units'][1]['filing_quarter']['validated_rows'])
+        self.assertEqual(report['units'][1]['filing_quarter']['row_count'], 1)
+        self.assertFalse(report['complete'])
+        code, report = self.coverage(h, message['result_ref'])
+        self.assertEqual((report['check'], report['units'][1]['verdict']), ('full', 'covered'))
+
+    def test_timing_times_each_member_and_refuses_a_member_over_the_limit(self):
+        h = self.harness({2: (row('111111', 'Second', '2026-04-01', 2),), 3: Q3, 4: Q4})
+        code, message = h.invoke('backfill', run='r1', attempt='a1')
+        self.assertEqual(code, 0, h.calls[-1])
+        code, report = self.run_tool(h, 'timing', '--config', str(h.config), '--result', message['result_ref'])
+        self.assertEqual(code, 0, report)
+        self.assertNotIn('breaches', report)
+        run = report['runs'][0]
+        self.assertEqual((run['run_id'], run['timed_members'], run['b4_members'], run['repeated_sources']),
+                         ('r1', 3, 0, []))
+        self.assertIsNone(run['dispatch_cutoff'])
+        self.assertGreaterEqual(run['tail_seconds'], 0)
+        for member in run['members']:
+            self.assertEqual(set(member['children']), {'collect', 'transform', 'publish'})
+            self.assertGreaterEqual(member['wall_seconds'], member['child_seconds'])
+            self.assertGreater(member['child_seconds'], 0)
+            self.assertGreaterEqual(member['engine_seconds'], 0)
+        self.assertGreaterEqual(report['child_call_rows'], 9)
+        code, report = self.run_tool(h, 'timing', '--config', str(h.config), '--result', message['result_ref'],
+                                     '--max-member-wall', '0')
+        self.assertEqual(code, 1)
+        self.assertEqual(sorted(item['period'] for item in report['breaches']), ['2026Q2', '2026Q3', '2026Q4'])
+        self.assertTrue(all(item['limit'] == 0 for item in report['breaches']))
 
     def test_backfill_units_separate_quarantine_from_quarterly_coverage(self):
         conflict = (row('111111', 'Second', '2026-04-01', 2), row('111111', 'Changed', '2026-04-01', 2))
