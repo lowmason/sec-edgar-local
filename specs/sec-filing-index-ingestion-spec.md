@@ -313,7 +313,7 @@ from the canonical normalized effective-config hash.
 | Storage / acquisition | `storage.backend=local`; `acquisition.mode=live`. |
 | Data root | `../data`, resolving to `/Users/lowell/Projects/sec-edgar-local/data`. |
 | Logging root | `../logs`, resolving to `/Users/lowell/Projects/sec-edgar-local/logs`. |
-| Backfill / handoff | `2015Q1` through `open`; daily handoff `2026-10-01`. |
+| Backfill / handoff | `2020Q1` through `open`; daily handoff `2026-10-01` (owner, plan 2, 2026-10-29). |
 | SEC identity | `Lowell Mason sec-edgar-ingest mason.lowell@mac.com`. |
 | Request policy | 3 requests/second, one active collector. A lower positive rate is allowed. |
 | HTTP attempts / retry delay | Five total; 2-second base, 120-second local cap with jitter; honor longer server delays. |
@@ -335,8 +335,11 @@ The selected manifest is:
 Stage 1b (plan 5) selected the 1b release
 `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` at commit
 `6d80da4d9e1f30461c45a826fecbf8eefc899201`. The reserve stays at 1800 s, which Stage 1a set. The
-Stage 1b [measurement](evidence/stage1b/measurement.md) now backs it. The effective-config SHA-256 is
+Stage 1b [measurement](evidence/stage1b/measurement.md) now backs it. The effective-config SHA-256 was
 `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.
+Plan 2 Revision 2 moved the backfill start to `2020Q1`. The effective-config SHA-256 is now
+`2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, confirmed by offline preflight
+(owner, plan 2, 2026-10-29).
 
 Before that, Stage 1a (plan 4) selected the D5 release
 `aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4` and added the dispatch reserve,

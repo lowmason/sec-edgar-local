@@ -67,3 +67,20 @@ No SEC request was sent. No writer ran during this task.
   total. The integrity check reads no row.
 - [1b/timing.json](pre-campaign/1b/timing.json): no workflow result yet, 0 `WorkflowChildCall` rows.
 - [1b/files.json](pre-campaign/1b/files.json): 153 files. Against L12, only SQLite journal state changed.
+
+## Known-answer checks after the 2020Q1 range change (plan 2 Revision 2)
+
+- The live config now starts at `2020Q1` (plan 2, D10). File bytes `bfdf2985…`, effective config `2512fdcb…`.
+- [rev2/preflight.json](pre-campaign/rev2/preflight.json): effective config `2512fdcb…`, release `9fa189a0…`,
+  range 2020Q1–open, reserve 1800.
+- Slice generator: `2020Q1`–`open` reproduces `2512fdcb…`. The 8 configs left in `conf/stage2/1b/` keep
+  their plan 2 F13 hashes and equal the live config except for the range. The five 2015–2019 configs were
+  removed (plan 2, O18).
+- [rev2/audit.json](pre-campaign/rev2/audit.json): 10 transport attempts, 10 URLs, 4,946,565 received bytes,
+  ordinal 1 only. This equals L12.
+- [rev2/coverage-integrity.json](pre-campaign/rev2/coverage-integrity.json) and
+  [rev2/coverage-full.json](pre-campaign/rev2/coverage-full.json): 28 requested units without a campaign
+  result; 16 published quarters, all daily-only and all inside the range. The full check reads 6,744 rows.
+  The integrity check reads no row.
+- [rev2/timing.json](pre-campaign/rev2/timing.json): no workflow result yet, 0 `WorkflowChildCall` rows.
+- [rev2/files.json](pre-campaign/rev2/files.json): 153 files. Against L12, only SQLite journal state changed.

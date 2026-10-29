@@ -1,0 +1,9 @@
+{
+ "backfill": [
+  "2020Q1",
+  "open"
+ ],
+ "dispatch_reserve_seconds": 1800,
+ "effective_config_sha256": "2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5",
+ "release_id": "9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b"
+}

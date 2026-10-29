@@ -1,7 +1,7 @@
 {
   "config_version": "sec-local-config-v1",
   "backfill": {
-    "start_quarter": "2015Q1",
+    "start_quarter": "2020Q1",
     "end_quarter": "open"
   },
   "daily": {
