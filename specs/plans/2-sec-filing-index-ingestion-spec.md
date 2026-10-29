@@ -28,10 +28,10 @@ Revision 2 (2026-10-29) starts the range at 2020Q1 (D10). Offline Task 3c change
 
 Written 2026-10-29 at Task 4 Step 2, after the owner asked to start the range at 2020Q1 (D10). Planning sent no SEC request and wrote nothing under `data/`. It computed the new config hashes from scratch copies under the ignored `logs/` and deleted them after. It opened the store with operator access under the edited config, and ran read-only coverage for the new range (F21–F23). It also dry-ran Task 3c's edit scripts on scratch copies.
 
-1. **What changes.** The requested range becomes 2020Q1–2026Q4: 28 quarterly units, with 2026Q4 open. The live config's `backfill.start_quarter` changes from `2015Q1` to `2020Q1`, so its file and effective hashes change (F21). Spec §4.8 and `docs/runbooks/local-ingestion.md` name the old start or hash, and change with it. The year slices 2015–2019 are not run, and their five configs are removed (O18). `max_invocations` drops to 24 (O19).
+1. **What changes.** The requested range becomes 2020Q1–2026Q4: 28 quarterly units, with 2026Q4 open. The live config's `backfill.start_quarter` changes from `2015Q1` to `2020Q1`, so its file and effective hashes change (F21). Spec §4.8 and `docs/runbooks/local-ingestion.md` name the old start or hash, and change with it. The runbook's config-creation snippet copies the fixture config, so it gains a line that sets the 2020Q1 start. The year slices 2015–2019 are not run, and their five configs are removed (O18). `max_invocations` drops to 24 (O19).
 2. **New Task 3c** makes these edits and re-runs the known answers on the edited config. Tasks 4–7 change their range, unit counts and hashes.
 3. **What stays.** Release `9fa189a0…`, the reserve, the evidence tool at `b176598`, every other config value, the stop rules other than rule 12, and the member-wall limit. The 8 kept slice configs stay byte-identical. Each one copies every live-config field and replaces only `backfill`, so its F13 hash holds (F21). Tasks 3a and 3b are the execution record and stay as run. Their 2015Q1 values are history.
-4. **Not touched.** `conf/sec-edgar-local-fixture.json` and the test fixture configs keep `2015Q1`: they are fixtures, not the live config. `packages/sec-edgar-ingest/tests/test_config.py` embeds a frozen snapshot of an older live config (release `fc68adef…`, hash `088403cb…`) and reads no live file. No test reads `conf/sec-edgar-local.json`. So no test changes, and the full offline checker is not required. Runbook line 62 names retained 2015Q1 specimens as a historical fact and stays.
+4. **Not touched.** `conf/sec-edgar-local-fixture.json` and the test fixture configs keep `2015Q1`: they are fixtures, not the live config. `packages/sec-edgar-ingest/tests/test_config.py` embeds a frozen snapshot of an older live config (release `fc68adef…`, hash `088403cb…`) and reads no live file. No test reads `conf/sec-edgar-local.json`: `test_local_launcher.py` writes its own copy into a temporary project and changes into that directory first. So no test changes, and the full offline checker is not required. Runbook line 62 names retained 2015Q1 specimens as a historical fact and stays.
 5. **Task 4 answers given before this revision are not approval.** The owner answered items 5, 6, 8 and 9 "as proposed", chose the window start 2026-10-29T12:00:00Z (it passed before this revision's review), and selected the drafted sole-issuer wording. Task 4 asks all ten items again against Revision 2.
 
 ## Revision 1 for the 1b release
@@ -2040,7 +2040,7 @@ git commit -m "docs(evidence): rebase the Stage 2 campaign onto the 1b release"
 **Files:**
 - Modify: `conf/sec-edgar-local.json` (one substitution)
 - Modify: `specs/sec-filing-index-ingestion-spec.md` (§4.8: the backfill row and the effective hash; the status line untouched)
-- Modify: `docs/runbooks/local-ingestion.md` (line 23, the backfill start)
+- Modify: `docs/runbooks/local-ingestion.md` (the backfill start on line 23, and one line in the config-creation snippet)
 - Delete: `conf/stage2/1b/backfill-2015Q1-2015Q4.json`, `backfill-2016Q1-2016Q4.json`, `backfill-2017Q1-2017Q4.json`, `backfill-2018Q1-2018Q4.json`, `backfill-2019Q1-2019Q4.json`
 - Create: `specs/evidence/baseline-campaign/pre-campaign/rev2/preflight.json`, `audit.json`, `coverage-integrity.json`, `coverage-full.json`, `timing.json`, `files.json`
 - Modify: `specs/evidence/baseline-campaign/campaign.json`, `campaign.md`, `pre-campaign.md` (append a Revision 2 section)
@@ -2235,7 +2235,10 @@ EDITS = {
          'Plan 2 Revision 2 moved the backfill start to `2020Q1`. The effective-config SHA-256 is now\n'
          '`2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, confirmed by offline preflight\n'
          '(owner, plan 2, 2026-10-29).\n')],
-    runbook: [('backfill `2015Q1` to `open`', 'backfill `2020Q1` to `open`')],
+    runbook: [('backfill `2015Q1` to `open`', 'backfill `2020Q1` to `open`'),
+              ("value['etl']['parser_version'] = 'sec-index-parser-v1'\n",
+               "value['etl']['parser_version'] = 'sec-index-parser-v1'\n"
+               "value['backfill'] = {'start_quarter': '2020Q1', 'end_quarter': 'open'}\n")],
 }
 for path, edits in EDITS.items():
     text = path.read_text()
@@ -2249,7 +2252,7 @@ PY
 git diff --stat -- specs/sec-filing-index-ingestion-spec.md docs/runbooks/local-ingestion.md
 ```
 
-Expected: `sec-filing-index-ingestion-spec.md 2 edits` and `local-ingestion.md 1 edits`, then 2 files changed. The spec diff changes the §4.8 backfill row and adds three lines after the `db62e7fb…` hash. The runbook diff changes only `2015Q1` to `2020Q1` on line 23.
+Expected: `sec-filing-index-ingestion-spec.md 2 edits` and `local-ingestion.md 2 edits`, then 2 files changed. The spec diff changes the §4.8 backfill row and adds three lines after the `db62e7fb…` hash. The runbook diff changes `2015Q1` to `2020Q1` in the config rules (line 23 before the edit, line 24 after). It also adds one line to the config-creation snippet, because that snippet copies `conf/sec-edgar-local-fixture.json`, which keeps `2015Q1`.
 
 - [ ] **Step 8: Edit `specs/evidence/baseline-campaign/campaign.json` (O19)**
 
