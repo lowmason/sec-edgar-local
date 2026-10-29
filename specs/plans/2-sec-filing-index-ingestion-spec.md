@@ -2919,6 +2919,8 @@ git commit -m "docs(specs): record tracked config and absent L12 external eviden
 
 When Tasks 3a–7 have run under Revisions 1 and 2, run the writing-plans Plan Completion Protocol, step 3a included. Rewrite the Handoff below from what then ships. In step 3, tick or update the deferred items that Task 7 §8 found met, and keep the others open.
 
+Review bases for executing-plans Step 3 (whole-plan review). Every task ran on `main`, so `git merge-base` gives no range. Revisions 1 and 2, and every task after Task 3, start after `d3e959c`. The review must also cover Tasks 1–3 and 8. For them, two commits are candidates for the start: `c2ff721` (the parent of Task 1's first commit, `4508859`) and `6c25121` (the commit that added this plan). The owner confirms which one at review time.
+
 ## Handoff to later stages
 
 Revision 1 (2026-10-29) re-plans Tasks 3a–7 for release `9fa189a0…`, and Revision 2 (2026-10-29) moves the range start to 2020Q1. Tasks 3a and 3b have run. Nothing live has run. The bullets below are the 2026-10-21 state on release `fc68adef…`. Their F11, D5-release and slice-config statements are superseded by Revision 1. Their 2015Q1 statements, such as a possible 2015Q1 quarantine for Stage 4, are superseded by Revision 2. The Plan Completion Protocol rewrites this section.
