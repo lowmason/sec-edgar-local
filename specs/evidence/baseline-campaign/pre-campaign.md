@@ -52,3 +52,18 @@ No SEC request was sent. No writer ran during this task.
   ordinal 1 only. This equals L12.
 - [coverage.json](pre-campaign/coverage.json): 48 requested units without a campaign result. 16 published
   quarters, all daily-only, total 6,744 validated rows. This equals the L12 latest-capture total.
+
+## Known-answer checks on release 9fa189a0… (plan 2 Revision 1)
+
+- [1b/preflight.json](pre-campaign/1b/preflight.json): effective config `db62e7fb…`, release `9fa189a0…`,
+  range 2015Q1–open, reserve 1800. Config file bytes `de6c0dd9…`.
+- Slice generator: `2015Q1`–`open` reproduces `db62e7fb…`. The 13 configs in `conf/stage2/1b/` match
+  plan 2, F13.
+- [1b/audit.json](pre-campaign/1b/audit.json): 10 transport attempts, 10 URLs, 4,946,565 received bytes,
+  ordinal 1 only. This equals L12.
+- [1b/coverage-integrity.json](pre-campaign/1b/coverage-integrity.json) and
+  [1b/coverage-full.json](pre-campaign/1b/coverage-full.json): 48 requested units without a campaign
+  result; 16 published quarters, all daily-only. The full check reads 6,744 rows, the L12 latest-capture
+  total. The integrity check reads no row.
+- [1b/timing.json](pre-campaign/1b/timing.json): no workflow result yet, 0 `WorkflowChildCall` rows.
+- [1b/files.json](pre-campaign/1b/files.json): 153 files. Against L12, only SQLite journal state changed.

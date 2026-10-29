@@ -1,7 +1,8 @@
 {
  "format_version": "sec-baseline-campaign-budget-v1",
  "max_distinct_urls": 300,
- "max_invocations": 16,
+ "max_invocations": 40,
+ "max_member_wall_seconds": 1056,
  "max_received_bytes": 1073741824,
  "max_request_attempts": 1500,
  "max_request_attempts_per_invocation": 700

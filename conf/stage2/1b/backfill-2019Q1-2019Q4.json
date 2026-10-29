@@ -1,0 +1,56 @@
+{
+  "config_version": "sec-local-config-v1",
+  "backfill": {
+    "start_quarter": "2019Q1",
+    "end_quarter": "2019Q4"
+  },
+  "daily": {
+    "start_date": "2026-10-01"
+  },
+  "sec": {
+    "user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+    "requests_per_second": 3,
+    "max_active_collectors": 1
+  },
+  "http": {
+    "max_attempts": 5,
+    "retry_base_seconds": 2,
+    "retry_cap_seconds": 120,
+    "connect_timeout_seconds": 15,
+    "read_timeout_seconds": 60,
+    "exchange_deadline_seconds": 90,
+    "max_received_bytes": 67108864,
+    "max_expanded_bytes": 536870912
+  },
+  "coordination": {
+    "lease_seconds": 60,
+    "renew_every_seconds": 20,
+    "namespace": "sec-owner-lowell-mason",
+    "clock_uncertainty_seconds": 2
+  },
+  "storage": {
+    "backend": "local",
+    "root": "/Users/lowell/Projects/sec-edgar-local/data"
+  },
+  "etl": {
+    "parser_version": "sec-index-parser-v1",
+    "schema_version": "sec-index-v1"
+  },
+  "reconciliation": {
+    "require_withdrawal_approval": true
+  },
+  "acquisition": {
+    "mode": "live"
+  },
+  "runtime": {
+    "kind": "native",
+    "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json"
+  },
+  "logging": {
+    "root": "/Users/lowell/Projects/sec-edgar-local/logs"
+  },
+  "execution": {
+    "max_run_seconds": 3600,
+    "dispatch_reserve_seconds": 1800
+  }
+}
