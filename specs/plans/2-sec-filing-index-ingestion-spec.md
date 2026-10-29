@@ -1,6 +1,6 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
-**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), approved by the owner (D11)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Task 3c executed (commit `eea0166`), and Task 4 Step 1 found the release gate standing for the 2020Q1 config. The owner answered all ten Task 4 items, and the approval is committed (`7869821`): window 2026-10-29T13:00:00Z to 2026-11-05T13:00:00Z. Task 5, the first live work, has not started. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
+**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), approved by the owner (D11)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Task 3c executed (commit `eea0166`), and Task 4 Step 1 found the release gate standing for the 2020Q1 config. The owner answered all ten Task 4 items, and the approval is committed (`7869821`): window 2026-10-29T13:00:00Z to 2026-11-05T13:00:00Z. Task 5 ran one invocation and halted: the pilot ended with launcher exit 9 and `state_conflict` after 67 s, with no workflow result (stop rule 1; commits `1870158`, `729ed1c`). Its publish moved nine filing-quarter pointers before the conflict, so the store holds 1b generations. The owner routed the failure to an engine diagnosis and fix, with no further invocation until then (D12). Tasks 6 and 7 have not run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -112,6 +112,7 @@ cd "$project"
 - **D9** (owner, plan review, 2026-10-29): Revision 1 approved, with O12–O17 accepted as proposed. Owner's words: "Approve and commit". This approval authorizes Tasks 3a and 3b. It is not live authority: Task 4 still gates every live invocation. Applied in: Tasks 3a–7.
 - **D10** (owner, Task 4 Step 2, 2026-10-29): The requested range and the live config's `backfill.start_quarter` start at 2020Q1. This replaces O1's 2015Q1 start. Owner's words: "Can we change the range for this package as well as the quarterly index downloads to 2020Q1-2026-Q4?", then "Write Revision 2". Planning read "this package" as the live config, the only place a range lives. Applied in: Revision 2, Global Constraints, Task 3c (config, spec amendment, runbook), Tasks 4–7.
 - **D11** (owner, plan review, 2026-10-29): Revision 2 approved as written. That includes O18 and O19 as proposed, D10's reading of "this package" as the live config, and the spec and runbook wording in Task 3c Step 7. Owner's words: "Approve Revision 2". This approval authorizes Task 3c and its one live config edit. It is not live authority: Task 4 still gates every live invocation. Applied in: Task 3c, Tasks 4–7.
+- **D12** (owner, Task 5 halt, 2026-10-29): Invocation 1 (run `8305a3d9-54a1-46ae-863c-af8227118417`) halted under stop rule 1. The owner routes the failure to an engine diagnosis and fix, and no further invocation runs until then. The owner selected this option: "Route the processing.py:96 completion-check failure to an engine diagnosis and fix. Run no further invocation until then." The Task 4 approval stays committed, but it does not authorize a rerun before the fix. Applied in: Task 5, Handoff.
 
 ## Defaults for owner review
 
@@ -2458,6 +2459,8 @@ git commit -m "docs(evidence): record the Stage 2 release gate and owner decisio
 > Revision 1: rewritten for release `9fa189a0…`: a fixed slice list instead of a sizing rule, integrity coverage and member timing after each invocation, and stop rules 7 and 8.
 >
 > Revision 2: the 8 configs from 2020Q1, the edited live config hash, and coverage from 2020Q1.
+>
+> Execution record (2026-10-29): Steps 1–7 ran once, for k = 1, and the campaign halted. Every Step 2 check passed, and the pilot started at 13:40:25Z. It ended at 13:41:32Z with launcher exit 9 and `state_conflict`: "child completion lacks all affected quarter/repair evidence". The error is raised at `workflows/processing.py:96`, after a member's `publish` child returned a complete outcome. No `result_ref` and no `workflow_summary` were written. Stop rule 1 matched first, and rules 2 and 3 also match. The audit found 5 attempts (4 with HTTP 200, 1 failed with status 0), 0 uncertain and no breach. The files check found 0 missing, 0 changed immutable and 173 added. The integrity coverage shows nine filing-quarter pointers moved: 2024Q3 is a first publication, and 2024Q4–2026Q3 are incremental generations on `fc68adef…` bases. Deviation: Step 6 defines no `after` block for a run without a result. `tool timing` could not run, so the record's timing fields are null and give the reason. The record also cites every raw log and report by path and SHA-256 (`729ed1c`). Recovery boundary: `docs/runbooks/local-recovery.md`, row "Crash after pointer update". Owner routing: D12.
 
 **Files:**
 - Create: `specs/evidence/baseline-campaign/invocations.md`
@@ -2478,7 +2481,7 @@ Repeat Steps 1–7 for k = 1, 2, … until a stop rule says finish or halt. Neve
 
 Collection is bound to the release that discovered the member (`specs/evidence/d5-release/two-release.md`; `specs/evidence/stage1b/two-release.md`). So the pilot's `collect` children for the pending members that L12 discovered run on the retained `fc68adef…` release, and the other children run on `9fa189a0…`. That is expected. It is not a release selection, so it does not breach the Global Constraints.
 
-- [ ] **Step 1: Choose the slice**
+- [x] **Step 1: Choose the slice**
 
 ```sh
 # prelude
@@ -2488,7 +2491,7 @@ tail -1 "$evidence/invocations.md" 2>/dev/null
 
 For k = 1, use the pilot. Otherwise use the decision in the last ledger row: on Rerun, the same config; on Next slice, the next config in the order above. Note the config's effective hash from the F13 table.
 
-- [ ] **Step 2: Pre-check**
+- [x] **Step 2: Pre-check**
 
 ```sh
 # prelude
@@ -2515,7 +2518,7 @@ Expected:
 
 If any check fails, halt.
 
-- [ ] **Step 3: Run one invocation**
+- [x] **Step 3: Run one invocation**
 
 The run can last up to the timeout. Run it in the background with the agent harness's background mode, and wait for the exit notification. Do not poll the SEC or the store meanwhile. Set `config` to this invocation's slice config and `timeout` to the approved value.
 
@@ -2533,7 +2536,7 @@ echo "launcher exit=$code"
 
 Expected: an exit code. With quarantines present, 3 is normal (F7). A run that deferred members at the cutoff ends `incomplete` or `pending` (exit 3 or 4), never exit 5.
 
-- [ ] **Step 4: Record the invocation**
+- [x] **Step 4: Record the invocation**
 
 ```sh
 # prelude
@@ -2575,7 +2578,7 @@ native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["release_id"
 
 Expected: release `9fa189a0…`, the slice config's effective hash from F13, the slice range, `1800`, a non-null `result_ref` and `ended_at`, and `True`. If the release, the config hash or the reserve differs, halt. If `result_ref` is null, apply stop rule 2.
 
-- [ ] **Step 5: Audit the budget**
+- [x] **Step 5: Audit the budget**
 
 ```sh
 # prelude
@@ -2591,7 +2594,7 @@ native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(len(v["runs"])
 
 Expected: `audit exit=0`, the run count equal to k, and `breaches: []`. Otherwise halt (rule 4).
 
-- [ ] **Step 6: Coverage, timing and integrity after the invocation**
+- [x] **Step 6: Coverage, timing and integrity after the invocation**
 
 The coverage here uses `--check integrity`: it reads no row, so it takes seconds, and no unit can be `covered` (O12). Task 6 runs the full check once.
 
@@ -2642,7 +2645,7 @@ PY
 
 Expected: `coverage exit=0` and `files exit=0`. `timing exit=0`, or `timing exit=1` with a non-empty `after.timing_breaches` (rule 7). Any other nonzero exit, or an exit 1 whose output does not parse or has no breach, is a tool failure: halt and report it. The printed `after` block is now in the invocation record. The full timing report stays in `logs/baseline-campaign/timing-after-<k>.json`.
 
-- [ ] **Step 7: Decide, log and commit**
+- [x] **Step 7: Decide, log and commit**
 
 Apply the `campaign.md` stop rules in order. Use the launcher exit, `result_ref`, `workflow_summary` (`outcome`, `summary_error`, `discovery_complete`), the audit breaches, the files exit, `after.timing_breaches` (rule 7), `after.refused` (rule 8), `after.eligible` (rule 9) and `after.untouched` (rule 11). For rule 9, compare the length of `eligible` with the previous invocation of the same slice.
 
@@ -2919,6 +2922,15 @@ When Tasks 3a–7 have run under Revisions 1 and 2, run the writing-plans Plan C
 ## Handoff to later stages
 
 Revision 1 (2026-10-29) re-plans Tasks 3a–7 for release `9fa189a0…`, and Revision 2 (2026-10-29) moves the range start to 2020Q1. Tasks 3a and 3b have run. Nothing live has run. The bullets below are the 2026-10-21 state on release `fc68adef…`. Their F11, D5-release and slice-config statements are superseded by Revision 1. Their 2015Q1 statements, such as a possible 2015Q1 quarantine for Stage 4, are superseded by Revision 2. The Plan Completion Protocol rewrites this section.
+
+**Task 5 halt (2026-10-29).** This bullet is current. It supersedes the statements below that nothing live has run.
+
+- **Next roadmap resume (derive-roadmap).**
+  - The owner routed the invocation 1 failure to an engine diagnosis and fix, with no further invocation until then (D12). The fix has no stage, spec or plan yet. As with D5, the resume adds it ahead of the rest of the Stage 2 live campaign.
+  - The failure: `state_conflict` "child completion lacks all affected quarter/repair evidence" at `workflows/processing.py:96`. A member's `publish` child returned a complete outcome. Then `evaluate_member` judged the member incomplete. Evidence: `specs/evidence/baseline-campaign/invocations/1-8305a3d9-54a1-46ae-863c-af8227118417.json` and the raw logs it cites by hash.
+  - Observations, not a cause. One daily member's publish wrote nine filing quarters. 2024Q3 was a first publication with no `retained-base.json`. 2024Q4–2026Q3 were incremental generations on `fc68adef…` bases. That is the path F17 names as untested. Not read: the transform `error.json` under `objects/quarantine/sec/8305a3d9-…/`, and the discovery quarantine with an empty body (`e3b0c442…`).
+  - Store state the fix must handle. Nine pointers moved without member completion or a workflow result. That is a repair obligation (`docs/runbooks/local-recovery.md`, row "Crash after pointer update"): never advance a pointer twice. The store holds 1b generations, so selecting `fc68adef…` or `aa8de1ac…` for it is unsupported (parent spec §4.9). The pre-campaign backup `backups/stage2-pre-campaign-20261021T180646Z` predates the halt.
+  - After the fix ships in a new release, revise this plan before any further invocation: Global Constraints, the release gate, the evidence tool's release-internal imports, the slice configs, the Task 4 gate, and how Task 5 treats the repair obligation and the ledger row k = 1. The campaign window ends 2026-11-05T13:00:00Z, and `open` must stay 2026Q4 (before 2027-01-01T00:00:00Z).
 
 On 2026-10-21, Stage 2 was blocked at Task 4, not complete. At that time it had produced only the offline preparation. It has not produced the roadmap's per-invocation results and captures, the coverage inventory or the operating decision. No item went to `specs/deferred_items.md`.
 
