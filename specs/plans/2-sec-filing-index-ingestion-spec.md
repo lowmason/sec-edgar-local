@@ -1,6 +1,6 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
-**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), approved by the owner (D11)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Nothing in Revision 2 has run. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
+**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), approved by the owner (D11)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Task 3c executed (commit `eea0166`), and Task 4 Step 1 found the release gate standing for the 2020Q1 config. Task 4 Step 2 awaits the owner. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -2052,7 +2052,7 @@ git commit -m "docs(evidence): rebase the Stage 2 campaign onto the 1b release"
 
 No file under `packages/sec-edgar-ingest/src` changes, the release is unchanged, and no test reads the live config (Revision 2, item 4). So the full offline checker is not required.
 
-- [ ] **Step 1: Confirm the starting state**
+- [x] **Step 1: Confirm the starting state**
 
 ```sh
 # prelude
@@ -2064,7 +2064,7 @@ ls conf/stage2/1b | wc -l
 
 Expected: `no writer`, the file hash `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc`, no `git status` line, and `13`. Any other result stops the plan.
 
-- [ ] **Step 2: Edit the live config**
+- [x] **Step 2: Edit the live config**
 
 This is the one approved edit of the live config (D10). It changes only the start quarter.
 
@@ -2086,7 +2086,7 @@ git diff --stat -- conf/sec-edgar-local.json
 
 Expected: `bfdf29859325fa396520c0fabd0bcd6f6e34d8854b558d56e4bf4a7731038204`, then `1 file changed, 1 insertion(+), 1 deletion(-)`. Any other hash stops the plan: restore the file with `git checkout -- conf/sec-edgar-local.json` and report.
 
-- [ ] **Step 3: Offline preflight of the edited config**
+- [x] **Step 3: Offline preflight of the edited config**
 
 ```sh
 # prelude
@@ -2107,7 +2107,7 @@ PY
 
 Expected: `backfill` `["2020Q1", "open"]`, `dispatch_reserve_seconds` `1800`, `effective_config_sha256` `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5` and `release_id` `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b`. Any difference stops the plan.
 
-- [ ] **Step 4: Remove the five unused slice configs (O18)**
+- [x] **Step 4: Remove the five unused slice configs (O18)**
 
 ```sh
 # prelude
@@ -2117,7 +2117,7 @@ ls conf/stage2/1b
 
 Expected: exactly these 8 names: `backfill-2020Q1-2020Q4.json`, `backfill-2021Q1-2021Q4.json`, `backfill-2022Q1-2022Q4.json`, `backfill-2023Q1-2023Q4.json`, `backfill-2024Q1-2024Q4.json`, `backfill-2025Q1-2025Q4.json`, `backfill-2026Q1-2026Q3.json`, `backfill-2026Q4-open.json`.
 
-- [ ] **Step 5: Check the generator and the kept slices against the edited config**
+- [x] **Step 5: Check the generator and the kept slices against the edited config**
 
 The `slice_config` function is Task 3b's, unchanged. It writes into `conf/stage2/1b/` and refuses to overwrite a file.
 
@@ -2170,7 +2170,7 @@ Expected:
 
 Any other hash, a `False`, or a modified kept config stops the plan.
 
-- [ ] **Step 6: Known answers on the live store under the edited config**
+- [x] **Step 6: Known answers on the live store under the edited config**
 
 ```sh
 # prelude
@@ -2215,7 +2215,7 @@ Expected, as planning observed on 2026-10-29 (F15, F22):
 
 Any other value stops the plan.
 
-- [ ] **Step 7: Amend the spec and the runbook**
+- [x] **Step 7: Amend the spec and the runbook**
 
 Spec-level edits (D10), approved with this revision. Each new spec line carries `(owner, plan 2, 2026-10-29)`. The spec's status line is not touched.
 
@@ -2255,7 +2255,7 @@ git diff --stat -- specs/sec-filing-index-ingestion-spec.md docs/runbooks/local-
 
 Expected: `sec-filing-index-ingestion-spec.md 2 edits` and `local-ingestion.md 2 edits`, then 2 files changed. The spec diff changes the §4.8 backfill row and adds three lines after the `db62e7fb…` hash. The runbook diff changes `2015Q1` to `2020Q1` in the config rules (line 23 before the edit, line 24 after). It also adds one line to the config-creation snippet, because that snippet copies `conf/sec-edgar-local-fixture.json`, which keeps `2015Q1`.
 
-- [ ] **Step 8: Edit `specs/evidence/baseline-campaign/campaign.json` (O19)**
+- [x] **Step 8: Edit `specs/evidence/baseline-campaign/campaign.json` (O19)**
 
 Replace the whole file with:
 
@@ -2273,7 +2273,7 @@ Replace the whole file with:
 
 Only `max_invocations` changes, from 40 to 24.
 
-- [ ] **Step 9: Edit `specs/evidence/baseline-campaign/campaign.md` for the 2020Q1 range**
+- [x] **Step 9: Edit `specs/evidence/baseline-campaign/campaign.md` for the 2020Q1 range**
 
 ```sh
 # prelude
@@ -2336,7 +2336,7 @@ PY
 
 Expected: `campaign.md: 17 edits`. Planning dry-ran this script on a copy of the `c9a9cb3` file. Any `SystemExit` stops the plan. The Approval section stays "To be completed in Task 4".
 
-- [ ] **Step 10: Append the Revision 2 section to `pre-campaign.md`**
+- [x] **Step 10: Append the Revision 2 section to `pre-campaign.md`**
 
 Every value below must equal the Step 2–6 outputs. A difference stops the plan.
 
@@ -2360,7 +2360,7 @@ Every value below must equal the Step 2–6 outputs. A difference stops the plan
 - [rev2/files.json](pre-campaign/rev2/files.json): 153 files. Against L12, only SQLite journal state changed.
 ```
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```sh
 git diff --check
@@ -2388,7 +2388,7 @@ Expected: `git status` lists the live config, the five deleted configs, the spec
 - Consumes: the Task 3a, 3b and 3c commits, and `specs/evidence/baseline-campaign/pre-campaign/rev2/preflight.json`.
 - Produces: either a stop that ends the plan, or the approval commit that Task 5 checks before every invocation.
 
-- [ ] **Step 1: Check the release gate**
+- [x] **Step 1: Check the release gate**
 
 ```sh
 # prelude
