@@ -1,6 +1,6 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
-**Status: BLOCKED at Task 4 (2026-10-21)** — Tasks 1–3 and 8 executed via executing-plans (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Task 4 was not run. Its release gate stays closed on release `fc68adef…` (F11), and the owner routed the blocker to an engine change and a new release (D5). Tasks 4–7 wait for a revision of this plan for that release. Roadmap Stage 2 stays unticked. See `## Handoff to later stages`.
+**Status: REVISED for release `9fa189a0…` (Revision 1, 2026-10-29), approved by the owner (D9)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Their text is the execution record and stays as run. Revision 1 adds Tasks 3a and 3b and rewrites Tasks 4–7 for the 1b release. Nothing in Revision 1 has run. Roadmap Stage 2 stays unticked. Read `## Revision 1 for the 1b release` first.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -16,11 +16,22 @@
 
 An owner gate then checks the release and approves the finite scope, budget, window and sole-issuer declaration. After the gate, the operator runs the existing launcher `backfill` workflow once for each range slice. Each slice config differs from the live config only in its backfill range. The operator audits durable transport records after each invocation, and at the end writes the two-axis coverage finding for owner disposition.
 
-**Tech Stack:** Installed native release `fc68adef…` (CPython 3.14.0, macOS arm64, Requests 2.34.2, PyArrow 25.0.1). Stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. SQLite backup API. Launcher `scripts/sec-edgar-local`.
+Revision 1 (2026-10-29) moves the campaign to the 1b release. On it, the runner stops starting members at the deadline minus the reserve and writes a durable result, so a slice that does not fit one invocation defers its remaining members. Two offline tasks come before the gate: Task 3a revises the evidence tool (a cheap integrity view between invocations, and per-member timing), and Task 3b re-runs the known answers and makes the 1b slice configs and campaign files.
+
+**Tech Stack:** Installed native release `9fa189a0…` (CPython 3.14.0, macOS arm64, Requests 2.34.2, PyArrow 25.0.1, application version 0.2.0). Tasks 1–3 ran on release `fc68adef…`. Stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. SQLite backup API. Launcher `scripts/sec-edgar-local`.
 
 **Spec:** [specs/sec-filing-index-ingestion-spec.md](../sec-filing-index-ingestion-spec.md). This plan implements Stage 2 only: §§4.2–4.9, 5–6 and 7 G2. It plans no work for Stages 3–5.
 
-## Feasibility blocker (read first)
+## Revision 1 for the 1b release (read first)
+
+Written 2026-10-29 against the Stage 2 roadmap entry (`Consumes`, amended at the 2026-10-28 resume) and plan 5, Handoff, Stage 2 bullet. Planning sent no SEC request and wrote nothing under `data/`. It ran the tool's tests, the offline preflight and read-only known answers (F12–F20).
+
+1. **The F11 blocker is resolved on the 1b release.** Release `9fa189a0…` stops starting members at the deadline minus `execution.dispatch_reserve_seconds` (1800) and writes its durable result (parent spec §4.7). Members not started end `pending` with `workflow_deferred`. The fixture measurement puts the slowest member at 1,010.9 s, inside 3,300 − 1,800 = 1,500 s (plan 5 D10; `specs/evidence/stage1b/measurement.md`, `gate.md`). The pilot no longer has to fit one invocation: it drains across reruns. What stays unmeasured is native cost (F18) and the A1 member class (F19). O14 and O15 cover both.
+2. **What Revision 1 changes.** Global Constraints (release, hashes, reserve, floor, prelude). New Task 3a: the evidence tool gets `coverage --check integrity` and a `timing` command (F16, O12). New Task 3b: known answers on the 1b interpreter, 13 new slice configs under `conf/stage2/1b/` (F13, O13), and new `campaign.json` and `campaign.md`. Tasks 4–7: the 1b release gate, the new slice list, new stop rules (O14, O16) and the evidence for the revisit triggers deferred into this stage (O17).
+3. **What stays.** Tasks 1–3 and 8 and their evidence are the execution record on `fc68adef…`. Their ticked text is not changed. The slice configs `conf/stage2/backfill-2026Q4-open.json` and `conf/stage2/backfill-2015Q1-2015Q2.json` bind to `fc68adef…`. They stay as history and are never run. Task 2's backup and restoration stand: the live root is unchanged since then (F14).
+4. **Never select an older release for this store after the first 1b live write** (parent spec §4.9). This plan changes no release selection, so it does not meet the revisit condition of the `specs/deferred_items.md` item "Two-release proof covers only first-generation 1b stores". Task 7 says so.
+
+## Feasibility blocker on release `fc68adef…` (history, resolved by Revision 1)
 
 On release `fc68adef…`, the first live invocation has no safe margin inside the runtime limit, and very likely exceeds it. Planning found this from retained native evidence and offline fixtures. It sent no SEC request.
 
@@ -33,39 +44,41 @@ Consequence: Tasks 1–3 are offline and remain useful preparation. Task 4's liv
 
 **Status of authority:** This plan authorizes no live traffic.
 
-- Tasks 1 and 3 are offline and send no SEC request.
+- Tasks 1, 3, 3a and 3b are offline and send no SEC request.
 - Task 2 changes files under `data/`. The owner approved its defaults O2, O3 and O9 (D6). It still runs only with no writer running (Task 2 Step 1).
-- Task 4 is the owner's live-execution gate. It opens only on a release that clears the feasibility blocker, after a reviewed revision of this plan for that release. Tasks 5–7 run only after the Task 4 approval commit exists.
+- Task 4 is the owner's live-execution gate. It opens only on a release that clears the feasibility blocker, after a reviewed revision of this plan for that release. Revision 1 is that revision for release `9fa189a0…`, once the owner approves it. Tasks 5–7 run only after the Task 4 approval commit exists.
 - Task 8 edits spec text only. The owner approved O4 (D6), and the task does not depend on the campaign.
 
 ## Global Constraints
 
-Every task's requirements include these lines.
+Every task's requirements include these lines. Revision 1 (2026-10-29) replaced the release, hash, reserve, slice-config and prelude lines. Tasks 1–3 and 8 ran under the 2026-10-21 lines, which stay in git history at `4004f2e`.
 
-- Release: `fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec`, manifest `/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json`.
-- Live config: `conf/sec-edgar-local.json`, `config_version=sec-local-config-v1`. Effective-config SHA-256 `088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d` (offline preflight, 2026-10-21). Do not edit it.
-- Slice configs: `conf/stage2/backfill-<start>-<end>.json`, made only by Task 3's `slice_config` function. Each one equals the live config except for `backfill.start_quarter` and `backfill.end_quarter`. Its storage and logging roots are written as the same absolute paths. The store binding excludes the range (§4.5), so every slice uses the same bound root.
-- Observed config facts, 2026-10-21. File-byte SHA-256 is `cad77e29d681e47a6cfb5658b7ddd13c50b6d55f17e0e315f30c2878cf8da0c4`. This differs from the L12 input bytes `2a940f236b2bf37dc1fb4fbef03d0da3c98f663c311231b225961b0c58c3dbbb`, but the effective hash is the same. The file is tracked since commit `001edf5`, although spec §4.8 says "untracked".
+- Release: `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` (version 0.2.0, `git_revision` `50423a404fb50a959b3ca4077301117d32804cc6`), manifest `/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json`. Selected in the live config at commit `6d80da4`. Evidence: `specs/evidence/stage1b/release.md`, `measurement.md`, `gate.md`.
+- Live config: `conf/sec-edgar-local.json`, `config_version=sec-local-config-v1`. Effective-config SHA-256 `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`. File-byte SHA-256 `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc` (both offline preflight, 2026-10-29). Do not edit it.
+- Dispatch reserve and floor: `execution.dispatch_reserve_seconds` 1800 (measured, plan 5 D10). Floor 480 s (release constant `config.DISPATCH_RESERVE_FLOOR_SECONDS`). The launcher refuses `--timeout-seconds` at or below the reserve. At the 3,300-second launcher default, the runner starts no member after 1,500 s (the dispatch cutoff, parent spec §4.7). A member running at the cutoff still completes.
+- Release history of this store: `fc68adef…` wrote every object in it (L12). After the first 1b live write, selecting `fc68adef…` or the D5 release `aa8de1ac…` for this store is unsupported (parent spec §4.9). Never change `runtime.release_manifest` during or after the campaign.
+- Slice configs: `conf/stage2/1b/backfill-<start>-<end>.json`, made only by Task 3b's `slice_config` function. Each one equals the live config except for `backfill.start_quarter` and `backfill.end_quarter`. Its storage and logging roots are written as the same absolute paths. The store binding excludes the range (§4.5), so every slice uses the same bound root. The two files directly under `conf/stage2/` bind to `fc68adef…`. Never run them.
+- Observed config facts, 2026-10-21. The file is tracked since commit `001edf5` (spec §4.8 as amended by Task 8).
 - Storage / acquisition: `storage.backend=local`; `acquisition.mode=live`. Data root `/Users/lowell/Projects/sec-edgar-local/data`. Logging root `/Users/lowell/Projects/sec-edgar-local/logs`.
 - Backfill / handoff (live config): `2015Q1` through `open`; daily handoff `2026-10-01`.
 - SEC identity: `Lowell Mason sec-edgar-ingest mason.lowell@mac.com`. Request policy: 3 requests/second, one active collector.
 - HTTP: five total attempts; 2-second base, 120-second local cap with jitter; honor longer server delays. Connect / read / exchange limits 15 / 60 / 90 seconds. Received / expanded limits 67,108,864 / 536,870,912 bytes per response.
 - Coordination: namespace `sec-owner-lowell-mason`; 60-second lease, 20-second renewal, 2-second uncertainty.
 - Parser / schema: `sec-index-parser-v1` / `sec-index-v1`. Withdrawal approval: `reconciliation.require_withdrawal_approval=true`.
-- Execution: live maximum 3,600 seconds; launcher default 3,300 seconds.
+- Execution: live maximum 3,600 seconds; launcher default 3,300 seconds; dispatch reserve 1,800 seconds.
 - Every native process uses `-I -B -X pycache_prefix=/dev/null`. No checkout application import, dependency sync or install, or interpreter download during a run.
-- No parser, schema, runtime, storage or release change. No `--force`. No `approve` or `rollback`. No duplicate-winner selection, pointer edit or object deletion. The single exception is the reviewed Task 2 restoration and `.DS_Store` removal.
+- No parser, schema, runtime, storage or release change. No `--force`. No `approve` or `rollback`. No duplicate-winner selection, pointer edit or object deletion. The single exception is the reviewed Task 2 restoration and `.DS_Store` removal. A candidate that the C6 equivalence check refused stays in the store: removing its objects is not a supported recovery step (parent spec §4.7; plan 5 D12; `docs/runbooks/local-recovery.md`, row "Refused incremental candidate").
 - During a campaign window, the launcher is the only SEC client under the owner identity. Do not send manual `curl`, browser or other requests with the owner User-Agent. The sole-issuer declaration covers every other machine and the original `sec-edgar` Azure project.
 - Do not open `data/` in an editor, formatter, Finder or Quick Look. Read store contents only through `scripts/baseline-campaign.py` or the release's validated readers.
 - Put no campaign evidence under `/tmp` or `/private/tmp`.
 - Do not rerun the port's acceptance harness `scripts/accept-sec-native.py` or its adjudicator `scripts/verify-sec-native-adjudication.py`. Do not repeat acceptance (§6).
 - Committed evidence goes under `specs/evidence/baseline-campaign/`, apart from `specs/evidence/local-port/` (§8). Raw evidence stays in the ignored `data/`, `logs/` and `backups/` trees. Committed records cite it by path and SHA-256.
 - Do not infer completeness from an exit code, latest filing date, directory presence or one nonempty captured quarter (§7). Keep approved incomplete coverage distinct from complete coverage.
-- Shell prelude: shell state does not persist between steps, so every shell step below starts with these lines.
+- Shell prelude: shell state does not persist between steps, so every shell step below starts with these lines. The shell is zsh: do not rely on word splitting of an unquoted variable.
 
 ```sh
 project=/Users/lowell/Projects/sec-edgar-local
-release="$project/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec"
+release="$project/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b"
 native() { "$release/venv/bin/python" -I -B -X pycache_prefix=/dev/null "$@"; }
 tool() { native "$project/scripts/baseline-campaign.py" "$@"; }
 evidence="$project/specs/evidence/baseline-campaign"
@@ -82,10 +95,12 @@ cd "$project"
 - **D5** (owner, plan review, 2026-10-21): O11 (a). An engine change and a new release come before the Stage 2 live campaign. Tasks 1–3 stay as offline preparation on release `fc68adef…`. Owner's words: "Route O11 (a): an engine change and a new release come before the Stage 2 live campaign. Keep Tasks 1–3 as offline preparation." Applied in: Feasibility blocker, Task 4, After the last task.
 - **D6** (owner, plan review, 2026-10-21): O1–O10 accepted as proposed. Owner's words: "Accept O1–O10 as proposed in plan 2." That settles: the range 2015Q1–2026Q4 in slices, pilot first (O1); restoring the 2021Q1 manifest (O2); removing the five `.DS_Store` files (O3); recording the lost L12 directory and amending the spec (O4); budgeting and reporting the retained daily sources (O5); approving no withdrawal in Stage 2 (O6); no discovery-only probe (O7); the `campaign.json` limits (O8); the backup location under `backups/` (O9); and the pilot order (O10). Applied in: the tasks that each default names.
 - **D7** (owner, execution review relayed by the parent session, 2026-10-21): After Tasks 1–3 ran, the integrity check reported `state.sqlite3-wal` and `state.sqlite3-shm` as `missing`, because SQLite deletes them when the last connection closes cleanly. The tool now lets those two files appear or vanish and reports that under `changed_state`. `state.sqlite3` stays strict. Owner's words: "Yes, approve the WAL/SHM integrity-check fix as proposed: let state.sqlite3-wal and -shm appear or disappear, keep state.sqlite3 strict, add a test, and correct the plan's code and the errors=10 wording." Applied in: Task 1 (code, test, Steps 2, 4 and 5), Task 2 Step 6.
+- **D8** (owner, brief, 2026-10-27): Roadmap default (vi), approved at the 2026-10-27 resume: Stage 2 consumes the Stage 1b release in place of the D5 release, and the plan 2 revision is written against it. The values to change and the traps come from plan 5, Handoff, Stage 2 bullet (roadmap resume, 2026-10-28). Applied in: Revision 1, Global Constraints, Tasks 3a–7.
+- **D9** (owner, plan review, 2026-10-29): Revision 1 approved, with O12–O17 accepted as proposed. Owner's words: "Approve and commit". This approval authorizes Tasks 3a and 3b. It is not live authority: Task 4 still gates every live invocation. Applied in: Tasks 3a–7.
 
 ## Defaults for owner review
 
-Each default below is applied in the named task. The owner accepted O1–O10 as proposed (D6) and settled O11 (D5).
+Each default below is applied in the named task. The owner accepted O1–O10 as proposed (D6) and settled O11 (D5). O12–O17 are new in Revision 1. The owner accepted them as proposed (D9). O1–O10 stand as accepted. Where Revision 1 changes how one applies (O1's slices, O8's limits), the new default names it.
 
 - **O1 — Range and slices.** Default: requested range 2015Q1–2026Q4, which is 48 quarterly units. This is the live config's `2015Q1`–`open` on a UTC date in 2026Q4. 2026Q4 is the open quarter, so its quarterly source is quarter-to-date. The campaign runs as range slices (F8, F9). The first slice is the pilot `2026Q4`–`open`. Then ascending slices run from 2015Q1 to 2026Q3, and together they cover the range with no gap or overlap. If the campaign starts on or after 2027-01-01T00:00:00Z, `open` becomes 2027Q1: re-derive the range, the open quarter and every value that names 2026Q4 in the plan revision that Task 4 requires. Alternative: an earlier start, such as the `2010Q1` that the completed design names as a possible later revision. Applied in: Tasks 3 and 5.
 - **O2 — 2021Q1 manifest restoration.** Default: after a stopped-writer backup, write the canonical bytes back (Task 2). The canonical re-encoding of the drifted file is SHA-256 `a445d0a8…`, 5,100 bytes, which equals the L12 inventory record. Alternative: leave the file. Then every reader and every publication onto 2021Q1 refuses with `state_conflict`. That includes a future `daily` run whose back-dated rows reach 2021Q1. Applied in: Task 2.
@@ -102,6 +117,12 @@ Each default below is applied in the named task. The owner accepted O1–O10 as 
   - (b) Untested alternative: drain on this release by deliberate deadline expiry and new-ID continuation. Each invocation would end with exit 9 and no workflow result. A kill during a collect can leave an `uncertain` transport attempt. Stop rules 1, 2 and 4 halt on these outcomes. So this route needs its own offline proof and new stop rules, and the recovery runbook names it a recovery path, not an operating mode. This plan does not include it.
   - (c) Stop Stage 2 after Tasks 1–3, or before them.
   - Applied in: Task 4.
+- **O12 — Evidence tool revision (Task 3a).** Default: add `coverage --check integrity`, which checks only the exact manifest and file hashes and reports `validated_rows` as null, with the new verdict `published_unchecked`. Task 5 uses it between invocations. Keep `--check full` as the default, with one full content check per quarter instead of two, and run it once in Task 6. Add a `timing` command that joins each member's child refs to durable `Attempt` rows and reports child seconds, member wall and engine seconds. Reason: F16. A full check costs about 415 s per full-size quarter, and the stop rules read only member outcomes. Under the 1b trust model (plan 5 Handoff, trap (a)), the final full read is the only independent content check on engine-built generations, so it stays. Alternative: keep the tool as it is. Then the between-invocation coverage grows to hours (F16). Applied in: Tasks 3a, 5, 6.
+- **O13 — Slices and budget.** Default: the pilot `2026Q4`–`open` first, rerun until no daily source is pending. Then 11 calendar-year slices `2015`–`2025`, then `2026Q1`–`2026Q3`. That is 13 configs, all made in Task 3b, and no sizing rule. A year slice that does not fit one invocation defers its last members, and stop rule 9 reruns it. Budget: `max_invocations` 40 (about 2 full-size members start in each invocation, F18: pilot 2–4, year slices about 24, plus reruns). The other limits stay as O8 set them. They still hold, because each rerun adds only listing requests. This replaces O1's slice plan and O8's invocation count. Alternative: two-quarter slices (24 configs, fewer reruns, more configs). Applied in: Tasks 3b, 4, 5.
+- **O14 — Member-wall halt.** Default: halt after any invocation in which a timed member's wall exceeds **1,056 s**. A member's wall holds no finish step: the tool reports that apart as the run's `tail_seconds` (Task 3a, Timing rules). That is the largest wall for which the measured reserve rule still gives at most the approved reserve: 1.25 × 1,056 + 480 = 1,800 (plan 5 D10). The fixture value is 1,010.9 s, and native cost is not measured (plan 5 Handoff, trap (c)). So the first full-size year slice may halt here. A halt then is evidence for the owner, who may approve a named, measured limit. Alternatives: 1,320 s (the reserve minus the floor, the hard fit for a member that starts at the cutoff), or report only. Applied in: Tasks 4, 5.
+- **O15 — The A1 member class in the pilot.** The pilot publishes the open quarter's quarter-to-date quarterly source. Every 2026Q4 daily member after it is an open-quarter member with a quarterly membership authority (A1). That class is not measured (`specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`). Default: accept the pilot as the first measurement of A1, under the O14 halt. Alternative: measure A1 offline first, in a separate plan with a new fixture scenario, before Task 4. Applied in: Tasks 4, 5, 7.
+- **O16 — Refused incremental candidate (C6).** A member whose publish refuses its candidate ends `invalid_source` and is not quarantined. Its retry is blocked (plan 5 Handoff, trap (e)). Default: halt after that invocation. Name the unit as an exception in Task 7, with a disposition that points to Stage 4. Do not remove objects. Applied in: Tasks 4, 5, 7.
+- **O17 — Revisit triggers deferred into Stage 2.** Default: report, do not halt (except O14). Task 7 §8 records the evidence for each trigger: B4 (`repeated_sources` and `b4_members`), the history scan (engine seconds against `child_call_rows`), A1 (2026Q4 member walls), refused C6 candidates, and the two-release limit (no release change). The items stay open in `specs/deferred_items.md` unless the evidence meets their closure conditions at plan completion. Applied in: Tasks 5, 6, 7.
 
 ## Facts established while planning (read-only, 2026-10-21)
 
@@ -122,25 +143,59 @@ Each default below is applied in the named task. The owner accepted O1–O10 as 
   - Fixture timings can only underestimate native cost. So no fixture estimate can show the pilot to be feasible.
   - Unmeasured: the native cost of one closed-quarter quarterly publish. An offline estimate of it was stopped unfinished when this blocker made it moot.
 
+## Facts established for Revision 1 (read-only, 2026-10-29)
+
+No SEC request was sent. Nothing under `data/` was written. The store was opened only with operator access by the evidence tool, as in Task 3.
+
+- **F12 — 1b inputs.** Offline preflight of the live config under the 1b interpreter printed effective SHA-256 `db62e7fb…`, release `9fa189a0…`, range `2015Q1`–`open` and reserve 1800. The file bytes are `de6c0dd9…`. These equal plan 5, Handoff, Stage 2 bullet.
+- **F13 — Slice generator.** The Task 3 generator, run into a scratch directory with the 1b interpreter, reproduces the live effective hash `db62e7fb…` exactly for the slice `2015Q1`–`open`. That is the new known answer for the generator. The L12 check no longer applies: `2024Q1`–`2024Q1` now gives `c3b01790…`, not `32b4da63…`, because the release manifest and the reserve key changed. The 13 campaign configs give these effective hashes:
+
+| Config | Effective SHA-256 |
+| --- | --- |
+| `backfill-2026Q4-open.json` (pilot) | `aab50ee232bfe0c062931593ea976cec485c82335e8a1e03503678b7d4d6573d` |
+| `backfill-2015Q1-2015Q4.json` | `a4003c361fb6bd11f2682a435b8966183fef8ef79cdfd300421e4ab4a8163de6` |
+| `backfill-2016Q1-2016Q4.json` | `2e5377911323cba4338972f046b66732a3a22a35406a645c5c72d60a8aafd7d8` |
+| `backfill-2017Q1-2017Q4.json` | `e49855b75c50ee176718d92e4282721713bfd8f8c74936325db1682d0376a79a` |
+| `backfill-2018Q1-2018Q4.json` | `4d8e600fc725456a17e74a86dae492b0be18713dd3a77bd7c8825036657e6cb0` |
+| `backfill-2019Q1-2019Q4.json` | `6aa0b675459f8642290bf01593f189db4a36e00b6228f9306503ccc2d05e832c` |
+| `backfill-2020Q1-2020Q4.json` | `6af8dd95411a8d9614d075eb067382ee12526d3140173449abc76b1094f0d3d3` |
+| `backfill-2021Q1-2021Q4.json` | `403ee6d813448f30e98f80adf39937339ace1d1793adad7f799af9eb105a6279` |
+| `backfill-2022Q1-2022Q4.json` | `ce09a643e7b97f7b86ae781ca53ad17232e9315de9e9a11423536bb2c5ec284d` |
+| `backfill-2023Q1-2023Q4.json` | `12b29832fd23c31bd726e738ab3363d72fa05bee3e1e608bbb8c4f1da64c44a8` |
+| `backfill-2024Q1-2024Q4.json` | `b3800ebbc33494fea29b970d0999db206d0cd040d665c36dbc8be9b22b445694` |
+| `backfill-2025Q1-2025Q4.json` | `1d733369522f78bc9d857390cfd3c0539b9a24ac50be8f3026e531c24b15adce` |
+| `backfill-2026Q1-2026Q3.json` | `d84919ef81fea54f9026c9ab014b2c7e5e2b825166e23e9cd323269d50eeed61` |
+
+- **F14 — Live root unchanged since Task 2.** `files` against L12 reports 153 files, 12,170,549 bytes, and an empty comparison except `changed_state` for the SQLite journal files. No writer runs. The backup `backups/stage2-pre-campaign-20261021T180646Z` exists. 497 GiB are free.
+- **F15 — The tool on the 1b code.** The checkout source equals the 1b `git_revision` (empty `git diff 50423a4 HEAD -- packages/sec-edgar-ingest/src`). The tool's 11 tests pass on it (110.8 s). Every release internal the tool imports is defined in `9fa189a0…`, and the tests exercise each one. `audit` gives the L12 store total again (10 attempts, 10 URLs, 4,946,565 bytes, ordinal 1). `coverage` gives `{'no_campaign_result': 48}`, 16 published daily-only quarters and 6,744 rows. `_validate_report` and `capture_quarter` use the cheap C1 check on this release.
+- **F16 — Coverage cost.** `quarter_view` calls `validated_manifest` and then `read_quarter`, which calls `validated_manifest` again. So each published quarter gets two full content checks. One full check of a full-size quarter is about 415 s (`specs/evidence/stage1b/diagnosis.md` §1). On the live root's 16 small quarters, a prototype of the Task 3a tool took 51.5 s with `--check full` and 0.6 s with `--check integrity`. With about 2 full-size quarters added in each invocation, an unchanged between-invocation coverage would cost about 2k × 830 s after invocation k.
+- **F17 — Two-release coverage of this store.** Every object in the live store was written by `fc68adef…`. Continuation of `fc68adef…`-origin pending work by the current code is tested by `test_release_origin.OriginReleaseTests`, which ran in the 1b gate (1108 tests, OK). Continuation of D5-origin work is in `specs/evidence/stage1b/two-release.md`. Not tested: a 1b incremental publish onto a base generation that `fc68adef…` wrote, which is what the pilot does to the 16 daily-only quarters. It rests on unchanged formats (1b spec C7) and on C6, which checks each incremental candidate before the pointer moves. A C6 refusal is handled by O16.
+- **F18 — Dispatch arithmetic.** Fixture member walls: full-size closed first publication 911.9–1,010.9 s; open-quarter daily members 8.8–16.2 s at n = 1–80; measure 1 16.7 s; fan-out 21.0 s; authority full rebuild 985.4 s; finish step up to 97.8 s (`measurement.md`). With the cutoff at 1,500 s, about 2 full-size members start in one invocation, and the run ends near 2,100–2,200 s. The reserve rule 1.25 × w + 480 ≤ 1,800 holds up to w = 1,056 s (O14).
+- **F19 — A1 arises in the pilot.** The pilot's selection holds the 2026Q4 quarter-to-date quarterly source and the 2026Q4 daily sources. Once the quarterly source is published, later 2026Q4 daily members take the A1 path, which plan 5 did not measure (O15).
+- **F20 — History scan starts at zero.** The live store has 0 `WorkflowChildCall` rows and 14 `Attempt` rows (all from L12, run `accept-38bf7c024e0fd5ac`). Each timed member adds up to 3 child calls. The measured slopes are 0.0218–0.0290 s per row (`measurement.md`, "History scan (S4)").
+
 ## File structure
 
 | Path | Responsibility | Task |
 | --- | --- | --- |
-| `scripts/baseline-campaign.py` | Read-only evidence tool: `files`, `audit`, `coverage`. Pinned to release `fc68adef…` internals. | 1 |
-| `packages/sec-edgar-ingest/tests/test_baseline_campaign.py` | Offline tests: pure rules plus fixture-store workflows. | 1 |
+| `scripts/baseline-campaign.py` | Read-only evidence tool: `files`, `audit`, `coverage` (`--check full\|integrity`), `timing`. Verified against releases `fc68adef…` and `9fa189a0…`. | 1, 3a |
+| `packages/sec-edgar-ingest/tests/test_baseline_campaign.py` | Offline tests: pure rules plus fixture-store workflows. | 1, 3a |
 | `.gitignore` | Adds `backups/`. | 2 |
 | `backups/stage2-pre-campaign-<stamp>/` (ignored) | Stopped-writer backup: SQLite backup copy and raw copy of `data/`. | 2 |
-| `specs/evidence/baseline-campaign/pre-campaign.md`, `pre-campaign/*.json` | Integrity findings, backup, restoration and known-answer results. | 2–3 |
-| `conf/stage2/backfill-<start>-<end>.json` | Range-only slice configs. | 3, 5 |
-| `specs/evidence/baseline-campaign/campaign.md`, `campaign.json` | Scope, budget, slice plan, stop rules, evidence locations, approval boundary, release gate and owner approval. | 3–4 |
-| `specs/evidence/baseline-campaign/invocations.md`, `invocations/<k>-<run-id>.json` | Ledger and record for each invocation. | 5 |
-| `specs/evidence/baseline-campaign/final/*.json`, `quarantine/<quarter>.txt` | Final coverage, audit, inventory comparison and conflict enumerations. | 6 |
+| `specs/evidence/baseline-campaign/pre-campaign.md`, `pre-campaign/*.json` | Integrity findings, backup, restoration and known-answer results. `pre-campaign/1b/*.json` holds the Revision 1 known answers. | 2–3, 3b |
+| `conf/stage2/backfill-<start>-<end>.json` | Range-only slice configs bound to `fc68adef…`. History; never run. | 3 |
+| `conf/stage2/1b/backfill-<start>-<end>.json` | The 13 range-only slice configs bound to `9fa189a0…`. | 3b, 5 |
+| `specs/evidence/baseline-campaign/campaign.md`, `campaign.json` | Scope, budget, slice plan, stop rules, evidence locations, approval boundary, release gate and owner approval. Rewritten for the 1b release. | 3, 3b, 4 |
+| `specs/evidence/baseline-campaign/invocations.md`, `invocations/<k>-<run-id>.json` | Ledger and record for each invocation, with its timing summary. | 5 |
+| `specs/evidence/baseline-campaign/final/*.json`, `quarantine/<quarter>.txt` | Final full coverage, audit, timing, inventory comparison and conflict enumerations. | 6 |
 | `specs/evidence/baseline-campaign/coverage-finding.md` | The G2 finding, dispositions and operating decision. | 7 |
 | `specs/sec-filing-index-ingestion-spec.md` | Amendment for F3 and the config observation, only if O4 is approved. | 8 |
 
 ---
 
 ### Task 1: Read-only campaign evidence tool
+
+> Revision 1: executed on release `fc68adef…`. Task 3a extends this tool for the 1b release. The text below is the execution record.
 
 **Files:**
 - Create: `scripts/baseline-campaign.py`
@@ -970,6 +1025,8 @@ git commit -m "docs(evidence): record pre-campaign backup and manifest restorati
 
 ### Task 3: Known answers, slice configs and campaign scope and budget (offline)
 
+> Revision 1: executed on release `fc68adef…`. Task 3b repeats its known answers on the 1b release, makes the 1b slice configs, and rewrites `campaign.json` and `campaign.md`. The text below is the execution record. Its `slice_config` function is redefined in Task 3b.
+
 **Files:**
 - Create: `specs/evidence/baseline-campaign/pre-campaign/audit.json`, `coverage.json`
 - Modify: `specs/evidence/baseline-campaign/pre-campaign.md` (append `Known-answer checks`)
@@ -1217,34 +1274,778 @@ git commit -m "docs(evidence): propose Stage 2 campaign scope, slices and budget
 
 ---
 
-### Task 4: Release gate and owner live-execution gate (human checkpoint)
+### Task 3a: Evidence tool for the 1b release: integrity coverage and member timing (offline, O12)
 
 **Files:**
-- Modify: `specs/evidence/baseline-campaign/campaign.md` (`Release gate`, `Approval` and `Status` sections)
+- Modify: `scripts/baseline-campaign.py`
+- Modify: `packages/sec-edgar-ingest/tests/test_baseline_campaign.py`
 
 **Interfaces:**
-- Consumes: the Tasks 2–3 commits and the Task 3 Step 1 preflight output (`release_id`).
-- Produces: either the closed-gate record that ends the plan, or the approval commit that Task 5 checks before every invocation.
+- Consumes: the Task 1 tool at `4004f2e`. Installed `sec_edgar_ingest` APIs of release `9fa189a0…`: everything Task 1 lists, plus `etl.reader.checked_manifest`, `StateStore.scan('Attempt' | 'WorkflowChildCall', {})`, and `RunContext.effective_config / deadline / started_at` and `WorkflowResult.ended_at`.
+- Produces:
+  - `coverage … [--check full|integrity]`. The output gains `check`. Default `full`: one full content check per quarter (through `read_quarter`), and `validated_rows` is the row count read. `integrity`: the exact manifest and file hashes only (C1), and `validated_rows` is null. New verdict `published_unchecked`: the unit would be checked for coverage, but its rows were not read. It never counts as coverage, so `complete` is false.
+  - `timing --config PATH [--result REF]... [--max-member-wall SECONDS]` returns `{kind: timing, runs[{run_id, command, outcome, started_at, deadline, dispatch_cutoff, ended_at, tail_seconds, members[…], timed_members, b4_members, repeated_sources, max_member_wall}], child_call_rows, max_member_wall, breaches?}`. Each member is `{source_id, kind, period, outcome, b4, ran_children, reused_children, children{collect|transform|publish: {outcome, started_at, ended_at, seconds}}, child_seconds, start, last_child_end, wall_seconds, engine_seconds}`. Exit 1 when `--max-member-wall` is given and a timed member's wall exceeds it. Each breach is `{run_id, source_id, period, wall_seconds, limit}`.
+  - Pure functions used by the tests: `child_attempts(values) -> dict`, `member_timings(run_id, members, attempts) -> list[dict]`, `tail_seconds(rows, ended_at) -> float | None`, `summarize_timings(rows) -> dict`.
+
+Timing rules. A member starts at its first child's start. Members run one at a time, so a member's wall runs to the next timed member's start. The last timed member's wall runs to its own last child's end. The run's `tail_seconds` runs from there to the result's `ended_at`: the finish step and the bookkeeping for deferred members. No member's wall holds the tail, so a slow finish step cannot trip the member-wall limit (O14). That is the plan 4 definition (collect start to next collect start), not the plan 5 one (`sibling_completion` call to receipt), so the two can differ by the engine time before a member's first child, and by the last member's receipt after its last child (0.1–0.4% of a full-size member, `measurement.md` §6). Engine seconds are the wall minus the member's own child seconds. A child ref names its run, command and attempt (`runs/sec/{run}/{command}/{attempt}/result.json`). A child of another run is listed under `reused_children` and not timed. A member that ends `unchanged` with no child ref is a B4 sibling completion. A member deferred at the cutoff has no child ref and is not B4. `repeated_sources` lists the sources with more than one member that ran children in one result (F10).
+
+- [ ] **Step 1: Write the failing tests**
+
+In `packages/sec-edgar-ingest/tests/test_baseline_campaign.py`, add these two methods to `PureRuleTests`, directly before `test_budget_breaches_name_each_exceeded_limit`:
+
+```python
+    def test_an_integrity_only_view_is_never_coverage(self):
+        verdict = self.api['unit_verdict']
+        member = {'source_id': 's', 'outcome': 'success', 'status': 'complete', 'quarantined': False,
+                  'quarters': [{'quarter': '2026Q3', 'outcome': 'published'}]}
+        unchecked = {'status': 'published', 'membership_source_id': 's', 'gate': 'clear',
+                     'row_count': 3, 'validated_rows': None}
+        self.assertEqual(verdict('2026Q3', '2026Q4', member, unchecked, False), 'published_unchecked')
+        self.assertEqual(verdict('2026Q4', '2026Q4', member, unchecked, False), 'published_unchecked')
+        self.assertEqual(verdict('2026Q3', '2026Q4', member, {**unchecked, 'membership_source_id': None}, False),
+                         'publication_mismatch')
+        self.assertEqual(verdict('2026Q3', '2026Q4', member, {**unchecked, 'row_count': 0}, False),
+                         'publication_mismatch')
+
+    def test_member_timings_join_children_by_attempt_and_time_each_wall(self):
+        def attempt(run, command, attempt_id, start, end, outcome='success'):
+            return {'context': {'run_id': run, 'command': command, 'attempt_id': attempt_id,
+                                'started_at': '2026-11-02T10:' + start + '+00:00'},
+                    'started_at': '2026-11-02T10:' + start + '+00:00',
+                    'ended_at': None if end is None else '2026-11-02T10:' + end + '+00:00', 'outcome': outcome}
+        values = [attempt('r1', 'collect', 'c1', '00:00', '00:02'), attempt('r1', 'transform', 't1', '00:02', '00:05'),
+                  attempt('r1', 'publish', 'p1', '00:05', '00:10'), attempt('r1', 'publish', 'p1', '00:05', '00:06', 'received'),
+                  attempt('r1', 'collect', 'c2', '00:12', '00:13'), attempt('r1', 'collect', 'c3', '00:20', None),
+                  attempt('r1', 'discover', 'd1', '00:00', '00:01')]
+        attempts = self.api['child_attempts'](values)
+        self.assertEqual(sorted(attempts), [('r1', 'collect', 'c1'), ('r1', 'collect', 'c2'),
+                                            ('r1', 'publish', 'p1'), ('r1', 'transform', 't1')])
+        ref = lambda run, command, attempt_id: f'runs/sec/{run}/{command}/{attempt_id}/result.json'
+        members = [
+            {'source_id': 's1', 'kind': 'daily', 'period': '2026-10-01', 'outcome': 'success',
+             'child_refs': [ref('r1', 'collect', 'c1'), ref('r1', 'transform', 't1'), ref('r1', 'publish', 'p1')]},
+            {'source_id': 's1', 'kind': 'daily', 'period': '2026-10-01', 'outcome': 'unchanged', 'child_refs': []},
+            {'source_id': 's2', 'kind': 'quarterly', 'period': '2026Q3', 'outcome': 'retry_exhausted',
+             'child_refs': [ref('r0', 'collect', 'old'), ref('r1', 'collect', 'c2')]},
+            {'source_id': 's2', 'kind': 'quarterly', 'period': '2026Q3', 'outcome': 'success',
+             'child_refs': [ref('r1', 'publish', 'p1')]},
+            {'source_id': 's3', 'kind': 'quarterly', 'period': '2026Q4', 'outcome': 'pending', 'child_refs': []}]
+        rows = self.api['member_timings']('r1', [*members[:3], members[4]], attempts)
+        # The last timed member's wall ends at its own last child; the finish step is the run's tail.
+        self.assertEqual([(row['wall_seconds'], row['child_seconds'], row['engine_seconds'], row['b4'])
+                          for row in rows], [(12.0, 10.0, 2.0, False), (None, 0, None, True),
+                                             (1.0, 1.0, 0.0, False), (None, 0, None, False)])
+        self.assertEqual(self.api['tail_seconds'](rows, '2026-11-02T10:00:30+00:00'), 17.0)
+        self.assertIsNone(self.api['tail_seconds'](rows[1:2], '2026-11-02T10:00:30+00:00'))
+        self.assertEqual(rows[0]['children']['publish'], {'outcome': 'success', 'seconds': 5.0,
+                                                           'started_at': '2026-11-02T10:00:05+00:00',
+                                                           'ended_at': '2026-11-02T10:00:10+00:00'})
+        self.assertEqual(rows[2]['reused_children'], [ref('r0', 'collect', 'old')])
+        summary = self.api['summarize_timings'](rows)
+        self.assertEqual(summary, {'timed_members': 2, 'b4_members': 1, 'repeated_sources': [],
+                                   'max_member_wall': {'source_id': 's1', 'kind': 'daily',
+                                                       'period': '2026-10-01', 'wall_seconds': 12.0}})
+        twice = self.api['member_timings']('r1', [members[0], members[3]], attempts)
+        self.assertEqual(self.api['summarize_timings'](twice)['repeated_sources'], [])
+        again = [members[0], {**members[0], 'child_refs': [ref('r1', 'collect', 'c2')]}]
+        rows = self.api['member_timings']('r1', again, attempts)
+        self.assertEqual(self.api['summarize_timings'](rows)['repeated_sources'], ['s1'])
+        with self.assertRaises(ValueError):
+            self.api['member_timings']('r1', [{**members[0], 'child_refs': [ref('r1', 'collect', 'c3')]}], attempts)
+```
+
+In `FixtureStoreTests`, replace the `coverage` helper:
+
+```python
+    def coverage(self, h, *refs):
+        flags = [item for ref in refs for item in ('--result', ref)]
+        return self.run_tool(h, 'coverage', '--config', str(h.config), *flags,
+                             '--start', '2026Q2', '--end', '2026Q4', '--open-quarter', '2026Q4')
+```
+
+with this helper and two new tests:
+
+```python
+    def coverage(self, h, *refs, check=()):
+        flags = [item for ref in refs for item in ('--result', ref)]
+        return self.run_tool(h, 'coverage', '--config', str(h.config), *flags,
+                             '--start', '2026Q2', '--end', '2026Q4', '--open-quarter', '2026Q4', *check)
+
+    def test_integrity_coverage_reads_no_row_and_reports_no_coverage(self):
+        conflict = (row('111111', 'Second', '2026-04-01', 2), row('111111', 'Changed', '2026-04-01', 2))
+        h = self.harness({2: conflict, 3: Q3, 4: Q4})
+        code, message = h.invoke('backfill', run='r1', attempt='a1')
+        self.assertEqual(code, 3, h.calls[-1])
+        code, report = self.coverage(h, message['result_ref'], check=('--check', 'integrity'))
+        self.assertEqual(code, 0)
+        self.assertEqual(report['check'], 'integrity')
+        self.assertEqual({unit['quarter']: unit['verdict'] for unit in report['units']},
+                         {'2026Q2': 'quarantined', '2026Q3': 'published_unchecked',
+                          '2026Q4': 'published_unchecked'})
+        self.assertIsNone(report['units'][1]['filing_quarter']['validated_rows'])
+        self.assertEqual(report['units'][1]['filing_quarter']['row_count'], 1)
+        self.assertFalse(report['complete'])
+        code, report = self.coverage(h, message['result_ref'])
+        self.assertEqual((report['check'], report['units'][1]['verdict']), ('full', 'covered'))
+
+    def test_timing_times_each_member_and_refuses_a_member_over_the_limit(self):
+        h = self.harness({2: (row('111111', 'Second', '2026-04-01', 2),), 3: Q3, 4: Q4})
+        code, message = h.invoke('backfill', run='r1', attempt='a1')
+        self.assertEqual(code, 0, h.calls[-1])
+        code, report = self.run_tool(h, 'timing', '--config', str(h.config), '--result', message['result_ref'])
+        self.assertEqual(code, 0, report)
+        self.assertNotIn('breaches', report)
+        run = report['runs'][0]
+        self.assertEqual((run['run_id'], run['timed_members'], run['b4_members'], run['repeated_sources']),
+                         ('r1', 3, 0, []))
+        self.assertIsNone(run['dispatch_cutoff'])
+        self.assertGreaterEqual(run['tail_seconds'], 0)
+        for member in run['members']:
+            self.assertEqual(set(member['children']), {'collect', 'transform', 'publish'})
+            self.assertGreaterEqual(member['wall_seconds'], member['child_seconds'])
+            self.assertGreater(member['child_seconds'], 0)
+            self.assertGreaterEqual(member['engine_seconds'], 0)
+        self.assertGreaterEqual(report['child_call_rows'], 9)
+        code, report = self.run_tool(h, 'timing', '--config', str(h.config), '--result', message['result_ref'],
+                                     '--max-member-wall', '0')
+        self.assertEqual(code, 1)
+        self.assertEqual(sorted(item['period'] for item in report['breaches']), ['2026Q2', '2026Q3', '2026Q4'])
+        self.assertTrue(all(item['limit'] == 0 for item in report['breaches']))
+```
+
+The fixture settings carry no reserve key, so `dispatch_cutoff` is null there.
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+```sh
+cd /Users/lowell/Projects/sec-edgar-local
+UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never uv run --offline --locked --package sec-edgar-ingest \
+  python packages/sec-edgar-ingest/tests/network_guard.py discover -s packages/sec-edgar-ingest/tests \
+  -p test_baseline_campaign.py
+```
+
+Expected: `Ran 15 tests` and `FAILED (failures=1, errors=3)`. The failure is `'publication_mismatch' != 'published_unchecked'`. The errors are `KeyError: 'child_attempts'`, `invalid choice: 'timing'` and the unknown `--check` argument.
+
+- [ ] **Step 3: Write the implementation**
+
+In `scripts/baseline-campaign.py`, make these changes.
+
+Replace the module docstring with:
+
+```python
+"""Read-only Stage 2 baseline-campaign evidence: file inventory, transport audit, coverage and timing.
+
+Run under the selected release interpreter with -I -B -X pycache_prefix=/dev/null. The tool opens
+the store with operator access, sends no request and writes nothing under the store root. It uses
+release internals (workflow result validation, ETL readers, durable child attempts). It is verified
+against releases fc68adef... and 9fa189a0...; re-verify it before use with any other release.
+"""
+```
+
+After `from collections import Counter`, add:
+
+```python
+from datetime import datetime, timedelta
+```
+
+After the `RANK = …` line, add:
+
+```python
+CHECKS = ('full', 'integrity')
+CHILD_COMMANDS = ('collect', 'transform', 'publish')
+```
+
+In `unit_verdict`, replace:
+
+```python
+    if (view['status'] != 'published' or view['membership_source_id'] != member['source_id']
+            or view['gate'] != 'clear' or view['row_count'] == 0 or view['validated_rows'] != view['row_count']):
+        return 'publication_mismatch'
+```
+
+with:
+
+```python
+    if (view['status'] != 'published' or view['membership_source_id'] != member['source_id']
+            or view['gate'] != 'clear' or view['row_count'] == 0):
+        return 'publication_mismatch'
+    if view['validated_rows'] is None:
+        return 'published_unchecked'  # An integrity-only view never counts as coverage.
+    if view['validated_rows'] != view['row_count']:
+        return 'publication_mismatch'
+```
+
+Replace the head of `quarter_view`, up to and including its `rows = …` line:
+
+```python
+def quarter_view(quarter: str, objects, state) -> dict:
+    from sec_edgar_ingest.etl.reader import capture_quarter, read_quarter, validated_manifest
+    try:
+        capture = capture_quarter(quarter, objects, state)
+        if capture is None:
+            return {'quarter': quarter, 'status': 'unpublished'}
+        manifest = validated_manifest(capture, objects)
+        rows = sum(1 for _ in read_quarter(capture, objects))
+```
+
+with:
+
+```python
+def quarter_view(quarter: str, objects, state, check: str = 'full') -> dict:
+    """`full` reads every row through the release's full content check (once); `integrity` checks
+    only the exact manifest and file hashes (C1) and reports `validated_rows` as null."""
+    from sec_edgar_ingest.etl.reader import capture_quarter, checked_manifest, read_quarter
+    if check not in CHECKS:
+        raise ValueError('unknown quarter check: ' + check)
+    try:
+        capture = capture_quarter(quarter, objects, state)
+        if capture is None:
+            return {'quarter': quarter, 'status': 'unpublished'}
+        rows = sum(1 for _ in read_quarter(capture, objects)) if check == 'full' else None
+        manifest = checked_manifest(capture, objects)
+```
+
+In `coverage`, change the signature to:
+
+```python
+def coverage(store, objects, refs: list[str], start: str, end: str, open_quarter: str | None,
+             check: str = 'full') -> dict:
+```
+
+change the `views = …` line to:
+
+```python
+    views = {quarter: quarter_view(quarter, objects, state, check) for quarter in sorted({*requested, *published})}
+```
+
+and change the first line of its `return` to:
+
+```python
+    return {'format_version': FORMAT, 'kind': 'coverage', 'check': check, 'requested': {'start': start, 'end': end,
+```
+
+Directly before the `# ---- command line ----` comment, add:
+
+```python
+# ---- member timing --------------------------------------------------------------------------
+
+def _time(value) -> datetime:
+    return value if isinstance(value, datetime) else datetime.fromisoformat(value)
+
+
+def _seconds(start, end) -> float:
+    return round((_time(end) - _time(start)).total_seconds(), 3)
+
+
+def child_attempts(values: list[dict]) -> dict:
+    """Finished child `Attempt` values keyed by (run_id, command, attempt_id); the latest end wins."""
+    found = {}
+    for value in values:
+        context = value['context']
+        if (context['command'] not in CHILD_COMMANDS or value.get('ended_at') is None
+                or value.get('outcome') == 'received'):
+            continue
+        key = (context['run_id'], context['command'], context['attempt_id'])
+        held = found.get(key)
+        if held is None or _time(value['ended_at']) > _time(held['ended_at']):
+            found[key] = value
+    return found
+
+
+def member_timings(run_id: str, members: list[dict], attempts: dict) -> list[dict]:
+    """Per-member child seconds and wall for one workflow result.
+
+    A member starts at its first child's start. Members run one at a time, so a member's wall runs to
+    the next timed member's start. The last timed member's wall runs to its own last child's end, so no
+    member's wall holds the finish step (see `tail_seconds`). Engine seconds are the wall minus the
+    member's own child seconds. A child of another run (a reused child) is listed, not timed. A member
+    that ends `unchanged` with no child ref is a B4 sibling completion. A member deferred at the cutoff
+    has no child ref either, and is not B4.
+    """
+    rows = []
+    for member in members:
+        children, reused = {}, []
+        for ref in member['child_refs']:
+            _, _, ref_run, command, attempt_id, _ = ref.split('/')
+            if ref_run != run_id:
+                reused.append(ref)
+                continue
+            value = attempts.get((ref_run, command, attempt_id))
+            if value is None:
+                raise ValueError('child result has no finished attempt record: ' + ref)
+            started = value.get('started_at') or value['context']['started_at']
+            children[command] = {'outcome': value['outcome'], 'started_at': str(started),
+                                 'ended_at': str(value['ended_at']), 'seconds': _seconds(started, value['ended_at'])}
+        start = min((_time(child['started_at']) for child in children.values()), default=None)
+        end = max((_time(child['ended_at']) for child in children.values()), default=None)
+        rows.append({'source_id': member['source_id'], 'kind': member['kind'], 'period': member['period'],
+                     'outcome': member['outcome'], 'b4': not member['child_refs'] and member['outcome'] == 'unchanged',
+                     'ran_children': bool(member['child_refs']), 'reused_children': reused,
+                     'children': children, 'child_seconds': round(sum(c['seconds'] for c in children.values()), 3),
+                     'start': None if start is None else start.isoformat(),
+                     'last_child_end': None if end is None else end.isoformat(),
+                     'wall_seconds': None, 'engine_seconds': None})
+    timed = sorted((row for row in rows if row['start'] is not None), key=lambda row: row['start'])
+    for row, following in zip(timed, [*timed[1:], None]):
+        end = row['last_child_end'] if following is None else following['start']
+        row['wall_seconds'] = _seconds(row['start'], end)
+        row['engine_seconds'] = round(row['wall_seconds'] - row['child_seconds'], 3)
+    return rows
+
+
+def tail_seconds(rows: list[dict], ended_at) -> float | None:
+    """Seconds from the last child's end to the result's end: the finish step and deferral bookkeeping."""
+    ends = [row['last_child_end'] for row in rows if row['last_child_end'] is not None]
+    return None if not ends else _seconds(max(ends, key=_time), ended_at)
+
+
+def summarize_timings(rows: list[dict]) -> dict:
+    timed = [row for row in rows if row['wall_seconds'] is not None]
+    sources = Counter(row['source_id'] for row in rows if row['ran_children'])
+    slowest = max(timed, key=lambda row: row['wall_seconds'], default=None)
+    return {'timed_members': len(timed), 'b4_members': sum(row['b4'] for row in rows),
+            'repeated_sources': sorted(source for source, count in sources.items() if count > 1),
+            'max_member_wall': None if slowest is None else {
+                key: slowest[key] for key in ('source_id', 'kind', 'period', 'wall_seconds')}}
+
+
+def run_timing(store, objects, refs: list[str], max_wall: float | None) -> dict:
+    results = read_results(refs, store, objects)
+    attempts = child_attempts([row.to_mapping()['value'] for row in store.scan('Attempt', {})])
+    runs, breaches = [], []
+    for result in results:
+        context = result.context
+        members = [{'source_id': member.source.source_id, 'kind': member.source.kind,
+                    'period': member.source.period, 'outcome': member.outcome,
+                    'child_refs': list(member.child_refs)} for member in result.members]
+        rows = member_timings(context.run_id, members, attempts)
+        reserve = context.effective_config.get('execution', {}).get('dispatch_reserve_seconds')
+        deadline = _time(context.deadline)
+        runs.append({'run_id': context.run_id, 'command': context.command, 'outcome': result.outcome,
+                     'started_at': _time(context.started_at).isoformat(), 'deadline': deadline.isoformat(),
+                     'dispatch_cutoff': None if reserve is None else (deadline - timedelta(seconds=reserve)).isoformat(),
+                     'ended_at': _time(result.ended_at).isoformat(), 'tail_seconds': tail_seconds(rows, result.ended_at),
+                     'members': rows, **summarize_timings(rows)})
+        if max_wall is not None:
+            breaches += [{'run_id': context.run_id, 'source_id': row['source_id'], 'period': row['period'],
+                          'wall_seconds': row['wall_seconds'], 'limit': max_wall}
+                         for row in rows if row['wall_seconds'] is not None and row['wall_seconds'] > max_wall]
+    every = [row for run in runs for row in run['members']]
+    value = {'format_version': FORMAT, 'kind': 'timing', 'runs': runs,
+             'child_call_rows': sum(1 for _ in store.scan('WorkflowChildCall', {})),
+             'max_member_wall': summarize_timings(every)['max_member_wall']}
+    if max_wall is not None:
+        value['breaches'] = breaches
+    return value
+
+
+```
+
+In `main`, after `report.add_argument('--open-quarter')`, add:
+
+```python
+    report.add_argument('--check', choices=CHECKS, default='full')
+    timing = commands.add_parser('timing')
+    timing.add_argument('--config', type=Path, required=True)
+    timing.add_argument('--result', action='append', default=[])
+    timing.add_argument('--max-member-wall', type=float)
+```
+
+and replace:
+
+```python
+        value = coverage(opened[0], opened[1], args.result, args.start, args.end, args.open_quarter)
+        sys.stdout.write(dumps(value))
+        return 0
+```
+
+with:
+
+```python
+        if args.command == 'timing':
+            value = run_timing(opened[0], opened[1], args.result, args.max_member_wall)
+            sys.stdout.write(dumps(value))
+            return 1 if value.get('breaches') else 0
+        value = coverage(opened[0], opened[1], args.result, args.start, args.end, args.open_quarter, args.check)
+        sys.stdout.write(dumps(value))
+        return 0
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run the Step 2 command again.
+
+Expected: `Ran 15 tests` and `OK`, in about 2.5 minutes. On 2026-10-29, planning applied this task's blocks to a throwaway copy of `4004f2e`'s files as Steps 1 and 3 say: Step 2 gave exactly the result above, and this step passed (147.7 s).
+
+- [ ] **Step 5: Check the tool under the release interpreter, read-only**
+
+```sh
+# prelude (Global Constraints)
+pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_bootstrap' || echo 'no writer'
+tool files --root "$project/data" --recorded specs/evidence/local-port/sec-acceptance.json \
+  | native -c 'import json,sys; v=json.load(sys.stdin); print(v["inventory"]["file_count"], json.dumps(v["comparison"]))'
+tool timing --config "$project/conf/sec-edgar-local.json"; echo "timing exit=$?"
+```
+
+Expected: `no writer`. Then `153` and a comparison with `missing`, `added` and `changed_immutable` empty, and `changed_state` empty or listing only `state.sqlite3-shm` and `state.sqlite3-wal` (F14). Then a timing report with `runs: []`, `child_call_rows: 0` and `max_member_wall: null`, and `timing exit=0`. Any other result stops the plan. Report it to the owner.
+
+- [ ] **Step 6: Commit**
+
+The full offline checker is not required: no file under `packages/sec-edgar-ingest/src` changes, and the release is unchanged.
+
+```sh
+git diff --check
+git add scripts/baseline-campaign.py packages/sec-edgar-ingest/tests/test_baseline_campaign.py
+git commit -m "feat(scripts): add integrity coverage and member timing to the campaign tool"
+```
+
+---
+
+### Task 3b: Known answers, slice configs and campaign files on the 1b release (offline, O13–O16)
+
+**Files:**
+- Create: `specs/evidence/baseline-campaign/pre-campaign/1b/preflight.json`, `audit.json`, `coverage-integrity.json`, `coverage-full.json`, `timing.json`, `files.json`
+- Modify: `specs/evidence/baseline-campaign/pre-campaign.md` (append a Revision 1 section)
+- Create: the 13 files `conf/stage2/1b/backfill-<start>-<end>.json` listed in F13
+- Modify (rewrite): `specs/evidence/baseline-campaign/campaign.json`, `specs/evidence/baseline-campaign/campaign.md`
+
+**Interfaces:**
+- Consumes: the Task 3a tool and its commit hash, and the live root as Task 2 left it (F14).
+- Produces: the 13 slice configs with the F13 effective hashes; `campaign.json` with `max_member_wall_seconds`, which Task 5 passes to `timing`; and `campaign.md`, which Task 4 gates and Task 5 obeys.
+
+- [ ] **Step 1: Offline preflight of the live config**
+
+```sh
+# prelude
+mkdir -p "$evidence/pre-campaign/1b"
+shasum -a 256 conf/sec-edgar-local.json
+native - "$project/conf/sec-edgar-local.json" <<'PY' | tee "$evidence/pre-campaign/1b/preflight.json"
+import json, sys
+from pathlib import Path
+from sec_edgar_ingest.config import load_config
+from sec_edgar_ingest.runtime import preflight_current
+settings = load_config(Path(sys.argv[1]))
+verified = preflight_current(Path(settings.runtime.release_manifest))
+print(json.dumps({'effective_config_sha256': settings.config_sha256, 'release_id': verified.release_id,
+                  'backfill': [settings.backfill.start_quarter, settings.backfill.end_quarter],
+                  'dispatch_reserve_seconds': settings.execution.dispatch_reserve_seconds},
+                 sort_keys=True, indent=1))
+PY
+```
+
+Expected: file hash `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc`, then `backfill` `["2015Q1", "open"]`, `dispatch_reserve_seconds` `1800`, `effective_config_sha256` `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1` and `release_id` `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b`. Any difference stops the plan.
+
+- [ ] **Step 2: Known answers on the live store**
+
+```sh
+# prelude
+out="$evidence/pre-campaign/1b"
+tool audit --config "$project/conf/sec-edgar-local.json" > "$out/audit.json"; echo "audit exit=$?"
+tool coverage --config "$project/conf/sec-edgar-local.json" --start 2015Q1 --end 2026Q4 --open-quarter 2026Q4 \
+  --check integrity > "$out/coverage-integrity.json"; echo "integrity exit=$?"
+tool coverage --config "$project/conf/sec-edgar-local.json" --start 2015Q1 --end 2026Q4 --open-quarter 2026Q4 \
+  --check full > "$out/coverage-full.json"; echo "full exit=$?"
+tool timing --config "$project/conf/sec-edgar-local.json" > "$out/timing.json"; echo "timing exit=$?"
+mkdir -p "$campaign_logs"
+tool files --root "$project/data" --recorded specs/evidence/local-port/sec-acceptance.json > "$campaign_logs/files-1b.json"; echo "files exit=$?"
+native - "$campaign_logs/files-1b.json" <<'PY' > "$out/files.json"
+import json, sys
+value = json.load(open(sys.argv[1]))
+print(json.dumps({'file_count': value['inventory']['file_count'], 'byte_count': value['inventory']['byte_count'],
+                  'comparison': value['comparison']}, sort_keys=True, indent=1))
+PY
+native - "$out" <<'PY'
+import json, sys
+from pathlib import Path
+out = Path(sys.argv[1])
+print(json.load(open(out / 'audit.json'))['store_total'])
+for name in ('coverage-integrity.json', 'coverage-full.json'):
+    value = json.load(open(out / name))
+    views = [unit['filing_quarter'] for unit in value['units'] if unit['filing_quarter']['status'] == 'published']
+    print(value['check'], value['verdicts'], len(views), sorted({str(view['validated_rows']) for view in views})[:1],
+          sum(view['validated_rows'] or 0 for view in views),
+          sorted({view['membership_source_id'] for view in views}, key=str), value['other_filing_quarters'])
+timing = json.load(open(out / 'timing.json'))
+print(timing['runs'], timing['child_call_rows'], json.load(open(out / 'files.json')))
+PY
+```
+
+Expected, as planning observed on 2026-10-29 (F15):
+
+- `audit exit=0`, `integrity exit=0`, `full exit=0`, `timing exit=0`, `files exit=0`. The full coverage takes about one minute.
+- `store_total` has `attempts: 10`, `distinct_urls: 10`, `max_ordinal: 1`, `received_bytes: 4946565`, `uncertain: 0`, `access_denied: 0`.
+- `integrity {'no_campaign_result': 48} 16 ['None'] 0 [None] []`.
+- `full {'no_campaign_result': 48} 16 ['1'] 6744 [None] []`. The `['1']` is only the first row count in sort order.
+- `[] 0`, then 153 files and a comparison with only SQLite journal files under `changed_state`.
+
+Any other value stops the plan. Report it, because the campaign checks would then measure something else.
+
+- [ ] **Step 3: Make the 13 slice configs**
+
+The `slice_config` function writes into `conf/stage2/1b/`. Do not touch the two files directly under `conf/stage2/`.
+
+```sh
+# prelude
+slice_config() {
+  native - "$project/conf/sec-edgar-local.json" "$project/conf/stage2/1b" "$1" "$2" <<'PY'
+import json, sys
+from pathlib import Path
+from sec_edgar_ingest.config import load_config
+base_path, directory, start, end = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4]
+base = load_config(base_path)
+value = json.loads(base_path.read_text())
+value['backfill'] = {'start_quarter': start, 'end_quarter': end}
+value['storage']['root'] = base.storage.root
+value['logging']['root'] = base.logging.root
+directory.mkdir(parents=True, exist_ok=True)
+target = directory / f'backfill-{start}-{end}.json'
+with target.open('x') as stream:
+    json.dump(value, stream, indent=2)
+    stream.write('\n')
+derived = load_config(target)
+expected = base.to_mapping()
+expected['backfill'] = {'start_quarter': start, 'end_quarter': end}
+if derived.to_mapping() != expected:
+    raise SystemExit('slice config differs from the live config beyond the backfill range')
+print(target.name, derived.config_sha256)
+PY
+}
+slice_config 2015Q1 open && rm "$project/conf/stage2/1b/backfill-2015Q1-open.json"
+slice_config 2026Q4 open
+for year in 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024 2025; do slice_config "${year}Q1" "${year}Q4"; done
+slice_config 2026Q1 2026Q3
+ls "$project/conf/stage2/1b" | wc -l
+```
+
+Expected: the first line is `backfill-2015Q1-open.json db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, the live effective hash, which confirms the generator. That file is then removed. The next 13 lines each print a file name and exactly the effective hash in the F13 table. The last line is `13`. Any other hash stops the plan.
+
+- [ ] **Step 4: Rewrite `specs/evidence/baseline-campaign/campaign.json`**
+
+```json
+{
+ "format_version": "sec-baseline-campaign-budget-v1",
+ "max_distinct_urls": 300,
+ "max_invocations": 40,
+ "max_member_wall_seconds": 1056,
+ "max_received_bytes": 1073741824,
+ "max_request_attempts": 1500,
+ "max_request_attempts_per_invocation": 700
+}
+```
+
+`check_budget` reads only its named limits. Task 5 passes `max_member_wall_seconds` to `timing --max-member-wall`.
+
+- [ ] **Step 5: Rewrite `specs/evidence/baseline-campaign/campaign.md`**
+
+Replace the whole file with the text below. Put the Task 3a commit hash (`git log -1 --format=%h -- scripts/baseline-campaign.py`) in the Evidence tool row.
+
+```markdown
+# Stage 2 baseline campaign: scope, budget and approval
+
+**Status:** Proposed for release `9fa189a0…`. Not approved. No live invocation may start until the
+Release gate section is open and the Approval section is complete and committed.
+**Plan:** [plan 2](../../plans/2-sec-filing-index-ingestion-spec.md), Revision 1.
+**Spec:** §§4.2–4.9, 5–6, 7 G2 of the [ingestion spec](../../sec-filing-index-ingestion-spec.md).
+**History:** the version of this file at commit `ea482dd` proposed a campaign on release `fc68adef…`. Its
+release gate stayed closed (plan 2, F11). This version replaces it.
+
+## Identity
+
+| Item | Value |
+| --- | --- |
+| Release | `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` (version 0.2.0) |
+| Live config | `conf/sec-edgar-local.json`, effective SHA-256 `db62e7fb…`, file SHA-256 `de6c0dd9…` |
+| Dispatch reserve / floor | 1,800 s / 480 s. At the 3,300 s timeout, no member starts after 1,500 s. |
+| Slice configs | `conf/stage2/1b/`, 13 files. Effective hashes: plan 2, F13. |
+| Slice generator check | `2015Q1`–`open` reproduces the live effective hash `db62e7fb…` |
+| Data / log roots | `/Users/lowell/Projects/sec-edgar-local/data` / `…/logs` |
+| Pre-campaign backup | `backups/stage2-pre-campaign-20261021T180646Z` |
+| Evidence tool | `scripts/baseline-campaign.py` at commit `<Task 3a commit>` |
+
+## Release gate
+
+Open on evidence for release `9fa189a0…`. Live work still needs the Approval below.
+
+1. Undispatched members defer before the deadline. The runner starts no member after the deadline
+   minus 1,800 s and writes its durable result (parent spec §4.7). Members not started end `pending`
+   with `workflow_deferred`.
+2. Members fit inside the reserve on fixtures. The slowest measured member took 1,010.9 s, inside
+   3,300 − 1,800 = 1,500 s (`specs/evidence/stage1b/measurement.md` and `gate.md`; plan 5 D10).
+3. Not measured: native cost (fixture timings can only underestimate it), and an open-quarter member
+   with a quarterly authority (A1). Stop rule 7 halts when a member's wall exceeds the approved limit,
+   so the campaign measures both under a halt.
+4. The offline preflight passes on this release ([pre-campaign.md](pre-campaign.md), Revision 1 section).
+
+## Source scope
+
+- Workflow: launcher `backfill` only, with one slice config for each invocation. No `daily`,
+  `reconcile`, low-level command, `approve` or `rollback`.
+- Requested units: the quarterly sources 2015Q1–2026Q4, which is 48 units. 2026Q4 is the open quarter.
+  Its source is quarter-to-date, and absence from it is not withdrawal authority (§4.4).
+- Slice plan, in this order (plan 2 F9, O13):
+  1. The pilot `2026Q4`–`open`. It carries every pending daily source as retained work: every daily
+     body listed under `daily-index/2026/QTR3` and `QTR4`. L12 left 73 such sources, and each business
+     day since has added one. These daily units are not baseline units. The finding reports them apart,
+     for Stage 3. The pilot reruns under stop rule 9 until no daily source is pending. Its 2026Q4 daily
+     members that run after the 2026Q4 quarterly source is published are the A1 class (O15).
+  2. The calendar years 2015, 2016, …, 2025, one slice each, in ascending order.
+  3. `2026Q1`–`2026Q3`.
+  Together the slices cover every quarter exactly once. About 2 full-size quarters start in one
+  invocation. A slice that does not fit defers its last members, and stop rule 9 reruns it.
+- Source quarters and output filing quarters differ (§4.2). Daily rows can be back-dated into old filing
+  quarters (findings §4.7).
+- Expected exceptions: the 2024Q1 quarantine (line 88043), retained and selected again by the 2024
+  slice. Possible quarantines for 2015Q1 and 2026Q3 (retained conflict specimens). Possible withdrawal
+  gates for closed quarters that hold back-dated daily rows (plan 2 F5, O10). Possibly a refused
+  incremental candidate (O16).
+
+## Budget
+
+| Bound | Limit | Enforced by | Basis |
+| --- | --- | --- | --- |
+| Invocations | 40 | audit, stop rule 4 | pilot 2–4; about 24 for the year slices at about 2 full-size members each; reruns |
+| Runtime per invocation | 3,300 s (launcher default) | launcher | live maximum 3,600 s; must stay above the 1,800 s reserve |
+| Dispatch cutoff | deadline − 1,800 s | runner | parent spec §4.7 |
+| Member wall | 1,056 s (`max_member_wall_seconds`) | timing after the invocation, stop rule 7 | reserve rule 1.25 × w + 480 ≤ 1,800 (plan 2 O14) |
+| Request rate | 3/s, one collector | coordinator | §4.8 |
+| Attempts per URL per command | 5 | downloader | §4.8 |
+| Bytes per response | 67,108,864 received / 536,870,912 expanded | downloader | §4.8 |
+| Request attempts per invocation | 700 | audit after the invocation | pilot about 10 listings + 1 quarterly + about 90 daily bodies; 5 attempts each is about 505 |
+| Request attempts, campaign | 1,500 | audit | about 100 pilot sends; each year-slice invocation about 6 listings and up to 4 bodies; reruns add listings |
+| Distinct URLs, campaign | 300 | audit | about 1 + 12 + 48 full-index listings, 48 quarterly bodies, 4 daily listings and about 90 daily bodies, about 203 |
+| Received bytes, campaign | 1,073,741,824 | audit | about 47 × 4.3 MB + 90 × 0.35 MB, about 235 MB (2024Q1 4,262,821; daily 289,582 and 329,651) |
+| Expanded validation bytes, campaign | declared 16 GiB | not counted durably by the launcher; reported after the campaign from retained raw ZIP member sizes | 2024Q1 `master.idx` 33,578,469 |
+| Free disk before each invocation | at least 50 GiB | pre-check | 497 GiB free on 2026-10-29 |
+| Store growth | at most 30 GiB | pre-check | whole-quarter generations are rewritten by full rebuilds |
+| Window | from the approved UTC start, at most 7 days, and ending before 2027-01-01T00:00:00Z | pre-check | `open` must stay 2026Q4 |
+
+The audit checks the aggregate limits between invocations, not inside one. Inside one invocation, the
+hard bounds are the runtime, the dispatch cutoff, the rate, the per-URL attempt limit and the
+per-response byte limits. Expected launcher time: about 26–30 invocations of about 2,200 s each.
+
+## Stop rules
+
+After each invocation, apply the first rule that matches.
+
+1. **Halt** on a launcher exit of 2, 6, 8, 9 or 11, or any exit outside 0, 3, 4, 5, 7 and 10.
+2. **Halt** when the run left no `result_ref` or no `workflow_summary`. This is a deadline or crash
+   (plan 2 F8). Follow `docs/runbooks/local-recovery.md` with the owner before any further invocation.
+3. **Halt** on a workflow outcome of `access_blocked`, `ownership_lost`, `state_conflict` or `internal_error`.
+4. **Halt** on any audit breach, any HTTP 403, or any `uncertain` transport attempt.
+5. **Halt** when the files comparison against L12 reports `missing` or `changed_immutable`.
+6. **Halt** when `workflow_summary.summary_error` is not null.
+7. **Halt** when the timing report has a breach: a member's wall above `max_member_wall_seconds`
+   (plan 2 O14, O15).
+8. **Halt** when any member has outcome `invalid_source` and is not quarantined. The likely cause is a
+   publish that refused its incremental candidate (C6). Its retry is blocked, and its objects stay
+   (plan 2 O16). Read the member's gaps and report them.
+9. **Rerun the same slice** when any of its units, or any daily source, has outcome `pending`,
+   `deferred` or `throttled`, and this is the slice's first invocation or its previous invocation
+   reduced that count. Halt when a rerun does not reduce it.
+10. **Halt** on the second consecutive invocation with `discovery_complete: false`.
+11. **Next slice** when quarters remain without a campaign result. Take the next slice in the Source
+    scope order.
+12. **Finish** when every quarter 2015Q1–2026Q4 has a campaign result and no member has outcome
+    `pending`, `deferred` or `throttled`. Quarantined, failed and `awaiting_approval` members are not
+    eligible work.
+
+A halt stops the campaign. The operator reports to the owner and does nothing else. A halt is evidence,
+not a failure of the plan.
+
+## Evidence locations
+
+- Committed: this directory. `pre-campaign.md`, `pre-campaign/1b/`, `invocations.md`,
+  `invocations/<k>-<run-id>.json`, `final/`, `quarantine/`, `coverage-finding.md`. Slice configs in
+  `conf/stage2/1b/`.
+- Raw and ignored: `data/` (store, durable results), `logs/<run-id>/<attempt-id>/` (launcher evidence),
+  `logs/baseline-campaign/` (coverage, audit, timing and files reports after each invocation), `backups/`
+  (pre-campaign backup).
+
+## Approval boundary
+
+- Plan 2's approval authorized Tasks 1–3. The owner's approval of Revision 1 authorizes Tasks 3a and 3b.
+- A live invocation needs all four of these: (1) the Release gate above, open; (2) the Approval section
+  below, completed with the owner's words and committed; (3) the Task 3b files check with exit 0;
+  (4) the sole-issuer declaration below, with its start time.
+- Never authorized here: `approve`, `rollback`, `daily`, `reconcile`, a parser, schema, release or live
+  config change, a second root, object removal, or any SEC request outside the launcher.
+
+## Approval
+
+To be completed in Task 4 with the owner's exact words.
+```
+
+- [ ] **Step 6: Append the Revision 1 section to `pre-campaign.md`**
+
+Fill each value from the Step 1–3 outputs.
+
+```markdown
+## Known-answer checks on release 9fa189a0… (plan 2 Revision 1)
+
+- [1b/preflight.json](pre-campaign/1b/preflight.json): effective config `db62e7fb…`, release `9fa189a0…`,
+  range 2015Q1–open, reserve 1800. Config file bytes `de6c0dd9…`.
+- Slice generator: `2015Q1`–`open` reproduces `db62e7fb…`. The 13 configs in `conf/stage2/1b/` match
+  plan 2, F13.
+- [1b/audit.json](pre-campaign/1b/audit.json): 10 transport attempts, 10 URLs, 4,946,565 received bytes,
+  ordinal 1 only. This equals L12.
+- [1b/coverage-integrity.json](pre-campaign/1b/coverage-integrity.json) and
+  [1b/coverage-full.json](pre-campaign/1b/coverage-full.json): 48 requested units without a campaign
+  result; 16 published quarters, all daily-only. The full check reads 6,744 rows, the L12 latest-capture
+  total. The integrity check reads no row.
+- [1b/timing.json](pre-campaign/1b/timing.json): no workflow result yet, 0 `WorkflowChildCall` rows.
+- [1b/files.json](pre-campaign/1b/files.json): 153 files. Against L12, only SQLite journal state changed.
+```
+
+- [ ] **Step 7: Commit**
+
+```sh
+git add conf/stage2/1b/ specs/evidence/baseline-campaign/
+git commit -m "docs(evidence): rebase the Stage 2 campaign onto the 1b release"
+```
+
+---
+
+### Task 4: Release gate and owner live-execution gate (human checkpoint)
+
+> Revision 1: rewritten for release `9fa189a0…`. The 2026-10-21 text gated `fc68adef…` and stays in git history at `4004f2e`.
+
+**Files:**
+- Modify: `specs/evidence/baseline-campaign/campaign.md` (`Status` and `Approval` sections)
+- Modify: `specs/evidence/baseline-campaign/campaign.json` (only if the owner changes a limit)
+
+**Interfaces:**
+- Consumes: the Task 3a and 3b commits, and `specs/evidence/baseline-campaign/pre-campaign/1b/preflight.json`.
+- Produces: either a stop that ends the plan, or the approval commit that Task 5 checks before every invocation.
 
 - [ ] **Step 1: Check the release gate**
 
-Read `release_id` from the Task 3 Step 1 output.
+```sh
+# prelude
+native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["release_id"], v["effective_config_sha256"], v["dispatch_reserve_seconds"])' \
+  "$evidence/pre-campaign/1b/preflight.json"
+shasum -a 256 conf/sec-edgar-local.json
+git log -1 --format='%H %s' -- specs/evidence/baseline-campaign/campaign.md
+```
 
-- If it is `fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec`, the gate stays closed (F11). Replace the Approval section with `Not opened: F11 blocker on release fc68adef…. Owner routing (D5, plan review, 2026-10-21, verbatim): "Route O11 (a): an engine change and a new release come before the Stage 2 live campaign. Keep Tasks 1–3 as offline preparation."`. Commit as in Step 4, and end the plan here.
-- If the owner selected another release, stop. This plan pins `fc68adef…` throughout. First revise the plan for that release: Global Constraints, the Task 1 tool's release-internal imports (re-run Task 1 Steps 4–5), the Task 3 values, and this gate's evidence that the pilot's drain fits one invocation with margin, or that undispatched members defer before the deadline. The owner reviews that revision. Then restart at Task 3.
-- Continue to Step 2 only under a reviewed revision whose release gate is open.
+Expected: `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1 1800`, then the file hash `de6c0dd9…`, then the Task 3b commit.
 
-- [ ] **Step 2: Present `pre-campaign.md` and `campaign.md` to the owner**
+- If the release, the effective hash, the file hash or the reserve differs, stop. The owner has selected another release or config, and this revision pins `9fa189a0…`. Revise the plan again (Global Constraints, Task 3a Step 5, Task 3b) and get owner review before any gate.
+- Otherwise the Release gate that Task 3b wrote stands. Continue to Step 2.
 
-Ask the owner to confirm or change each of these:
+- [ ] **Step 2: Present the revision and the campaign files to the owner**
 
-1. The range (O1).
-2. The budget and stop rules (O8).
-3. The runtime per invocation.
-4. The window start in UTC.
-5. The withdrawal policy (O6) and the order effect (O10).
-6. The retained daily sources (O5).
-7. The sole-issuer declaration.
+Present `pre-campaign.md` (its Revision 1 section), `campaign.md`, and plan 2's O12–O17. Ask the owner to confirm or change each of these:
+
+1. The range, 2015Q1–2026Q4 (O1).
+2. The slice list, the budget and the stop rules (O13).
+3. The runtime per invocation: 3,300 s, or another value above the 1,800 s reserve and at most 3,600 s.
+4. The member-wall limit, 1,056 s (O14).
+5. The pilot as the first measurement of the A1 member class (O15).
+6. The handling of a refused incremental candidate (O16).
+7. The window start in UTC.
+8. The withdrawal policy (O6) and the order effect (O10).
+9. The retained daily sources (O5).
+10. The sole-issuer declaration.
 
 Do not suggest that the owner skip any item.
 
@@ -1256,15 +2057,19 @@ Replace the Approval section with the following, filled only from the owner's wo
 ## Approval
 
 - Owner: Lowell Mason. Approved on (UTC): <owner's timestamp>.
-- Range: <owner's words>. Budget and stop rules: <"as proposed" or the owner's changes>.
-- Runtime per invocation: <3300 or another value up to 3600>. Window: starts <UTC>, ends <UTC>.
+- Range: <owner's words>. Slices, budget and stop rules: <"as proposed" or the owner's changes>.
+- Runtime per invocation: <3300 or another value above 1800 and up to 3600>. Window: starts <UTC>, ends <UTC>.
+- Member-wall limit: <1056 or the owner's value>. Pilot as the first A1 measurement: <owner's words>.
+- Refused incremental candidate: <owner's words>.
 - Withdrawal policy and order effect: <owner's words>. Retained daily sources: <owner's words>.
 - Sole-issuer declaration, verbatim: "<owner's words>"
 ```
 
 Set `**Status:** Approved for live execution within the limits above.`
 
-If the owner changes a limit, update `campaign.json` in the same commit. If the owner does not approve, stop. The plan then ends at Task 4 with nothing live run.
+- If the owner changes a limit, the member-wall limit included, update `campaign.json` in the same commit.
+- If the owner chooses O15's alternative (measure A1 offline first), stop. That measurement needs its own plan. Task 4 restarts after it.
+- If the owner does not approve, stop. The plan then ends at Task 4 with nothing live run.
 
 - [ ] **Step 4: Commit**
 
@@ -1277,57 +2082,61 @@ git commit -m "docs(evidence): record the Stage 2 release gate and owner decisio
 
 ### Task 5: Campaign invocations (live, after Task 4 approval)
 
+> Revision 1: rewritten for release `9fa189a0…`: a fixed slice list instead of a sizing rule, integrity coverage and member timing after each invocation, and stop rules 7 and 8.
+
 **Files:**
 - Create: `specs/evidence/baseline-campaign/invocations.md`
 - Create: `specs/evidence/baseline-campaign/invocations/<k>-<run-id>.json` (one for each invocation)
-- Create: `conf/stage2/backfill-<start>-<end>.json` (each sized slice after the first)
-- Create (ignored): `logs/baseline-campaign/coverage-after-<k>.json`, `audit-after-<k>.json`, `files-after-<k>.json`, `launcher-exit-<k>`, `invocation-<k>.json`
+- Create (ignored): `logs/baseline-campaign/coverage-after-<k>.json`, `audit-after-<k>.json`, `timing-after-<k>.json`, `files-after-<k>.json`, `launcher-exit-<k>`, `invocation-<k>.json`
 
 **Interfaces:**
-- Consumes: the Task 4 approval commit, `campaign.json`, Task 3's slice configs and `slice_config`, and Task 1's `tool audit / coverage / files`.
-- Produces: the list of result refs and run IDs for Task 6, in `invocations/*.json`.
+- Consumes: the Task 4 approval commit, `campaign.json`, the 13 configs in `conf/stage2/1b/`, and Task 3a's `tool audit / coverage --check integrity / timing / files`.
+- Produces: the result refs and run IDs for Task 6, in `invocations/*.json`. Each record has an `after` block.
 
-The slice order is fixed:
+The slice order is fixed (O13). Each entry is a file in `conf/stage2/1b/`:
 
-1. The pilot `conf/stage2/backfill-2026Q4-open.json` runs first, and reruns under stop rule 7 until no daily source is pending.
-2. Then `conf/stage2/backfill-2015Q1-2015Q2.json`.
-3. Each later slice starts at the quarter after the previous slice's end and ends at 2026Q3 at most.
-
-Sizing rule for each later slice:
-
-- `per_quarter` is the largest per-quarter time seen so far: each quarterly slice's elapsed seconds (`ended_at` − `started_at`) divided by its quarter count.
-- The slice length is `max(1, min(8, floor(0.5 × timeout / per_quarter)))` quarters.
+1. `backfill-2026Q4-open.json` (the pilot). It reruns under stop rule 9 until no daily source is pending.
+2. `backfill-2015Q1-2015Q4.json`, then each year to `backfill-2025Q1-2025Q4.json`, in ascending order.
+3. `backfill-2026Q1-2026Q3.json`.
 
 Repeat Steps 1–7 for k = 1, 2, … until a stop rule says finish or halt. Never start an invocation while another writer runs. Never read the store while the launcher runs.
 
-- [ ] **Step 1: Choose the slice and make its config**
+Collection is bound to the release that discovered the member (`specs/evidence/d5-release/two-release.md`; `specs/evidence/stage1b/two-release.md`). So the pilot's `collect` children for the pending members that L12 discovered run on the retained `fc68adef…` release, and the other children run on `9fa189a0…`. That is expected. It is not a release selection, so it does not breach the Global Constraints.
+
+- [ ] **Step 1: Choose the slice**
 
 ```sh
 # prelude
 k=$(( $(ls "$evidence"/invocations/*-*.json 2>/dev/null | wc -l) + 1 )); echo "k=$k"
+tail -1 "$evidence/invocations.md" 2>/dev/null
 ```
 
-For the pilot and the first slice, use the Task 3 configs. Otherwise, apply the sizing rule, define `slice_config` as in Task 3 Step 5, and run `slice_config <start> <end>`. Record the printed effective hash. A rerun under stop rule 7 uses the same config file again.
+For k = 1, use the pilot. Otherwise use the decision in the last ledger row: on Rerun, the same config; on Next slice, the next config in the order above. Note the config's effective hash from the F13 table.
 
 - [ ] **Step 2: Pre-check**
 
 ```sh
 # prelude
-pgrep -fl 'sec_edgar_ingest|sec-edgar-local|local-bootstrap' || echo 'no writer'
+pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_bootstrap' || echo 'no writer'
 git log -1 --format='%H %s' -- specs/evidence/baseline-campaign/campaign.md
+shasum -a 256 conf/sec-edgar-local.json
 df -g "$project" | tail -1
 du -sg "$project/data" | cut -f1
 date -u +%Y-%m-%dT%H:%M:%SZ
+k=$(( $(ls "$evidence"/invocations/*-*.json 2>/dev/null | wc -l) + 1 ))
+last=$(ls "$evidence"/invocations/"$((k - 1))"-*.json 2>/dev/null)
+[ -n "$last" ] && native -c 'import json,sys; print("daily_open", json.load(open(sys.argv[1]))["after"]["daily_open"])' "$last"
 ```
 
 Expected:
 
 - `no writer`.
 - The last `campaign.md` commit is the Task 4 approval commit.
+- The live config file hash is `de6c0dd9…`. A different hash means the config or its release changed: halt (Global Constraints, release history).
 - At least 50 GiB available.
 - Store growth since pre-campaign (12 MB) of at most 30 GiB.
 - The UTC time is inside the approved window and before 2027-01-01T00:00:00Z.
-- After the pilot, the last coverage report has no source with outcome `pending`, `deferred` or `throttled` in a quarter after this slice's end (F9).
+- For any slice after the pilot: `daily_open []`. A daily source that is still pending, or failed and not quarantined, stays selected and is after every year slice's end, so the run would end in `state_conflict` (F9).
 
 If any check fails, halt.
 
@@ -1338,8 +2147,8 @@ The run can last up to the timeout. Run it in the background with the agent harn
 ```sh
 # prelude
 k=$(( $(ls "$evidence"/invocations/*-*.json 2>/dev/null | wc -l) + 1 ))
-config="$project/conf/stage2/backfill-2026Q4-open.json"   # this invocation's slice config
-timeout=3300                                               # the approved value
+config="$project/conf/stage2/1b/backfill-2026Q4-open.json"   # this invocation's slice config
+timeout=3300                                                  # the approved value
 scripts/sec-edgar-local backfill --config "$config" --timeout-seconds "$timeout"
 code=$?
 mkdir -p "$campaign_logs"
@@ -1347,7 +2156,7 @@ echo "$code" > "$campaign_logs/launcher-exit-$k"
 echo "launcher exit=$code"
 ```
 
-Expected: an exit code. With quarantines present, 3 is normal (F7).
+Expected: an exit code. With quarantines present, 3 is normal (F7). A run that deferred members at the cutoff ends `incomplete` or `pending` (exit 3 or 4), never exit 5.
 
 - [ ] **Step 4: Record the invocation**
 
@@ -1377,6 +2186,7 @@ print(json.dumps({'k': k, 'launcher_exit': launcher_exit, 'log_directory': str(d
     'run_id': invocation['run_id'], 'attempt_id': invocation['attempt_id'], 'command': invocation['command'],
     'release_id': invocation['release_id'], 'config_sha256': invocation['config_sha256'],
     'backfill': invocation['effective_config']['backfill'],
+    'dispatch_reserve_seconds': invocation['effective_config'].get('execution', {}).get('dispatch_reserve_seconds'),
     'started_at': invocation['started_at'], 'deadline': invocation['deadline'],
     'ended_at': None if result is None else result['ended_at'],
     'stdout': stdout, 'result_ref': result_ref,
@@ -1385,71 +2195,95 @@ print(json.dumps({'k': k, 'launcher_exit': launcher_exit, 'log_directory': str(d
 PY
 run_id=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$campaign_logs/invocation-$k.json")
 cp "$campaign_logs/invocation-$k.json" "$evidence/invocations/$k-$run_id.json"
-native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["release_id"], v["config_sha256"], v["backfill"], v["result_ref"], v["ended_at"], v["workflow_summary"] is not None)' "$evidence/invocations/$k-$run_id.json"
+native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["release_id"], v["config_sha256"], v["backfill"], v["dispatch_reserve_seconds"], v["result_ref"], v["ended_at"], v["workflow_summary"] is not None)' "$evidence/invocations/$k-$run_id.json"
 ```
 
-Expected: the approved release, the slice config's effective hash from Step 1 or Task 3, the slice range, a non-null `result_ref` and `ended_at`, and `True`. If the release or config hash differs, halt. If `result_ref` is null, apply stop rule 2.
+Expected: release `9fa189a0…`, the slice config's effective hash from F13, the slice range, `1800`, a non-null `result_ref` and `ended_at`, and `True`. If the release, the config hash or the reserve differs, halt. If `result_ref` is null, apply stop rule 2.
 
 - [ ] **Step 5: Audit the budget**
 
 ```sh
 # prelude
 k=$(ls "$evidence"/invocations/*-*.json | wc -l | tr -d ' ')
-flags=$(for f in "$evidence"/invocations/*-*.json; do native -c 'import json,sys; print("--run-id", json.load(open(sys.argv[1]))["run_id"])' "$f"; done)
-tool audit --config "$project/conf/sec-edgar-local.json" $flags --budget "$evidence/campaign.json" \
+flags=()
+for f in "$evidence"/invocations/*-*.json; do
+  flags+=(--run-id "$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$f")")
+done
+tool audit --config "$project/conf/sec-edgar-local.json" "${flags[@]}" --budget "$evidence/campaign.json" \
   > "$campaign_logs/audit-after-$k.json"; echo "audit exit=$?"
-native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["total"], v["breaches"])' "$campaign_logs/audit-after-$k.json"
+native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(len(v["runs"]), v["total"], v["breaches"])' "$campaign_logs/audit-after-$k.json"
 ```
 
-Expected: `audit exit=0` and `breaches: []`. Otherwise halt (rule 4).
+Expected: `audit exit=0`, the run count equal to k, and `breaches: []`. Otherwise halt (rule 4).
 
-- [ ] **Step 6: Coverage and integrity after the invocation**
+- [ ] **Step 6: Coverage, timing and integrity after the invocation**
+
+The coverage here uses `--check integrity`: it reads no row, so it takes seconds, and no unit can be `covered` (O12). Task 6 runs the full check once.
 
 ```sh
 # prelude
 k=$(ls "$evidence"/invocations/*-*.json | wc -l | tr -d ' ')
-refs=$(for f in "$evidence"/invocations/*-*.json; do native -c 'import json,sys; v=json.load(open(sys.argv[1])); print("--result", v["result_ref"]) if v["result_ref"] else None' "$f"; done)
-tool coverage --config "$project/conf/sec-edgar-local.json" $refs --start 2015Q1 --end 2026Q4 --open-quarter 2026Q4 \
-  > "$campaign_logs/coverage-after-$k.json"; echo "coverage exit=$?"
+record=$(ls "$evidence"/invocations/"$k"-*.json)
+refs=()
+for f in "$evidence"/invocations/*-*.json; do
+  ref=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["result_ref"] or "")' "$f")
+  [ -n "$ref" ] && refs+=(--result "$ref")
+done
+this=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["result_ref"])' "$record")
+limit=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["max_member_wall_seconds"])' "$evidence/campaign.json")
+tool coverage --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --start 2015Q1 --end 2026Q4 \
+  --open-quarter 2026Q4 --check integrity > "$campaign_logs/coverage-after-$k.json"; echo "coverage exit=$?"
+tool timing --config "$project/conf/sec-edgar-local.json" --result "$this" --max-member-wall "$limit" \
+  > "$campaign_logs/timing-after-$k.json"; echo "timing exit=$?"
 tool files --root "$project/data" --recorded specs/evidence/local-port/sec-acceptance.json \
   > "$campaign_logs/files-after-$k.json"; echo "files exit=$?"
-record=$(ls "$evidence"/invocations/"$k"-*.json)
-native - "$campaign_logs/coverage-after-$k.json" "$campaign_logs/audit-after-$k.json" "$record" <<'PY'
+native - "$campaign_logs/coverage-after-$k.json" "$campaign_logs/audit-after-$k.json" \
+  "$campaign_logs/timing-after-$k.json" "$record" <<'PY'
 import json, sys
 from pathlib import Path
-coverage, audit, record = (Path(item) for item in sys.argv[1:])
-value, spent = json.loads(coverage.read_text()), json.loads(audit.read_text())
+coverage, audit, timing, record = (Path(item) for item in sys.argv[1:])
+value, spent, timed = (json.loads(path.read_text()) for path in (coverage, audit, timing))
 waiting = ('pending', 'deferred', 'throttled')
+sources = [unit['source'] for unit in value['units'] if unit['source']] + value['daily_sources']
 eligible = [unit['quarter'] for unit in value['units'] if unit['source'] and unit['source']['outcome'] in waiting]
 eligible += [item['period'] for item in value['daily_sources'] if item['outcome'] in waiting]
+daily_open = [item['period'] for item in value['daily_sources']
+              if item['outcome'] in waiting or (item['status'] == 'failed' and not item['quarantined'])]
+refused = [{'kind': item['kind'], 'period': item['period'], 'gaps': item['gaps']} for item in sources
+           if item['outcome'] == 'invalid_source' and not item['quarantined']]
 untouched = [unit['quarter'] for unit in value['units'] if unit['verdict'] == 'no_campaign_result']
+run = timed['runs'][0]
 entry = json.loads(record.read_text())
 entry['after'] = {'verdicts': value['verdicts'], 'eligible': eligible, 'untouched': untouched,
-                  'daily_sources': len(value['daily_sources']), 'campaign_total': spent['total']}
+                  'daily_open': daily_open, 'refused': refused, 'daily_sources': len(value['daily_sources']),
+                  'campaign_total': spent['total'], 'child_call_rows': timed['child_call_rows'],
+                  'timing': {key: run[key] for key in ('dispatch_cutoff', 'tail_seconds', 'timed_members',
+                                                       'b4_members', 'repeated_sources', 'max_member_wall')},
+                  'timing_breaches': timed['breaches']}
 record.write_text(json.dumps(entry, sort_keys=True, indent=1) + '\n')
 print(json.dumps(entry['after']))
 PY
 ```
 
-Expected: `coverage exit=0` and `files exit=0`. The printed `after` block is now in the invocation record.
+Expected: `coverage exit=0` and `files exit=0`. `timing exit=0`, or `timing exit=1` with a non-empty `after.timing_breaches` (rule 7). Any other nonzero exit, or an exit 1 whose output does not parse or has no breach, is a tool failure: halt and report it. The printed `after` block is now in the invocation record. The full timing report stays in `logs/baseline-campaign/timing-after-<k>.json`.
 
 - [ ] **Step 7: Decide, log and commit**
 
-Apply the `campaign.md` stop rules in order. Use the launcher exit, `result_ref`, `workflow_summary` (`outcome`, `summary_error`, `discovery_complete`), the audit breaches, the files exit, and the `after` block (`eligible`, `untouched`). For rule 7, compare the length of `eligible` with the previous invocation of the same slice. For rule 9, size the next slice by the sizing rule.
+Apply the `campaign.md` stop rules in order. Use the launcher exit, `result_ref`, `workflow_summary` (`outcome`, `summary_error`, `discovery_complete`), the audit breaches, the files exit, `after.timing_breaches` (rule 7), `after.refused` (rule 8), `after.eligible` (rule 9) and `after.untouched` (rule 11). For rule 9, compare the length of `eligible` with the previous invocation of the same slice.
 
 Append one row to `invocations.md`. Create the file with this header on k = 1:
 
 ```markdown
 # Stage 2 campaign invocations
 
-| k | Slice | Run ID | Launcher exit | Outcome | Elapsed (s) | Complete / pending / failed sources | Published quarters | Attempts (run / campaign) | Received bytes (campaign) | Eligible after | Untouched after | Decision |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| k | Slice | Run ID | Launcher exit | Outcome | Elapsed (s) | Complete / pending / failed sources | Published quarters | Timed / B4 members | Max member wall (s) | Attempts (run / campaign) | Received bytes (campaign) | Eligible after | Untouched after | Decision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 ```
 
 ```sh
 # prelude
 k=$(ls "$evidence"/invocations/*-*.json | wc -l | tr -d ' ')
-git add conf/stage2/ specs/evidence/baseline-campaign/invocations.md specs/evidence/baseline-campaign/invocations/
+git add specs/evidence/baseline-campaign/invocations.md specs/evidence/baseline-campaign/invocations/
 git commit -m "docs(evidence): record Stage 2 campaign invocation $k"
 ```
 
@@ -1459,29 +2293,41 @@ On Rerun or Next slice, go back to Step 1. On Finish, go to Task 6. On Halt, rep
 
 ### Task 6: Final coverage inventory, integrity and quarantine enumeration (offline)
 
+> Revision 1: Step 1 now runs the full content check once (`--check full`) and adds the final timing report.
+
 **Files:**
-- Create: `specs/evidence/baseline-campaign/final/coverage.json`, `audit.json`, `files.json`
+- Create: `specs/evidence/baseline-campaign/final/coverage.json`, `audit.json`, `timing.json`, `files.json`
 - Create: `specs/evidence/baseline-campaign/quarantine/<quarter>.txt` (one for each quarantined unit)
 
 **Interfaces:**
 - Consumes: the result refs and run IDs in `invocations/*.json`.
 - Produces: the inputs for Task 7.
 
-- [ ] **Step 1: Final coverage and audit**
+- [ ] **Step 1: Final full coverage, audit and timing**
+
+The full check reads every published quarter once through the release's full content check. That is about 415 s for each full-size quarter (F16), so expect about 6 hours for the 48 units. Run it in the background with the agent harness's background mode, and wait for the exit notification. No writer may run until it ends.
 
 ```sh
 # prelude
 mkdir -p "$evidence/final" "$evidence/quarantine"
-refs=$(for f in "$evidence"/invocations/*-*.json; do native -c 'import json,sys; v=json.load(open(sys.argv[1])); print("--result", v["result_ref"]) if v["result_ref"] else None' "$f"; done)
-flags=$(for f in "$evidence"/invocations/*-*.json; do native -c 'import json,sys; print("--run-id", json.load(open(sys.argv[1]))["run_id"])' "$f"; done)
-tool coverage --config "$project/conf/sec-edgar-local.json" $refs --start 2015Q1 --end 2026Q4 --open-quarter 2026Q4 \
-  > "$evidence/final/coverage.json"; echo "coverage exit=$?"
-tool audit --config "$project/conf/sec-edgar-local.json" $flags --budget "$evidence/campaign.json" \
+refs=(); flags=()
+for f in "$evidence"/invocations/*-*.json; do
+  ref=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["result_ref"] or "")' "$f")
+  [ -n "$ref" ] && refs+=(--result "$ref")
+  flags+=(--run-id "$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$f")")
+done
+limit=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["max_member_wall_seconds"])' "$evidence/campaign.json")
+tool coverage --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --start 2015Q1 --end 2026Q4 \
+  --open-quarter 2026Q4 --check full > "$evidence/final/coverage.json"; echo "coverage exit=$?"
+tool audit --config "$project/conf/sec-edgar-local.json" "${flags[@]}" --budget "$evidence/campaign.json" \
   > "$evidence/final/audit.json"; echo "audit exit=$?"
-native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["verdicts"], v["complete"], len(v["daily_sources"]), [q["quarter"] for q in v["other_filing_quarters"]])' "$evidence/final/coverage.json"
+tool timing --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --max-member-wall "$limit" \
+  > "$evidence/final/timing.json"; echo "timing exit=$?"
+native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["check"], v["verdicts"], v["complete"], len(v["daily_sources"]), [q["quarter"] for q in v["other_filing_quarters"]])' "$evidence/final/coverage.json"
+native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(len(v["runs"]), v["child_call_rows"], v["max_member_wall"], len(v["breaches"]))' "$evidence/final/timing.json"
 ```
 
-Expected: `coverage exit=0` and `audit exit=0`. The verdicts cover exactly 48 units.
+Expected: `coverage exit=0`, `audit exit=0` and `timing exit=0`. The coverage check is `full`, and the verdicts cover exactly 48 units with no `published_unchecked`. The timing report has one run for each invocation with a result, and 0 breaches against the limit in `campaign.json`. If the owner approved a higher limit after a halt, `campaign.json` already carries it.
 
 - [ ] **Step 2: Final integrity comparison**
 
@@ -1531,11 +2377,13 @@ git commit -m "docs(evidence): record final Stage 2 coverage and quarantine enum
 
 ### Task 7: G2 coverage finding, owner dispositions and operating decision
 
+> Revision 1: §2 adds the timing evidence, §4 names a refused incremental candidate, and the new §8 records the revisit triggers deferred into Stage 2 (O17).
+
 **Files:**
 - Create: `specs/evidence/baseline-campaign/coverage-finding.md`
 
 **Interfaces:**
-- Consumes: Task 6 outputs, `invocations.md`, `campaign.md` and `pre-campaign.md`.
+- Consumes: Task 6 outputs (`final/timing.json` included), `invocations.md`, `campaign.md`, `pre-campaign.md`, and `specs/deferred_items.md`, sections `4-sec-filing-index-bounded-drain — 2026-10-27` and `5-sec-filing-index-per-member-cost — 2026-10-28`.
 - Produces: the accepted G2 finding that the roadmap's Stage 2 Exit requires, and that Stages 3–4 consume.
 
 - [ ] **Step 1: Write the finding**
@@ -1546,18 +2394,23 @@ Use these sections in this order. Take every number from the cited JSON files. D
 # Stage 2 baseline coverage finding (G2)
 
 **Status:** Proposed for owner disposition. **Plan:** [plan 2](../../plans/2-sec-filing-index-ingestion-spec.md).
-**Range:** 2015Q1–2026Q4 (48 quarterly units; 2026Q4 open). **Release:** <approved release>. Slice configs:
-see invocations.md.
+**Range:** 2015Q1–2026Q4 (48 quarterly units; 2026Q4 open). **Release:** `9fa189a0…` (reserve 1,800 s).
+Slice configs: `conf/stage2/1b/`, see invocations.md.
 
 ## 1. Result
-One paragraph: the verdict counts from final/coverage.json, `complete` true or false, and the operating
-decision proposed in §6.
+One paragraph: the verdict counts from final/coverage.json (full check), `complete` true or false, and
+the operating decision proposed in §6.
 
 ## 2. Campaign as run
 The slices, invocations and window used, and the totals against each campaign.json limit
-(final/audit.json). The elapsed time of each pilot invocation against the F11 figures. Unique expanded
-bytes: the sum of `master.idx` sizes of the retained quarterly ZIPs, from `unzip -l` on each raw ZIP.
-Report it as post hoc, not as enforced.
+(final/audit.json). For each invocation: elapsed seconds, the dispatch cutoff, the number of members
+deferred at the cutoff (members with no child and outcome `pending`), and its slowest member wall
+(final/timing.json), and its `tail_seconds` against the 97.8 s fixture finish step. The slowest member of the
+campaign against the fixture value 1,010.9 s and the limit `max_member_wall_seconds`, by member class:
+closed first publication, closed rebuild by an incoming quarterly authority, open-quarter daily before
+and after the 2026Q4 quarterly publish (A1), closed-quarter daily. Unique expanded bytes: the sum of
+`master.idx` sizes of the retained quarterly ZIPs, from `unzip -l` on each raw ZIP. Report it as post
+hoc, not as enforced.
 
 ## 3. Baseline units
 One table row per requested quarter: quarter, verdict, source ID (first 12 hex), member outcome,
@@ -1570,7 +2423,8 @@ One subsection per unit whose verdict is not covered or covered_open_quarter. Ea
 downstream limitation, the proposed disposition, and an `Owner disposition:` line that only the
 owner's words fill. Proposed dispositions use one of: "accepted named gap", "deferred to a versioned
 parser/schema design (Size: design)", "deferred to Stage 4 reconciliation approval review", or
-"re-run in a later campaign".
+"re-run in a later campaign". A unit or daily source blocked by a refused incremental candidate (O16)
+gets "deferred to Stage 4 recovery disposition"; its objects stay in the store.
 
 ## 5. Other output
 - Filing quarters outside the range (other_filing_quarters).
@@ -1593,11 +2447,28 @@ Then the line `Owner decision:`, filled only with the owner's words and date.
   Full inventory `logs/baseline-campaign/files-final.json`, SHA-256 `<hash>`.
 - Pre-campaign facts: the 2021Q1 manifest restoration and the absent L12 external directory
   ([pre-campaign.md](pre-campaign.md)). Stage 2 cannot restore the absent directory.
+- Release history: every invocation ran on `9fa189a0…` (invocations/*.json). The store now holds 1b
+  generations, so selecting `fc68adef…` or `aa8de1ac…` for it is unsupported (parent spec §4.9).
+
+## 8. Revisit triggers deferred into Stage 2
+One subsection for each item. Each states the item's revisit condition as written in
+specs/deferred_items.md, the evidence from final/timing.json, and one verdict: "met", "not met" or
+"not determinable", with the reason.
+- B4 single-candidate limit (section 4-…-2026-10-27): the count of `repeated_sources` and `b4_members`
+  over all runs, and the share of total member wall spent by members of repeated sources.
+- History-scan cost (section 5-…-2026-10-28): engine seconds of each timed member against
+  `child_call_rows` before and after its invocation (the previous and this invocation record). Compare
+  with the measured fit 1.38 s + 0.0290 s per row (`measurement.md`, "History scan (S4)").
+- Unmeasured A1 member class: the walls of the 2026Q4 daily members that started after the 2026Q4
+  quarterly member, against 1,010.9 s.
+- Refused C6 candidate retry block: every `refused` entry in the invocation records, or "none occurred".
+- Two-release proof covers only first-generation 1b stores: no release change happened, so its
+  revisit condition is not met.
 ```
 
 - [ ] **Step 2: Owner disposition**
 
-Present §§1, 4 and 6 to the owner. Record each disposition and the decision verbatim. Then set `**Status:** Accepted by the owner on <date>.` If the owner rejects the finding or asks for another campaign, stop. Record the request. The plan is then not complete.
+Present §§1, 4, 6 and 8 to the owner. Record each disposition and the decision verbatim. Then set `**Status:** Accepted by the owner on <date>.` If the owner rejects the finding or asks for another campaign, stop. Record the request. The plan is then not complete.
 
 - [ ] **Step 3: Commit**
 
@@ -1663,11 +2534,13 @@ git commit -m "docs(specs): record tracked config and absent L12 external eviden
 
 ## After the last task
 
-When Tasks 4–7 have run under a revised plan, run the writing-plans Plan Completion Protocol, step 3a included. Update the Handoff below from what then ships.
+When Tasks 3a–7 have run under Revision 1, run the writing-plans Plan Completion Protocol, step 3a included. Rewrite the Handoff below from what then ships. In step 3, tick or update the deferred items that Task 7 §8 found met, and keep the others open.
 
 ## Handoff to later stages
 
-Stage 2 is blocked at Task 4, not complete. As of 2026-10-21 it has produced only the offline preparation. It has not produced the roadmap's per-invocation results and captures, the coverage inventory or the operating decision. No item went to `specs/deferred_items.md`.
+Revision 1 (2026-10-29) re-plans Tasks 3a–7 for release `9fa189a0…`. Nothing in it has run. The bullets below are the 2026-10-21 state on release `fc68adef…`. Their F11, D5-release and slice-config statements are superseded by Revision 1. The Plan Completion Protocol rewrites this section.
+
+On 2026-10-21, Stage 2 was blocked at Task 4, not complete. At that time it had produced only the offline preparation. It has not produced the roadmap's per-invocation results and captures, the coverage inventory or the operating decision. No item went to `specs/deferred_items.md`.
 
 - **Next roadmap resume (derive-roadmap).**
   - The owner routed F11 to an engine change and a new release, before the Stage 2 live campaign (D5). That change has no stage, spec or plan yet. The resume adds it ahead of the Stage 2 live campaign.
