@@ -75,8 +75,9 @@ Execution environment (planning facts, not spec text):
 
 Planning settled these points. Each one is plan-level: none changes what the spec requires. Each is applied in the tasks as written. The owner approves or changes each one at plan review.
 
-- **P1 — Builder shape and name.** The builder is `completion._legacy_publish_descriptor(context, objects) -> tuple[dict, TransformedWorkset]`. It returns the descriptor and the decoded input, so the refusal needs no second read. One helper, `completion._require_complete_input(workset)`, raises today's message. `_legacy_publish_call` and the kept-call branch of the loop both call it, so the message stays the same in both places.
-  - Consequence (not an M1 breach): today the complete-input check runs before the input-versions check. In the builder, the versions check comes first. So for an Attempt whose input is both incomplete and of other versions, `_legacy_publish_call` now says "legacy publish input versions differ" instead of "legacy unfinished publication has no complete publishable input". Both are `Conflict`, and every caller wraps or passes them the same way. No test asserts either message (F5). The live store has no such Attempt (diagnosis `diag3`).
+- **P1 — Builder shape and name.** The builder is `completion._legacy_publish_descriptor(context, objects, *, require_complete=False) -> tuple[dict, TransformedWorkset]`. It returns the descriptor and the decoded input, so the refusal needs no second read. One helper, `completion._require_complete_input(workset)`, raises today's message.
+  - `_legacy_publish_call` is `_legacy_publish_descriptor(context, objects, require_complete=True)[0]`. The flag runs the refusal at today's place, after the input-address check and before the input-versions check. So `_legacy_publish_call` behaves exactly as before for every caller, including the order of its checks (M1).
+  - The inventory loop calls the builder with the default, then calls `_require_complete_input` only for a kept call (M2). For a kept Attempt whose input is both incomplete and of other versions, the loop's message changes from the complete-input message to "legacy publish input versions differ". That is part of the M2 change: spec §4.3 item 2 requires every other check on every Attempt. Both messages are `Conflict`, and no test asserts either one (F5).
   - Applied in: Task 2.
 - **P2 — The 1b interpreter for §5 items 1 and 4.** The gate test builds the 1b application from its source revision `50423a4` with `support_release.origin_release`, as plan 5 P6 built the D5 origin. That keeps the gate self-contained in a worktree, which has no `releases/`. `main`'s `src` equals that revision (F1), so the application payload is the 1b payload. The spec's words "the retained 1b release interpreter (`9fa189a0…`)" are met by one extra evidence run of the same test class on the installed `releases/sha256=9fa189a0…/release.json`, through the environment variable `SEC_LOCAL_1B_RELEASE` (Task 4 Step 3). Alternative: make the installed release the only interpreter, and skip the test when it is absent. Applied in: Tasks 1 and 4.
 - **P3 — Message formats.** One helper, `processing._gap_text(gaps) -> str`, joins `f'{gap.code}: {gap.message}'` with `'; '`.
@@ -91,7 +92,12 @@ Planning settled these points. Each one is plan-level: none changes what the spe
   - The finished standalone Attempts also register two quarterly members through `bootstrap_legacy` (F4). They are quarantined. They sort after the daily member, so the daily member runs first.
   - Applied in: Task 1.
 - **P5 — Test-first across tasks.** Task 1 writes the reproduction and repair tests before the fix. Its two 1c-side tests carry `@unittest.expectedFailure`, so Task 1's commit keeps the gate green. Task 2 removes both decorators: an unexpected success fails the run, so the removal cannot be skipped. Applied in: Tasks 1 and 2.
-- **P6 — M1 byte identity uses an independent oracle.** After the refactor, `_legacy_publish_call` calls the builder, so comparing the two proves nothing. The test builds the expected descriptor from the persisted `command.json` and the Attempt context, as the 1b code builds it, and compares canonical bytes and SHA-256. It covers the three legacy publish shapes that the existing fixtures create: a finished complete publish (`test_local_workflow_contracts.py:336–349`), an unfinished one (`test_workflow_completion.py`, "ordinary public publish failure"), and the L12 shape. Applied in: Task 2.
+- **P6 — M1 byte identity uses an independent oracle.** After the refactor, `_legacy_publish_call` calls the builder, so comparing the two proves nothing. The test builds the expected descriptor from the persisted `command.json` and the Attempt context, as the 1b code builds it, and compares canonical bytes and SHA-256. It covers the three legacy publish shapes that the existing fixtures create:
+  - a finished complete publish;
+  - an unfinished complete publish. `test_local_workflow_contracts.py:336–349` and `test_workflow_completion.py` ("ordinary public publish failure") both make one by a failed standalone publish. The former calls `_legacy_publish_call` on it (`:346`) before it re-runs the publish to a finished one;
+  - the L12 shape.
+
+  Applied in: Task 2.
 - **P7 — The repair path that §5 item 4 observes.** The test asserts M5 without conditions: no pointer moves, the member's capture is under `already_complete`, its source is in `already_complete_sources`, and no repair record exists. It also asserts the §4.2 path: the member is not in `selection['jobs']` and gets no receipt. If only a §4.2 path assertion fails while every M5 assertion holds, change that assertion to the observed path, add a `> Deviation:` line, and name the path in `reproduction.md`. Spec §4.2 allows this. Applied in: Tasks 1 and 4.
 - **P8 — Existing tests and the stop rule.** M4 can turn a run that used to dispatch and then fail at `:96` into a stop before dispatch. If an existing test now fails because of M4, stop and ask. Never weaken that test. Applied in: Task 3.
 
@@ -106,7 +112,7 @@ Planning settled these points. Each one is plan-level: none changes what the spe
 - **F3 — `WorkflowMembers.completed` raises on a poisoned store.** It calls `outstanding_repairs`, which runs `_publish_calls`. Tests on a 1b-written store count `WorkflowMemberResult` rows directly.
 - **F4 — `bootstrap_legacy` registers members from finished standalone Attempts.** In the probe, the `daily` run had three members: the daily 2026-10-01 source and the quarterly 2026Q3 and 2026Q4 sources of the standalone chain.
 - **F5 — No test asserts the messages that change.** `grep` finds no test that asserts "child completion lacks", "authority inventory uncertain", "no complete publishable input" or "input versions differ". `test_local_workflow_contracts.py:346` calls `_legacy_publish_call` on an unfinished complete Attempt.
-- **F6 — The campaign tool.** `scripts/baseline-campaign.py` imports `workflows.contracts`, `workflows.results` (`_read`, `_validate_report`), `etl.reader`, `etl.state`, `discovery`, `config` and `storage`. It does not import `completion` or `processing` directly. The campaign stop rules read the workflow `outcome` (`campaign.md`, rule 3), not the error text.
+- **F6 — The campaign tool.** `scripts/baseline-campaign.py` imports `workflows.contracts`, `workflows.results` (`_read`, `_validate_report`), `etl.reader`, `etl.state`, `discovery`, `config` and `storage`. It does not import `completion` or `processing` directly. But `workflows/results.py` imports `completion` (`:13`, `:171`) and calls `WorkflowMembers.completed` (`:226`), which runs `_publish_calls` (F3). The campaign stop rules read the workflow `outcome` (`campaign.md`, rule 3), not the error text.
 - **F7 — Live config.** `conf/sec-edgar-local.json` selects `9fa189a0…`. Its effective-config SHA-256 is `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5` (plan 2 Revision 2; parent spec §4.8). The reserve is 1800 s, and the floor is 480 s.
 - **F8 — Gate baseline.** The 1b gate ran 1108 tests in 71 modules. `test_baseline_campaign.py` has gained 4 tests since (11 to 15), so `main` should run about 1112 tests in 71 modules. This plan adds two modules.
 - **F9 — `releases/`** holds `49b7a2ed…`, `900952a8…`, `9fa189a0…`, `aa8de1ac…`, `d718ae5f…`, `fc68adef…`, `artifact-cache` and `task14-guard-proofs`.
@@ -356,7 +362,7 @@ git commit -m "test: reproduce the member-completion conflict on the 1b release"
 
 **Interfaces:**
 - Consumes: `support_workflow_evidence.EvidenceFixture` (`invoke`, `snapshot_input`, `revised_member`, `config`, `workflow`, `store`, `objects`, `value`), `quarterly_bytes`.
-- Produces: `completion._legacy_publish_descriptor(context, objects) -> tuple[dict, TransformedWorkset]`; `completion._require_complete_input(workset) -> None`; `_legacy_publish_call(context, objects) -> dict` with unchanged signature. In `test_member_completion.py`: the module constants `INVENTORY`, `REFUSAL`, `STOCK` and the helper `conflicting_bytes(day)`, which Task 3 reuses.
+- Produces: `completion._legacy_publish_descriptor(context, objects, *, require_complete=False) -> tuple[dict, TransformedWorkset]`; `completion._require_complete_input(workset) -> None`; `_legacy_publish_call(context, objects) -> dict`, with unchanged signature and behavior (P1). In `test_member_completion.py`: the module constants `INVENTORY`, `REFUSAL`, `STOCK` and the helper `conflicting_bytes(day)`, which Task 3 reuses.
 
 - [ ] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_member_completion.py`:
 
@@ -582,8 +588,17 @@ Expected: `test_the_descriptor_bytes_are_unchanged_for_accepted_attempts` and `t
 - [ ] **Step 3: Implement M1.** In `completion.py`, replace the whole `_legacy_publish_call` function (`:451–478`) with:
 
 ```python
-def _legacy_publish_descriptor(context, objects):
-    """Build the legacy publish call and read its input, without the complete-input refusal (Stage 1c, M1)."""
+def _require_complete_input(workset):
+    if not workset.complete:
+        raise Conflict('legacy unfinished publication has no complete publishable input')
+
+
+def _legacy_publish_descriptor(context, objects, *, require_complete=False):
+    """Build the legacy publish call and read its input (Stage 1c, M1).
+
+    The inventory loop builds without the complete-input refusal. `_legacy_publish_call` sets
+    `require_complete`, so its checks run in today's order.
+    """
     if context.command != 'publish':
         raise Conflict('legacy repair context is not a publish command')
     settings = Settings.from_mapping(context.to_mapping()['effective_config'])
@@ -604,6 +619,8 @@ def _legacy_publish_descriptor(context, objects):
     workset = decode_transformed(objects.read(intent['workset']))
     if transformed_ref(workset) != intent['workset']:
         raise Conflict('legacy publish transformed input address differs')
+    if require_complete:
+        _require_complete_input(workset)
     if (workset.context.parser_version, workset.context.schema_version) != (
             context.parser_version, context.schema_version):
         raise Conflict('legacy publish input versions differ')
@@ -612,15 +629,8 @@ def _legacy_publish_descriptor(context, objects):
     return call, workset
 
 
-def _require_complete_input(workset):
-    if not workset.complete:
-        raise Conflict('legacy unfinished publication has no complete publishable input')
-
-
 def _legacy_publish_call(context, objects):
-    call, workset = _legacy_publish_descriptor(context, objects)
-    _require_complete_input(workset)
-    return call
+    return _legacy_publish_descriptor(context, objects, require_complete=True)[0]
 ```
 
 - [ ] **Step 4: Implement M2.** In `_publish_calls`, replace the body of the legacy loop's `try` block:
@@ -1186,7 +1196,7 @@ Add the commit hash to `release.md` in the Task 8 commit, not by amending.
 **Interfaces:**
 - Consumes: `<1C>`, the Task 7 SHA-256 and commit, and the Task 4 and Task 7 Decisions.
 
-- [ ] **Step 1: §4.7.** After the paragraph that ends `while preserving the actual engine status where known.`, add this paragraph:
+- [ ] **Step 1: §4.7.** After the paragraph whose last line is `actual engine status where known.` (spec line 290 at planning), add this paragraph:
 
 ```text
 A finished publish Attempt whose input workset is incomplete, with no repair record, moved no pointer.
@@ -1271,12 +1281,12 @@ Fill each `<…>` token from the evidence at plan completion. The 1c spec is `sp
 - **Stage 2 (baseline campaign; the plan 2 revision).** Consumes, as built:
   - Release `<1C>` (manifest `releases/sha256=<1C>/release.json`, `git_revision` `<1C revision>`), selected in the live config at commit `<Task 7 commit>`. Effective-config SHA-256 `<Task 7 SHA-256>`. Reserve 1800 s. Floor 480 s. Evidence: `specs/evidence/stage1c/release.md`, `gate.md`, `reproduction.md`.
   - The plan 2 revision must change: its Global Constraints (release and effective-config SHA-256); the slice configs, regenerated for the 1c manifest (today `conf/stage2/1b/backfill-2020Q1-2020Q4.json` through `backfill-2025Q1-2025Q4.json`, `backfill-2026Q1-2026Q3.json` and `backfill-2026Q4-open.json`, eight files bound to `9fa189a0…`); `scripts/baseline-campaign.py`, re-verified against `<1C>` (plan 2 Task 1 Steps 4–5); and the `campaign.md` Release gate, read against `<1C>`.
-  - Changed modules: `workflows/completion.py` and `workflows/processing.py` only. The tool imports `workflows.results._validate_report`, which reaches `completion`, so the re-verify runs (F6). No result format changed (M6). The stop rules read the workflow `outcome`, so the longer conflict text does not touch them.
+  - Changed modules: `workflows/completion.py` and `workflows/processing.py` only. The tool imports `workflows.results`, which imports `completion` and calls `WorkflowMembers.completed`, so the re-verify runs (F6). No result format changed (M6). The stop rules read the workflow `outcome`, so the longer conflict text does not touch them.
   - Repair of member `3554e8efb093532572ea5a35a1bf627a175784f0eac74b92e0777cb2e5d461ff` and ledger row k = 1: on `<1C>`, the next invocation evaluates this member complete. It lists the member's capture under `already_complete`, and its source (`924fd5f5…`) under `already_complete_sources`. No child runs for it, and no pointer moves (spec §4.2; `reproduction.md`, item 4 path: `<observed path>`). Task 5 treats that as completion of the runbook's repair obligation. Row k = 1 of `specs/evidence/baseline-campaign/invocations.md` stays as recorded: exit 9, `state_conflict`. It is not re-run.
   - Three sources appear as already complete in every invocation, because these members have no `WorkflowMemberResult` receipt: the daily members `3554e8ef…` (2026-07-01), `dc790624e85455feb79174c5d0ccbcab31c2b54c2e8b9de01ff503b551270a30` (2026-10-14) and `00c1f46d1f14a72ba1a949f89ff9bc93cb0b95109ace8de6e2799b40af95a4c6` (2026-10-15) (F10). The campaign ledger and the `coverage` tool must count them as complete without a receipt, and must not count them as new work in each invocation.
   - The skipped daily-index listing: in invocation 1, the `discover` child's request for `https://www.sec.gov/Archives/edgar/daily-index/index.json` was refused at 13:40:42Z with `permit_expired` ("child refused a stale dispatch window"), status 0, empty body (`quarantine/discovery/sha256=e3b0c442…`). The local design treats a safely refused expired permit as an explicit deferral (spec §4.3 item 6). The revision must account for the listing that was skipped.
   - The campaign window ends 2026-11-05T13:00:00Z. The open quarter must stay 2026Q4 (before 2027-01-01T00:00:00Z).
-  - Traps: (a) the stop before dispatch (M4) ends the command with `state_conflict`, exit 9 and no workflow result, as invocation 1 did, but no child runs and no pointer moves. The message names the member and its gaps. (b) On a poisoned store, the `discover` child still sends its requests before the first member stops (spec §8, second call). (c) Selecting the 1b release again for the live store is unsupported (parent §4.9). (d) Plan 5's traps still apply (plan 5, Handoff, Stage 2 bullet).
+  - Traps: (a) the stop before dispatch (M4) ends the command with `state_conflict`, exit 9 and no workflow result, as invocation 1 did, but no child runs and no pointer moves. The message names the member and its gaps. (b) On a poisoned store, the `discover` child still sends its requests before the first member stops (spec §8, second call). (c) Selecting the 1b release again for the live store is unsupported (parent §4.9). (d) Plan 5's traps still apply (plan 5, Handoff, Stage 2 bullet). (e) Under M4, any registered member whose first evaluation on `<1C>` returns a non-retryable gap, with no obligation, stops the whole invocation with exit 9. The Task 6 replay evaluated only `3554e8ef…`. Before the revision spends an invocation, it can evaluate every registered member on a scratch copy of `data/` on `<1C>`.
   - Deferred into this stage: none new. "Two-release proof covers only first-generation 1b stores" stays open in section `5-sec-filing-index-per-member-cost — 2026-10-28`, with the Stage 1c note.
 - **Stages 3, 4 and 5.** Consume `<1C>` wherever they name the 1b release (roadmap default (ix)), with the same config, reserve and floor as Stage 2. Each later invocation lists the three members above as already complete. Trap (a) of the Stage 2 bullet applies to every workflow command.
 - **Platform roadmap (not a stage of this roadmap).** S2 is satisfied once `<1C>` is built. The platform member may then merge to `main` under plan 3's Merge gate. That merge belongs to the platform roadmap.
