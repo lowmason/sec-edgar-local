@@ -1,0 +1,5 @@
+checked publish calls: 1
+checked 8305a3d9-54a1-46ae-863c-af8227118417 wf-b03b2ccf51c7391d1694e1f7779b419a33721352 2026-10-29T13:41:20.512691+00:00 result  
+legacy accept-38bf7c024e0fd5ac 2024Q1-publish-attempt-000 2026-10-18T23:23:52.544772+00:00 result Conflict: legacy unfinished publication has no complete publishable input  workset=56=8ed8b24d8f6552b171b3deb6d085dcf1959297fdfa475336ff3fc66fa6c6b3d3/workset.json complete=False obs=0
+legacy accept-38bf7c024e0fd5ac 2026-10-15-publish-attempt-000 2026-10-18T23:25:34.601172+00:00 result ok  workset=56=6d8634c9ffb7fe684a56cd6d9de4d898414f948aed38df6dad583b88aba6ebf9/workset.json complete=True obs=1
+legacy accept-38bf7c024e0fd5ac 2026-10-14-publish-attempt-000 2026-10-18T23:24:02.545339+00:00 result ok  workset=56=c6bba6d19ccb39ef4ed61c8185d0df97981e2fc1c9bf107bb5cd55917ec2e3a8/workset.json complete=True obs=1

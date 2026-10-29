@@ -1,0 +1,10 @@
+2024Q3 mode=closed base=none sources=1 rows=1 full=1 EQUAL
+2024Q4 mode=closed base=2d2194095e03 sources=2 rows=4 full=4 EQUAL
+2025Q1 mode=closed base=01cbe5076c35 sources=2 rows=12 full=12 EQUAL
+2025Q2 mode=closed base=194b3d83a4c1 sources=2 rows=12 full=12 EQUAL
+2025Q3 mode=closed base=2a089f104edc sources=3 rows=41 full=41 EQUAL
+2025Q4 mode=closed base=dca08c2cb35a sources=3 rows=40 full=40 EQUAL
+2026Q1 mode=closed base=17afe83f0fbb sources=3 rows=48 full=48 EQUAL
+2026Q2 mode=closed base=e9106ed3d96a sources=2 rows=50 full=50 EQUAL
+2026Q3 mode=closed base=5f5a95721fd8 sources=3 rows=6424 full=6424 EQUAL
+ALL_EQUAL
