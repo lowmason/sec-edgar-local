@@ -1,6 +1,6 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
-**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), approved by the owner (D11)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Task 3c executed (commit `eea0166`), and Task 4 Step 1 found the release gate standing for the 2020Q1 config. Task 4 Step 2 awaits the owner. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
+**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), approved by the owner (D11)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Task 3c executed (commit `eea0166`), and Task 4 Step 1 found the release gate standing for the 2020Q1 config. The owner answered all ten Task 4 items, and the approval is committed (`7869821`): window 2026-10-29T13:00:00Z to 2026-11-05T13:00:00Z. Task 5, the first live work, has not started. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -2403,7 +2403,7 @@ Expected: `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b 2512
 - If the release, the effective hash, the file hash or the reserve differs, stop. The owner has selected another release or config, and this revision pins `9fa189a0…` and the 2020Q1 config. Revise the plan again (Global Constraints, Task 3a Step 5, Tasks 3b and 3c) and get owner review before any gate.
 - Otherwise the Release gate that Task 3b wrote stands. Continue to Step 2.
 
-- [ ] **Step 2: Present the revision and the campaign files to the owner**
+- [x] **Step 2: Present the revision and the campaign files to the owner**
 
 Present `pre-campaign.md` (its Revision 1 and Revision 2 sections), `campaign.md`, and plan 2's O12–O19 and D10. Ask the owner to confirm or change each of these. Ask every item again, including the ones answered before Revision 2 (Revision 2, item 5). Ask one question for each item, so that a changed answer to one item cannot silently replace the others.
 
@@ -2420,7 +2420,7 @@ Present `pre-campaign.md` (its Revision 1 and Revision 2 sections), `campaign.md
 
 Do not suggest that the owner skip any item.
 
-- [ ] **Step 3: Record the owner's answers verbatim**
+- [x] **Step 3: Record the owner's answers verbatim**
 
 Replace the Approval section with the following, filled only from the owner's words:
 
@@ -2444,7 +2444,7 @@ Set `**Status:** Approved for live execution within the limits above.`
 - If the owner chooses O15's alternative (measure A1 offline first), stop. That measurement needs its own plan. Task 4 restarts after it.
 - If the owner does not approve, stop. The plan then ends at Task 4 with nothing live run.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```sh
 git add specs/evidence/baseline-campaign/campaign.md specs/evidence/baseline-campaign/campaign.json
