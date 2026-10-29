@@ -14,7 +14,8 @@ authorize live execution of any stage. The owner requested inclusion of a
 future local scheduling phase; its design remains open. **Resume, 2026-10-22:** inserted Stage 1a
 (the D5 release) was approved by the owner with defaults (i)–(iii) under Open questions. **Resume,
 2026-10-27:** inserted Stage 1b (per-member cost, plan 4 D2) was approved by the owner as proposed
-under Open questions.
+under Open questions. **Resume, 2026-10-29:** inserted Stage 1c (the member-completion conflict
+fix, plan 2 D12) was approved by the owner with defaults (vii)–(ix) under Open questions.
 
 The native port is complete, not a scaffold. Its [retired plan](plans/completed/1-sec-edgar-local-spec.md)
 and [final completion review](evidence/local-port/completion-review.md) control delivery status.
@@ -79,6 +80,15 @@ owner. Deferred items that no Handoff bullet assigns to a stage stay in `specs/d
 Handoff's platform bullet (plan 3 DF6) belongs to the platform roadmap. The rubric verdicts above stand;
 this resume does not re-run gap analysis.
 
+Resume reconcile, 2026-10-29: no stage carries a new COMPLETE stamp. [Plan 2](plans/2-sec-filing-index-ingestion-spec.md)
+halted at Task 5: invocation 1 ended with launcher exit 9 and `state_conflict` at
+`workflows/processing.py:96`, and the owner routed it to an engine diagnosis and fix (plan 2 D12). Its
+Handoff bullet "Task 5 halt (2026-10-29)" is the carrier for the Stage 2 amendment below. Engine source
+under `packages/sec-edgar-ingest/src` is unchanged since the 1b build revision `50423a4` (its manifest
+`git_revision`; empty `git diff 50423a4 HEAD`). The ten raw logs and reports that the invocation 1 record
+cites match their recorded SHA-256 values. The halt is not diagnosed, so the rubric verdicts above stand.
+This resume does not re-run gap analysis.
+
 ## Open questions
 
 One change set was put to the owner as a single approve-or-amend at the 2026-10-22 resume:
@@ -110,6 +120,22 @@ Stage 1b's release in place of the D5 release, and the plan 2 revision is writte
 *Owner's answer (2026-10-27):* approved as proposed. Owner's words: "Approve as proposed
 (Recommended)". Approval authorizes no SEC request or live run.
 
+One change set was put to the owner as a single approve-or-amend at the 2026-10-29 resume:
+
+Insert Stage 1c (the member-completion conflict fix) ahead of the rest of Stage 2, per plan 2 D12 and
+Handoff, bullet "Task 5 halt (2026-10-29)", and keep every existing stage number. Proposed defaults
+inside that change: (vii) one stage, not an investigation stage plus a build stage: the diagnosis changes
+only Stage 1c's own design, as defaults (ii) and (iv) settled for Stages 1a and 1b. (viii) Stage 1c designs
+and proves offline the recovery path for the nine pointers that moved without member completion. The
+recovery runs on the live store only in the plan 2 revision, under its own owner gate. (ix) Stages 3–5
+consume Stage 1c's release wherever they now name the 1b release, because their members run through the
+same checked member boundary (R5) that failed in invocation 1. No Handoff bullet names those
+stages, so this is part of the change set, not an amendment. The Stage 2 amendment cites plan 2 D12
+rather than Stage 1c, so it stands however this is answered.
+
+*Owner's answer (2026-10-29):* approved as proposed. Owner's words: "Approve as proposed
+(Recommended)". Approval authorizes no SEC request or live run.
+
 ## Stages
 
 Order follows dependency and evidence needs: accept operational baseline coverage before daily
@@ -121,7 +147,10 @@ task list and does not reopen the completed 16-task native plan. Proposed Stage 
 dependency rule: Stages 2, 3 and 5 each need an invocation that ends with a durable result inside its
 deadline (plan 2 F8, F11), so the release that provides it comes first. Stage 1b follows the same
 rule: on the D5 release no reserve lets a full-size quarterly member fit one invocation (plan 4 D2),
-so the release that cuts per-member cost comes before Stage 2. The spec ranks no stages, so
+so the release that cuts per-member cost comes before Stage 2. Stage 1c follows the same
+rule: on the 1b release the pilot's first member failed the member-completion check after its publish
+moved nine pointers, and no further invocation runs until the fix (plan 2 D12), so the release that
+fixes it comes before the rest of Stage 2. The spec ranks no stages, so
 this order diverges from no spec ranking.
 
 `Consumes` name the inputs needed to plan a stage. Each operational stage's plan must establish
@@ -165,11 +194,20 @@ to live execution, not prerequisites to writing the plan that defines them.
   > Stage 1b: COMPLETE (2026-10-28) — implemented by plan 5 (specs/plans/completed/5-sec-filing-index-per-member-cost.md). Its Handoff section names what Stages 2–5 consume.
   > Next: resume the roadmap.
 
+- [ ] Stage 1c: Member-completion conflict fix and its release (approved at resume, 2026-10-29)
+      Objective: Ship a reviewed native release on which a member whose publish completes also passes the member-completion check, and which repairs the store state that invocation 1 left.
+      Spec: §3 R5, R6, R9, R12; §§4.6–4.9, 5–6, 9; plan 2 D12, F17.
+      Gap closed: None directly; removes the plan 2 D12 blocker that keeps G2 and G3 open.
+      Consumes: The 1b release `9fa189a0…` and its evidence (`specs/evidence/stage1b/`). Plan 2 D12, F17 and Handoff, bullet "Task 5 halt (2026-10-29)": the failure, the observations that are not a cause, and the store state the fix must handle. The invocation 1 record `specs/evidence/baseline-campaign/invocations/1-8305a3d9-54a1-46ae-863c-af8227118417.json`, `invocations.md`, and the raw logs it cites by SHA-256. [Local recovery](../docs/runbooks/local-recovery.md), row "Crash after pointer update". Platform roadmap D1 and plan 3 DF6: the stage spec settles whether this release's locked inputs carry the platform member.
+      Produces: A stage spec and plan; a written diagnosis of the `processing.py:96` conflict; the fix with offline tests; a recovery path for the nine filing-quarter pointers that moved without member completion, exercised offline; a reviewed release with setup, preflight and review evidence; the reviewed live-config selection with its effective-config SHA-256; and a plan Handoff that names every value the plan 2 revision must change, including how Task 5 treats the repair obligation and ledger row k = 1.
+      Exit: An offline reproduction that fails on the 1b release passes on the new release: one daily member whose publish writes a first publication and incremental generations on `fc68adef…`-written bases completes with all affected quarter evidence; offline, a re-run through the checked boundary completes a member whose pointers moved without member completion and moves no pointer twice (§4.7); the offline checker and preflight pass on the new release, with the 1b release and older releases retained (§4.9); the provenance and reader contracts hold or an explicit versioned transition is reviewed (§9); no SEC request was sent and nothing was written under `data/`.
+      ROUTING: brainstorming
+
 - [ ] Stage 2: Baseline campaign and coverage decision
       Objective: Produce an accepted written finding on the requested historical baseline, including every unresolved exception.
       Spec: §§4.2–4.9, 5–6, 7 G2.
       Gap closed: G2.
-      Consumes: Stage 1 evidence, the explicitly selected native release/current config, the intended range, and preserved live-root evidence. The [submissions findings](findings/sec-filing-submissions-findings.md) §§2, 4.6–4.7: daily indexes add back-dated rows to old filing quarters (Approved at resume, 2026-10-21). Plan 2 Tasks 1–3 and 8 as offline preparation (`4508859`, `7b63168`, `ea482dd`, `780ea51`, `4004f2e`). The D5 release, then a reviewed revision of plan 2 for it before Tasks 4–7, scoped by plan 2, Handoff `:1676` (Resolved at resume, 2026-10-22). The values that revision must change, read against the release selected when it is written: plan 4, Handoff, Stage 2 bullet (Resolved at resume, 2026-10-27). Stage 1b's release and Handoff; the plan 2 revision is written against that release, not the D5 release (default (vi), approved at resume, 2026-10-27). The 1b release as built, the values the plan 2 revision must change, and its traps: plan 5, Handoff, Stage 2 bullet; the items deferred into this stage are in `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`, and the B4 revisit trigger in section `4-sec-filing-index-bounded-drain — 2026-10-27` (Resolved at resume, 2026-10-28).
+      Consumes: Stage 1 evidence, the explicitly selected native release/current config, the intended range, and preserved live-root evidence. The [submissions findings](findings/sec-filing-submissions-findings.md) §§2, 4.6–4.7: daily indexes add back-dated rows to old filing quarters (Approved at resume, 2026-10-21). Plan 2 Tasks 1–3 and 8 as offline preparation (`4508859`, `7b63168`, `ea482dd`, `780ea51`, `4004f2e`). The D5 release, then a reviewed revision of plan 2 for it before Tasks 4–7, scoped by plan 2, Handoff `:1676` (Resolved at resume, 2026-10-22). The values that revision must change, read against the release selected when it is written: plan 4, Handoff, Stage 2 bullet (Resolved at resume, 2026-10-27). Stage 1b's release and Handoff; the plan 2 revision is written against that release, not the D5 release (default (vi), approved at resume, 2026-10-27). The 1b release as built, the values the plan 2 revision must change, and its traps: plan 5, Handoff, Stage 2 bullet; the items deferred into this stage are in `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`, and the B4 revisit trigger in section `4-sec-filing-index-bounded-drain — 2026-10-27` (Resolved at resume, 2026-10-28). The release from the engine fix that plan 2 D12 routes, and its Handoff; the plan 2 revision is written against that release, not the 1b release, before any further invocation. That revision also covers the repair obligation of the nine moved pointers, ledger row k = 1, the window end 2026-11-05T13:00:00Z and the open quarter 2026Q4 (plan 2 D12, Handoff, bullet "Task 5 halt (2026-10-29)"; Resolved at resume, 2026-10-29).
       Produces: A reviewed finite campaign scope/budget, per-invocation results/captures, a source-and-quarter coverage inventory, and an explicit complete-or-incomplete operating decision.
       Exit: Every requested baseline unit is accounted for by validated publication or a named gap/quarantine with owner disposition; the committed port evidence, immutable live-root objects and releases remain intact, and the absent L12 external directory stays recorded as lost (§6, `780ea51`; plan 2, Handoff; Resolved at resume, 2026-10-22).
       ROUTING: writing-plans
@@ -178,7 +216,7 @@ to live execution, not prerequisites to writing the plan that defines them.
       Objective: Establish accepted manual daily continuation over the handoff and retained pending inventory.
       Spec: §§4.2–4.9, 5, 7 G3.
       Gap closed: G3.
-      Consumes: Stage 2 coverage decision and explicit exceptions, retained discovery boundaries/pending work, and selected native release/current config. The D5 release, since F11 applies to a `daily` invocation too, and the pending inventory from Stage 2's `final/coverage.json` `daily_sources` plus a fresh discovery (plan 2 D5, O5, F4, Handoff; Resolved at resume, 2026-10-22). The D5 cutoff semantics (parent spec §4.7) and their overrun limit for a member running at the cutoff (plan 4 D4, Handoff, Stage 3 and Stage 5 bullet; Resolved at resume, 2026-10-27). The 1b release, config, reserve and floor that Stage 2 consumes, its measured member classes and traps, and the unmeasured A1 member class and history-scan cost deferred into this stage (plan 5, Handoff, Stage 3 bullet; `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`; Resolved at resume, 2026-10-28).
+      Consumes: Stage 2 coverage decision and explicit exceptions, retained discovery boundaries/pending work, and selected native release/current config. The D5 release, since F11 applies to a `daily` invocation too, and the pending inventory from Stage 2's `final/coverage.json` `daily_sources` plus a fresh discovery (plan 2 D5, O5, F4, Handoff; Resolved at resume, 2026-10-22). The D5 cutoff semantics (parent spec §4.7) and their overrun limit for a member running at the cutoff (plan 4 D4, Handoff, Stage 3 and Stage 5 bullet; Resolved at resume, 2026-10-27). The 1b release, config, reserve and floor that Stage 2 consumes, its measured member classes and traps, and the unmeasured A1 member class and history-scan cost deferred into this stage (plan 5, Handoff, Stage 3 bullet; `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`; Resolved at resume, 2026-10-28). Stage 1c's release, wherever this entry names the 1b release (default (ix), approved at resume, 2026-10-29).
       Produces: A dated catch-up report with exact results/captures, boundary evidence, and unresolved-work disposition usable by later scheduling.
       Exit: Handoff-to-current daily discovery and pending units are accounted for without skipping failed directories or erasing older gaps; the owner accepts the reported coverage/limits.
       ROUTING: writing-plans
@@ -187,7 +225,7 @@ to live execution, not prerequisites to writing the plan that defines them.
       Objective: Establish accepted operational reconciliation and operator handling before unattended reconciliation.
       Spec: §§4.2, 4.4, 4.6–4.9, 5, 7 G4.
       Gap closed: G4.
-      Consumes: Stages 2–3 reports/exceptions, selected native release/config, and retained candidate/history/approval/rollback contracts. Stage 2's `gated` units and reconciliation-bound quarantine dispositions, and the closed-quarter quarterly-membership limit (plan 2 F5, F7, O6, O10, Handoff; Resolved at resume, 2026-10-22). The 1b release's full-check and full-rebuild paths, and the refused-C6-candidate retry block, which needs a recovery disposition when it occurs (plan 5, Handoff, Stage 4 bullet; `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`; Resolved at resume, 2026-10-28).
+      Consumes: Stages 2–3 reports/exceptions, selected native release/config, and retained candidate/history/approval/rollback contracts. Stage 2's `gated` units and reconciliation-bound quarantine dispositions, and the closed-quarter quarterly-membership limit (plan 2 F5, F7, O6, O10, Handoff; Resolved at resume, 2026-10-22). The 1b release's full-check and full-rebuild paths, and the refused-C6-candidate retry block, which needs a recovery disposition when it occurs (plan 5, Handoff, Stage 4 bullet; `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`; Resolved at resume, 2026-10-28). Stage 1c's release, wherever this entry names the 1b release (default (ix), approved at resume, 2026-10-29).
       Produces: A reconciliation report with exact source/candidate/generation evidence and accepted change, gate, revert, quarantine, and recovery dispositions.
       Exit: The reviewed range has a retained manual refresh outcome, every unresolved candidate/gap has explicit disposition, and required approvals name exact authority without bypassing refusal rules.
       ROUTING: writing-plans
@@ -196,7 +234,7 @@ to live execution, not prerequisites to writing the plan that defines them.
       Objective: Design and validate unattended local invocation of the accepted workflows.
       Spec: §§2.2–2.3, 3 R13, 4.7–4.10, 5–6, 7 G5.
       Gap closed: R13; G5.
-      Consumes: Stages 2–4 accepted operating reports/limits and the existing native launcher; no scheduler mechanism or cadence is assumed approved. The D5 release and plan 2's invocation rules: work fits one invocation (F8), and no member is after the pinned end (F9) (plan 2 D5, Handoff; Resolved at resume, 2026-10-22). The D5 cutoff semantics (parent spec §4.7) and their overrun limit for a member running at the cutoff (plan 4 D4, Handoff, Stage 3 and Stage 5 bullet; Resolved at resume, 2026-10-27). The 1b release, config, reserve and floor, and the history-scan growth and unmeasured A1 member class deferred into this stage (plan 5, Handoff, Stage 5 bullet; `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`; Resolved at resume, 2026-10-28).
+      Consumes: Stages 2–4 accepted operating reports/limits and the existing native launcher; no scheduler mechanism or cadence is assumed approved. The D5 release and plan 2's invocation rules: work fits one invocation (F8), and no member is after the pinned end (F9) (plan 2 D5, Handoff; Resolved at resume, 2026-10-22). The D5 cutoff semantics (parent spec §4.7) and their overrun limit for a member running at the cutoff (plan 4 D4, Handoff, Stage 3 and Stage 5 bullet; Resolved at resume, 2026-10-27). The 1b release, config, reserve and floor, and the history-scan growth and unmeasured A1 member class deferred into this stage (plan 5, Handoff, Stage 5 bullet; `specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`; Resolved at resume, 2026-10-28). Stage 1c's release, wherever this entry names the 1b release (default (ix), approved at resume, 2026-10-29).
       Produces: A reviewed scheduler design/implementation, disabled installation and explicit enable/disable records, operating/recovery documentation, and observed scheduled-run evidence.
       Exit: R13 has scheduler-specific verification and accepted actual daily/reconciliation executions linked to durable results/logs; missed-run, overlap, host lifecycle and DST policies are exercised or their approved limits recorded.
       ROUTING: brainstorming
@@ -220,7 +258,7 @@ unchanged when new configuration or operating evidence is added.
 
 ## Completion
 
-The owner reviews this local partition before Stage 2, and each inserted stage (1a, 1b) before it is
+The owner reviews this local partition before Stage 2, and each inserted stage (1a, 1b, 1c) before it is
 routed; approving either authorizes no SEC request or live run. Rewriting these files starts no campaign,
 installs/enables no schedule, and grants no live-access or budget authorization. On a later request
 to resume, use derive-roadmap to reconcile actual completion stamps and route only the first
