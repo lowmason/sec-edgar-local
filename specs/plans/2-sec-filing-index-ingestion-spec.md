@@ -1,6 +1,6 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
-**Status: REVISED for release `9fa189a0…` (Revision 1, 2026-10-29), approved by the owner (D9)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Their text is the execution record and stays as run. Revision 1 adds Tasks 3a and 3b and rewrites Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. Task 4 Step 2 awaits the owner. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 1 for the 1b release` first.
+**Status: REVISED for the 2020Q1 range (Revision 2, 2026-10-29), awaiting owner review** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Revision 1 (approved, D9) added Tasks 3a and 3b and rewrote Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. At Task 4 Step 2 the owner moved the range start to 2020Q1 (D10). Revision 2 adds Task 3c and changes Tasks 4–7 for that range. Executed task text is the execution record and stays as run. Nothing in Revision 2 has run. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 2 for the 2020Q1 range` first, then `## Revision 1 for the 1b release`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -18,11 +18,23 @@ An owner gate then checks the release and approves the finite scope, budget, win
 
 Revision 1 (2026-10-29) moves the campaign to the 1b release. On it, the runner stops starting members at the deadline minus the reserve and writes a durable result, so a slice that does not fit one invocation defers its remaining members. Two offline tasks come before the gate: Task 3a revises the evidence tool (a cheap integrity view between invocations, and per-member timing), and Task 3b re-runs the known answers and makes the 1b slice configs and campaign files.
 
+Revision 2 (2026-10-29) starts the range at 2020Q1 (D10). Offline Task 3c changes the live config's `backfill.start_quarter`, the matching spec and runbook text, the slice set and the campaign files, and re-runs the known answers. Then the Task 4 gate runs again.
+
 **Tech Stack:** Installed native release `9fa189a0…` (CPython 3.14.0, macOS arm64, Requests 2.34.2, PyArrow 25.0.1, application version 0.2.0). Tasks 1–3 ran on release `fc68adef…`. Stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. SQLite backup API. Launcher `scripts/sec-edgar-local`.
 
 **Spec:** [specs/sec-filing-index-ingestion-spec.md](../sec-filing-index-ingestion-spec.md). This plan implements Stage 2 only: §§4.2–4.9, 5–6 and 7 G2. It plans no work for Stages 3–5.
 
-## Revision 1 for the 1b release (read first)
+## Revision 2 for the 2020Q1 range (read first)
+
+Written 2026-10-29 at Task 4 Step 2, after the owner asked to start the range at 2020Q1 (D10). Planning sent no SEC request and wrote nothing under `data/`. It computed the new config hashes from scratch copies under the ignored `logs/` and deleted them after. It opened the store with operator access under the edited config, and ran read-only coverage for the new range (F21–F23). It also dry-ran Task 3c's edit scripts on scratch copies.
+
+1. **What changes.** The requested range becomes 2020Q1–2026Q4: 28 quarterly units, with 2026Q4 open. The live config's `backfill.start_quarter` changes from `2015Q1` to `2020Q1`, so its file and effective hashes change (F21). Spec §4.8 and `docs/runbooks/local-ingestion.md` name the old start or hash, and change with it. The year slices 2015–2019 are not run, and their five configs are removed (O18). `max_invocations` drops to 24 (O19).
+2. **New Task 3c** makes these edits and re-runs the known answers on the edited config. Tasks 4–7 change their range, unit counts and hashes.
+3. **What stays.** Release `9fa189a0…`, the reserve, the evidence tool at `b176598`, every other config value, the stop rules other than rule 12, and the member-wall limit. The 8 kept slice configs stay byte-identical. Each one copies every live-config field and replaces only `backfill`, so its F13 hash holds (F21). Tasks 3a and 3b are the execution record and stay as run. Their 2015Q1 values are history.
+4. **Not touched.** `conf/sec-edgar-local-fixture.json` and the test fixture configs keep `2015Q1`: they are fixtures, not the live config. `packages/sec-edgar-ingest/tests/test_config.py` embeds a frozen snapshot of an older live config (release `fc68adef…`, hash `088403cb…`) and reads no live file. No test reads `conf/sec-edgar-local.json`. So no test changes, and the full offline checker is not required. Runbook line 62 names retained 2015Q1 specimens as a historical fact and stays.
+5. **Task 4 answers given before this revision are not approval.** The owner answered items 5, 6, 8 and 9 "as proposed", chose the window start 2026-10-29T12:00:00Z (it passed before this revision's review), and selected the drafted sole-issuer wording. Task 4 asks all ten items again against Revision 2.
+
+## Revision 1 for the 1b release
 
 Written 2026-10-29 against the Stage 2 roadmap entry (`Consumes`, amended at the 2026-10-28 resume) and plan 5, Handoff, Stage 2 bullet. Planning sent no SEC request and wrote nothing under `data/`. It ran the tool's tests, the offline preflight and read-only known answers (F12–F20).
 
@@ -44,23 +56,24 @@ Consequence: Tasks 1–3 are offline and remain useful preparation. Task 4's liv
 
 **Status of authority:** This plan authorizes no live traffic.
 
-- Tasks 1, 3, 3a and 3b are offline and send no SEC request.
+- Tasks 1, 3, 3a, 3b and 3c are offline and send no SEC request.
+- Task 3c edits `conf/sec-edgar-local.json`, the spec and a runbook. It writes nothing under `data/`. The owner's approval of Revision 2 authorizes it, and it is the only task that may edit the live config.
 - Task 2 changes files under `data/`. The owner approved its defaults O2, O3 and O9 (D6). It still runs only with no writer running (Task 2 Step 1).
-- Task 4 is the owner's live-execution gate. It opens only on a release that clears the feasibility blocker, after a reviewed revision of this plan for that release. Revision 1 is that revision for release `9fa189a0…`, once the owner approves it. Tasks 5–7 run only after the Task 4 approval commit exists.
+- Task 4 is the owner's live-execution gate. It opens only on a release that clears the feasibility blocker, after a reviewed revision of this plan for that release. Revision 1 is that revision for release `9fa189a0…`. Revision 2 changes its range, so Task 4 runs again after Task 3c. Tasks 5–7 run only after the Task 4 approval commit exists.
 - Task 8 edits spec text only. The owner approved O4 (D6), and the task does not depend on the campaign.
 
 ## Global Constraints
 
-Every task's requirements include these lines. Revision 1 (2026-10-29) replaced the release, hash, reserve, slice-config and prelude lines. Tasks 1–3 and 8 ran under the 2026-10-21 lines, which stay in git history at `4004f2e`.
+Every task's requirements include these lines. Revision 1 (2026-10-29) replaced the release, hash, reserve, slice-config and prelude lines. Revision 2 (2026-10-29) replaced the live-config, slice-config and backfill lines. Tasks 1–3 and 8 ran under the 2026-10-21 lines, which stay in git history at `4004f2e`. Tasks 3a and 3b ran under the Revision 1 lines, at `d3e959c`.
 
 - Release: `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` (version 0.2.0, `git_revision` `50423a404fb50a959b3ca4077301117d32804cc6`), manifest `/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json`. Selected in the live config at commit `6d80da4`. Evidence: `specs/evidence/stage1b/release.md`, `measurement.md`, `gate.md`.
-- Live config: `conf/sec-edgar-local.json`, `config_version=sec-local-config-v1`. Effective-config SHA-256 `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`. File-byte SHA-256 `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc` (both offline preflight, 2026-10-29). Do not edit it.
+- Live config: `conf/sec-edgar-local.json`, `config_version=sec-local-config-v1`. After Task 3c: effective-config SHA-256 `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5` and file-byte SHA-256 `bfdf29859325fa396520c0fabd0bcd6f6e34d8854b558d56e4bf4a7731038204` (F21). Before Task 3c: `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1` and `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc` (offline preflight, 2026-10-29). Task 3c Step 2 makes the one approved edit. Do not edit it otherwise.
 - Dispatch reserve and floor: `execution.dispatch_reserve_seconds` 1800 (measured, plan 5 D10). Floor 480 s (release constant `config.DISPATCH_RESERVE_FLOOR_SECONDS`). The launcher refuses `--timeout-seconds` at or below the reserve. At the 3,300-second launcher default, the runner starts no member after 1,500 s (the dispatch cutoff, parent spec §4.7). A member running at the cutoff still completes.
 - Release history of this store: `fc68adef…` wrote every object in it (L12). After the first 1b live write, selecting `fc68adef…` or the D5 release `aa8de1ac…` for this store is unsupported (parent spec §4.9). Never change `runtime.release_manifest` during or after the campaign.
-- Slice configs: `conf/stage2/1b/backfill-<start>-<end>.json`, made only by Task 3b's `slice_config` function. Each one equals the live config except for `backfill.start_quarter` and `backfill.end_quarter`. Its storage and logging roots are written as the same absolute paths. The store binding excludes the range (§4.5), so every slice uses the same bound root. The two files directly under `conf/stage2/` bind to `fc68adef…`. Never run them.
+- Slice configs: `conf/stage2/1b/backfill-<start>-<end>.json`, made only by Task 3b's `slice_config` function. After Task 3c, 8 files remain: the pilot, the years 2020–2025 and `2026Q1`–`2026Q3` (O18). Each one equals the live config except for `backfill.start_quarter` and `backfill.end_quarter`. Its storage and logging roots are written as the same absolute paths. The store binding excludes the range (§4.5), so every slice uses the same bound root. The two files directly under `conf/stage2/` bind to `fc68adef…`. Never run them.
 - Observed config facts, 2026-10-21. The file is tracked since commit `001edf5` (spec §4.8 as amended by Task 8).
 - Storage / acquisition: `storage.backend=local`; `acquisition.mode=live`. Data root `/Users/lowell/Projects/sec-edgar-local/data`. Logging root `/Users/lowell/Projects/sec-edgar-local/logs`.
-- Backfill / handoff (live config): `2015Q1` through `open`; daily handoff `2026-10-01`.
+- Backfill / handoff (live config): `2020Q1` through `open` after Task 3c (was `2015Q1`, D10); daily handoff `2026-10-01`.
 - SEC identity: `Lowell Mason sec-edgar-ingest mason.lowell@mac.com`. Request policy: 3 requests/second, one active collector.
 - HTTP: five total attempts; 2-second base, 120-second local cap with jitter; honor longer server delays. Connect / read / exchange limits 15 / 60 / 90 seconds. Received / expanded limits 67,108,864 / 536,870,912 bytes per response.
 - Coordination: namespace `sec-owner-lowell-mason`; 60-second lease, 20-second renewal, 2-second uncertainty.
@@ -97,12 +110,13 @@ cd "$project"
 - **D7** (owner, execution review relayed by the parent session, 2026-10-21): After Tasks 1–3 ran, the integrity check reported `state.sqlite3-wal` and `state.sqlite3-shm` as `missing`, because SQLite deletes them when the last connection closes cleanly. The tool now lets those two files appear or vanish and reports that under `changed_state`. `state.sqlite3` stays strict. Owner's words: "Yes, approve the WAL/SHM integrity-check fix as proposed: let state.sqlite3-wal and -shm appear or disappear, keep state.sqlite3 strict, add a test, and correct the plan's code and the errors=10 wording." Applied in: Task 1 (code, test, Steps 2, 4 and 5), Task 2 Step 6.
 - **D8** (owner, brief, 2026-10-27): Roadmap default (vi), approved at the 2026-10-27 resume: Stage 2 consumes the Stage 1b release in place of the D5 release, and the plan 2 revision is written against it. The values to change and the traps come from plan 5, Handoff, Stage 2 bullet (roadmap resume, 2026-10-28). Applied in: Revision 1, Global Constraints, Tasks 3a–7.
 - **D9** (owner, plan review, 2026-10-29): Revision 1 approved, with O12–O17 accepted as proposed. Owner's words: "Approve and commit". This approval authorizes Tasks 3a and 3b. It is not live authority: Task 4 still gates every live invocation. Applied in: Tasks 3a–7.
+- **D10** (owner, Task 4 Step 2, 2026-10-29): The requested range and the live config's `backfill.start_quarter` start at 2020Q1. This replaces O1's 2015Q1 start. Owner's words: "Can we change the range for this package as well as the quarterly index downloads to 2020Q1-2026-Q4?", then "Write Revision 2". Planning read "this package" as the live config, the only place a range lives. Applied in: Revision 2, Global Constraints, Task 3c (config, spec amendment, runbook), Tasks 4–7.
 
 ## Defaults for owner review
 
-Each default below is applied in the named task. The owner accepted O1–O10 as proposed (D6) and settled O11 (D5). O12–O17 are new in Revision 1. The owner accepted them as proposed (D9). O1–O10 stand as accepted. Where Revision 1 changes how one applies (O1's slices, O8's limits), the new default names it.
+Each default below is applied in the named task. The owner accepted O1–O10 as proposed (D6) and settled O11 (D5). O12–O17 are new in Revision 1. The owner accepted them as proposed (D9). O1–O10 stand as accepted. Where Revision 1 changes how one applies (O1's slices, O8's limits), the new default names it. O18 and O19 are new in Revision 2 and await the owner's review. D10 changes O1's range.
 
-- **O1 — Range and slices.** Default: requested range 2015Q1–2026Q4, which is 48 quarterly units. This is the live config's `2015Q1`–`open` on a UTC date in 2026Q4. 2026Q4 is the open quarter, so its quarterly source is quarter-to-date. The campaign runs as range slices (F8, F9). The first slice is the pilot `2026Q4`–`open`. Then ascending slices run from 2015Q1 to 2026Q3, and together they cover the range with no gap or overlap. If the campaign starts on or after 2027-01-01T00:00:00Z, `open` becomes 2027Q1: re-derive the range, the open quarter and every value that names 2026Q4 in the plan revision that Task 4 requires. Alternative: an earlier start, such as the `2010Q1` that the completed design names as a possible later revision. Applied in: Tasks 3 and 5.
+- **O1 — Range and slices.** Default: requested range 2015Q1–2026Q4, which is 48 quarterly units. This is the live config's `2015Q1`–`open` on a UTC date in 2026Q4. 2026Q4 is the open quarter, so its quarterly source is quarter-to-date. The campaign runs as range slices (F8, F9). The first slice is the pilot `2026Q4`–`open`. Then ascending slices run from 2015Q1 to 2026Q3, and together they cover the range with no gap or overlap. If the campaign starts on or after 2027-01-01T00:00:00Z, `open` becomes 2027Q1: re-derive the range, the open quarter and every value that names 2026Q4 in the plan revision that Task 4 requires. Alternative: an earlier start, such as the `2010Q1` that the completed design names as a possible later revision. Applied in: Tasks 3 and 5. Revision 2 (D10): the owner set the range to 2020Q1–2026Q4, 28 units, and the live config's start to `2020Q1`.
 - **O2 — 2021Q1 manifest restoration.** Default: after a stopped-writer backup, write the canonical bytes back (Task 2). The canonical re-encoding of the drifted file is SHA-256 `a445d0a8…`, 5,100 bytes, which equals the L12 inventory record. Alternative: leave the file. Then every reader and every publication onto 2021Q1 refuses with `state_conflict`. That includes a future `daily` run whose back-dated rows reach 2021Q1. Applied in: Task 2.
 - **O3 — Five `.DS_Store` files in `data/`.** Default: remove them after the backup and record their hashes. Alternative: leave them and accept them as `added` in every inventory comparison. Applied in: Task 2.
 - **O4 — Lost L12 external evidence.** `/private/tmp/sec-local-task16-acceptance-20261018` is absent (F3). Spec §6 requires that it be retained. Default: record the loss and amend the spec text (Task 8). What Stage 2 keeps intact is then the committed `specs/evidence/local-port/` records, the immutable live-root objects and the releases. Applied in: Tasks 2 and 8.
@@ -118,11 +132,13 @@ Each default below is applied in the named task. The owner accepted O1–O10 as 
   - (c) Stop Stage 2 after Tasks 1–3, or before them.
   - Applied in: Task 4.
 - **O12 — Evidence tool revision (Task 3a).** Default: add `coverage --check integrity`, which checks only the exact manifest and file hashes and reports `validated_rows` as null, with the new verdict `published_unchecked`. Task 5 uses it between invocations. Keep `--check full` as the default, with one full content check per quarter instead of two, and run it once in Task 6. Add a `timing` command that joins each member's child refs to durable `Attempt` rows and reports child seconds, member wall and engine seconds. Reason: F16. A full check costs about 415 s per full-size quarter, and the stop rules read only member outcomes. Under the 1b trust model (plan 5 Handoff, trap (a)), the final full read is the only independent content check on engine-built generations, so it stays. Alternative: keep the tool as it is. Then the between-invocation coverage grows to hours (F16). Applied in: Tasks 3a, 5, 6.
-- **O13 — Slices and budget.** Default: the pilot `2026Q4`–`open` first, rerun until no daily source is pending. Then 11 calendar-year slices `2015`–`2025`, then `2026Q1`–`2026Q3`. That is 13 configs, all made in Task 3b, and no sizing rule. A year slice that does not fit one invocation defers its last members, and stop rule 9 reruns it. Budget: `max_invocations` 40 (about 2 full-size members start in each invocation, F18: pilot 2–4, year slices about 24, plus reruns). The other limits stay as O8 set them. They still hold, because each rerun adds only listing requests. This replaces O1's slice plan and O8's invocation count. Alternative: two-quarter slices (24 configs, fewer reruns, more configs). Applied in: Tasks 3b, 4, 5.
+- **O13 — Slices and budget.** Default: the pilot `2026Q4`–`open` first, rerun until no daily source is pending. Then 11 calendar-year slices `2015`–`2025`, then `2026Q1`–`2026Q3`. That is 13 configs, all made in Task 3b, and no sizing rule. A year slice that does not fit one invocation defers its last members, and stop rule 9 reruns it. Budget: `max_invocations` 40 (about 2 full-size members start in each invocation, F18: pilot 2–4, year slices about 24, plus reruns). The other limits stay as O8 set them. They still hold, because each rerun adds only listing requests. This replaces O1's slice plan and O8's invocation count. Alternative: two-quarter slices (24 configs, fewer reruns, more configs). Applied in: Tasks 3b, 4, 5. Revision 2: 8 of the 13 configs remain (O18), and `max_invocations` is 24 (O19).
 - **O14 — Member-wall halt.** Default: halt after any invocation in which a timed member's wall exceeds **1,056 s**. A member's wall holds no finish step: the tool reports that apart as the run's `tail_seconds` (Task 3a, Timing rules). That is the largest wall for which the measured reserve rule still gives at most the approved reserve: 1.25 × 1,056 + 480 = 1,800 (plan 5 D10). The fixture value is 1,010.9 s, and native cost is not measured (plan 5 Handoff, trap (c)). So the first full-size year slice may halt here. A halt then is evidence for the owner, who may approve a named, measured limit. Alternatives: 1,320 s (the reserve minus the floor, the hard fit for a member that starts at the cutoff), or report only. Applied in: Tasks 4, 5.
 - **O15 — The A1 member class in the pilot.** The pilot publishes the open quarter's quarter-to-date quarterly source. Every 2026Q4 daily member after it is an open-quarter member with a quarterly membership authority (A1). That class is not measured (`specs/deferred_items.md`, section `5-sec-filing-index-per-member-cost — 2026-10-28`). Default: accept the pilot as the first measurement of A1, under the O14 halt. Alternative: measure A1 offline first, in a separate plan with a new fixture scenario, before Task 4. Applied in: Tasks 4, 5, 7.
 - **O16 — Refused incremental candidate (C6).** A member whose publish refuses its candidate ends `invalid_source` and is not quarantined. Its retry is blocked (plan 5 Handoff, trap (e)). Default: halt after that invocation. Name the unit as an exception in Task 7, with a disposition that points to Stage 4. Do not remove objects. Applied in: Tasks 4, 5, 7.
 - **O17 — Revisit triggers deferred into Stage 2.** Default: report, do not halt (except O14). Task 7 §8 records the evidence for each trigger: B4 (`repeated_sources` and `b4_members`), the history scan (engine seconds against `child_call_rows`), A1 (2026Q4 member walls), refused C6 candidates, and the two-release limit (no release change). The items stay open in `specs/deferred_items.md` unless the evidence meets their closure conditions at plan completion. Applied in: Tasks 5, 6, 7.
+- **O18 — The five unused slice configs (Revision 2).** Default: `git rm` the 2015–2019 year configs in Task 3c, so `conf/stage2/1b/` holds exactly the 8 slices to run and none can be run by mistake. They stay in git history at `c9a9cb3`. Alternative: keep them as never-run history, as the two `fc68adef…` configs are kept. Applied in: Task 3c.
+- **O19 — Budget for 28 units (Revision 2).** Default: `max_invocations` 24. That is the pilot's 2–4 invocations, about 14 for the 27 closed quarterly members at about 2 for each invocation, and reruns. The other limits stay as O8 and Revision 1 set them. They are upper bounds and still hold, now with more margin: about 158 of 300 distinct URLs and about 148 MB of 1 GiB received bytes. The runtime and the member-wall limit do not change. Alternative: also lower the campaign request, URL and byte limits in proportion. Applied in: Tasks 3c, 4.
 
 ## Facts established while planning (read-only, 2026-10-21)
 
@@ -174,6 +190,14 @@ No SEC request was sent. Nothing under `data/` was written. The store was opened
 - **F19 — A1 arises in the pilot.** The pilot's selection holds the 2026Q4 quarter-to-date quarterly source and the 2026Q4 daily sources. Once the quarterly source is published, later 2026Q4 daily members take the A1 path, which plan 5 did not measure (O15).
 - **F20 — History scan starts at zero.** The live store has 0 `WorkflowChildCall` rows and 14 `Attempt` rows (all from L12, run `accept-38bf7c024e0fd5ac`). Each timed member adds up to 3 child calls. The measured slopes are 0.0218–0.0290 s per row (`measurement.md`, "History scan (S4)").
 
+## Facts established for Revision 2 (read-only, 2026-10-29)
+
+No SEC request was sent. Nothing under `data/` was written. Scratch configs were written to the ignored `logs/` and deleted.
+
+- **F21 — New config hashes.** Replacing the one `"start_quarter": "2015Q1"` with `"start_quarter": "2020Q1"` in `conf/sec-edgar-local.json` gives file SHA-256 `bfdf29859325fa396520c0fabd0bcd6f6e34d8854b558d56e4bf4a7731038204` (1,361 bytes, the same length) and effective SHA-256 `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`. Two paths gave the same effective hash: a byte copy in `logs/`, whose relative roots resolve to the same absolute paths, and the slice-generator path with absolute roots. The effective mapping differs from the live one only in `backfill`. All 13 Task 3b configs still equal the live config except for `backfill`, with their F13 hashes. Their hashes do not depend on the live start.
+- **F22 — Store and coverage on the new range.** The store opens with operator access under the edited config (16 `QuarterPublication` rows), so the store binding excludes the range (§4.5). `coverage --start 2020Q1 --end 2026Q4 --open-quarter 2026Q4` gives `{'no_campaign_result': 28}` and 16 published daily-only quarters. With `--check full` it reads 6,744 rows. `other_filing_quarters` is empty: every published quarter is 2021Q1 or later.
+- **F23 — The engine reads the range only from config.** `discovery.py` and `runner.py` take `backfill.start_quarter` from settings. `workflows/results.py` rebuilds a result's requested quarters from the effective config recorded in that result, so the live edit does not change how slice results validate. Daily rows back-dated into filing quarters before 2020Q1 still publish, as daily-only quarters outside the range. Coverage lists them under `other_filing_quarters`.
+
 ## File structure
 
 | Path | Responsibility | Task |
@@ -182,14 +206,16 @@ No SEC request was sent. Nothing under `data/` was written. The store was opened
 | `packages/sec-edgar-ingest/tests/test_baseline_campaign.py` | Offline tests: pure rules plus fixture-store workflows. | 1, 3a |
 | `.gitignore` | Adds `backups/`. | 2 |
 | `backups/stage2-pre-campaign-<stamp>/` (ignored) | Stopped-writer backup: SQLite backup copy and raw copy of `data/`. | 2 |
-| `specs/evidence/baseline-campaign/pre-campaign.md`, `pre-campaign/*.json` | Integrity findings, backup, restoration and known-answer results. `pre-campaign/1b/*.json` holds the Revision 1 known answers. | 2–3, 3b |
+| `specs/evidence/baseline-campaign/pre-campaign.md`, `pre-campaign/*.json` | Integrity findings, backup, restoration and known-answer results. `pre-campaign/1b/*.json` holds the Revision 1 known answers, `pre-campaign/rev2/*.json` the Revision 2 ones. | 2–3, 3b, 3c |
 | `conf/stage2/backfill-<start>-<end>.json` | Range-only slice configs bound to `fc68adef…`. History; never run. | 3 |
-| `conf/stage2/1b/backfill-<start>-<end>.json` | The 13 range-only slice configs bound to `9fa189a0…`. | 3b, 5 |
-| `specs/evidence/baseline-campaign/campaign.md`, `campaign.json` | Scope, budget, slice plan, stop rules, evidence locations, approval boundary, release gate and owner approval. Rewritten for the 1b release. | 3, 3b, 4 |
+| `conf/stage2/1b/backfill-<start>-<end>.json` | The range-only slice configs bound to `9fa189a0…`: 13 made, 8 kept. | 3b, 3c, 5 |
+| `conf/sec-edgar-local.json` | The live config. Task 3c changes `backfill.start_quarter` to `2020Q1`. | 3c |
+| `docs/runbooks/local-ingestion.md` | The backfill start in its config rules. | 3c |
+| `specs/evidence/baseline-campaign/campaign.md`, `campaign.json` | Scope, budget, slice plan, stop rules, evidence locations, approval boundary, release gate and owner approval. Rewritten for the 1b release, then edited for the 2020Q1 range. | 3, 3b, 3c, 4 |
 | `specs/evidence/baseline-campaign/invocations.md`, `invocations/<k>-<run-id>.json` | Ledger and record for each invocation, with its timing summary. | 5 |
 | `specs/evidence/baseline-campaign/final/*.json`, `quarantine/<quarter>.txt` | Final full coverage, audit, timing, inventory comparison and conflict enumerations. | 6 |
 | `specs/evidence/baseline-campaign/coverage-finding.md` | The G2 finding, dispositions and operating decision. | 7 |
-| `specs/sec-filing-index-ingestion-spec.md` | Amendment for F3 and the config observation, only if O4 is approved. | 8 |
+| `specs/sec-filing-index-ingestion-spec.md` | Amendment for F3 and the config observation (Task 8). §4.8 backfill row and effective hash for the 2020Q1 range (Task 3c). | 8, 3c |
 
 ---
 
@@ -1703,6 +1729,8 @@ git commit -m "feat(scripts): add integrity coverage and member timing to the ca
 
 ### Task 3b: Known answers, slice configs and campaign files on the 1b release (offline, O13–O16)
 
+> Revision 2: executed at `c9a9cb3`. Task 3c replaces this task's live-config values and removes five of its 13 configs. The text below is the execution record.
+
 **Files:**
 - Create: `specs/evidence/baseline-campaign/pre-campaign/1b/preflight.json`, `audit.json`, `coverage-integrity.json`, `coverage-full.json`, `timing.json`, `files.json`
 - Modify: `specs/evidence/baseline-campaign/pre-campaign.md` (append a Revision 1 section)
@@ -2005,39 +2033,378 @@ git commit -m "docs(evidence): rebase the Stage 2 campaign onto the 1b release"
 
 ---
 
+### Task 3c: Start the range at 2020Q1: live config, spec, slices, known answers and campaign files (offline, D10, O18, O19)
+
+> Revision 2: new task.
+
+**Files:**
+- Modify: `conf/sec-edgar-local.json` (one substitution)
+- Modify: `specs/sec-filing-index-ingestion-spec.md` (§4.8: the backfill row and the effective hash; the status line untouched)
+- Modify: `docs/runbooks/local-ingestion.md` (line 23, the backfill start)
+- Delete: `conf/stage2/1b/backfill-2015Q1-2015Q4.json`, `backfill-2016Q1-2016Q4.json`, `backfill-2017Q1-2017Q4.json`, `backfill-2018Q1-2018Q4.json`, `backfill-2019Q1-2019Q4.json`
+- Create: `specs/evidence/baseline-campaign/pre-campaign/rev2/preflight.json`, `audit.json`, `coverage-integrity.json`, `coverage-full.json`, `timing.json`, `files.json`
+- Modify: `specs/evidence/baseline-campaign/campaign.json`, `campaign.md`, `pre-campaign.md` (append a Revision 2 section)
+
+**Interfaces:**
+- Consumes: D10, O18, O19. The Task 3a tool at `b176598`. The Task 3b files at `c9a9cb3`. The live root as Task 2 left it (F14).
+- Produces: the live config with file hash `bfdf2985…` and effective hash `2512fdcb…`. 8 slice configs with their F13 hashes. `campaign.json` with `max_invocations` 24. `campaign.md` for the 2020Q1 range, which Task 4 gates and Task 5 obeys.
+
+No file under `packages/sec-edgar-ingest/src` changes, the release is unchanged, and no test reads the live config (Revision 2, item 4). So the full offline checker is not required.
+
+- [ ] **Step 1: Confirm the starting state**
+
+```sh
+# prelude
+pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_bootstrap' || echo 'no writer'
+shasum -a 256 conf/sec-edgar-local.json
+git status --short -- conf/ specs/ docs/
+ls conf/stage2/1b | wc -l
+```
+
+Expected: `no writer`, the file hash `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc`, no `git status` line, and `13`. Any other result stops the plan.
+
+- [ ] **Step 2: Edit the live config**
+
+This is the one approved edit of the live config (D10). It changes only the start quarter.
+
+```sh
+# prelude
+native - "$project/conf/sec-edgar-local.json" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = path.read_bytes()
+old, new = b'"start_quarter": "2015Q1"', b'"start_quarter": "2020Q1"'
+if data.count(old) != 1:
+    raise SystemExit('expected exactly one 2015Q1 start_quarter')
+path.write_bytes(data.replace(old, new))
+PY
+shasum -a 256 conf/sec-edgar-local.json
+git diff --stat -- conf/sec-edgar-local.json
+```
+
+Expected: `bfdf29859325fa396520c0fabd0bcd6f6e34d8854b558d56e4bf4a7731038204`, then `1 file changed, 1 insertion(+), 1 deletion(-)`. Any other hash stops the plan: restore the file with `git checkout -- conf/sec-edgar-local.json` and report.
+
+- [ ] **Step 3: Offline preflight of the edited config**
+
+```sh
+# prelude
+mkdir -p "$evidence/pre-campaign/rev2"
+native - "$project/conf/sec-edgar-local.json" <<'PY' | tee "$evidence/pre-campaign/rev2/preflight.json"
+import json, sys
+from pathlib import Path
+from sec_edgar_ingest.config import load_config
+from sec_edgar_ingest.runtime import preflight_current
+settings = load_config(Path(sys.argv[1]))
+verified = preflight_current(Path(settings.runtime.release_manifest))
+print(json.dumps({'effective_config_sha256': settings.config_sha256, 'release_id': verified.release_id,
+                  'backfill': [settings.backfill.start_quarter, settings.backfill.end_quarter],
+                  'dispatch_reserve_seconds': settings.execution.dispatch_reserve_seconds},
+                 sort_keys=True, indent=1))
+PY
+```
+
+Expected: `backfill` `["2020Q1", "open"]`, `dispatch_reserve_seconds` `1800`, `effective_config_sha256` `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5` and `release_id` `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b`. Any difference stops the plan.
+
+- [ ] **Step 4: Remove the five unused slice configs (O18)**
+
+```sh
+# prelude
+for year in 2015 2016 2017 2018 2019; do git rm -q "conf/stage2/1b/backfill-${year}Q1-${year}Q4.json"; done
+ls conf/stage2/1b
+```
+
+Expected: exactly these 8 names: `backfill-2020Q1-2020Q4.json`, `backfill-2021Q1-2021Q4.json`, `backfill-2022Q1-2022Q4.json`, `backfill-2023Q1-2023Q4.json`, `backfill-2024Q1-2024Q4.json`, `backfill-2025Q1-2025Q4.json`, `backfill-2026Q1-2026Q3.json`, `backfill-2026Q4-open.json`.
+
+- [ ] **Step 5: Check the generator and the kept slices against the edited config**
+
+The `slice_config` function is Task 3b's, unchanged. It writes into `conf/stage2/1b/` and refuses to overwrite a file.
+
+```sh
+# prelude
+slice_config() {
+  native - "$project/conf/sec-edgar-local.json" "$project/conf/stage2/1b" "$1" "$2" <<'PY'
+import json, sys
+from pathlib import Path
+from sec_edgar_ingest.config import load_config
+base_path, directory, start, end = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4]
+base = load_config(base_path)
+value = json.loads(base_path.read_text())
+value['backfill'] = {'start_quarter': start, 'end_quarter': end}
+value['storage']['root'] = base.storage.root
+value['logging']['root'] = base.logging.root
+directory.mkdir(parents=True, exist_ok=True)
+target = directory / f'backfill-{start}-{end}.json'
+with target.open('x') as stream:
+    json.dump(value, stream, indent=2)
+    stream.write('\n')
+derived = load_config(target)
+expected = base.to_mapping()
+expected['backfill'] = {'start_quarter': start, 'end_quarter': end}
+if derived.to_mapping() != expected:
+    raise SystemExit('slice config differs from the live config beyond the backfill range')
+print(target.name, derived.config_sha256)
+PY
+}
+slice_config 2020Q1 open && rm "$project/conf/stage2/1b/backfill-2020Q1-open.json"
+native - "$project/conf/sec-edgar-local.json" "$project/conf/stage2/1b" <<'PY'
+import sys
+from pathlib import Path
+from sec_edgar_ingest.config import load_config
+base = load_config(Path(sys.argv[1]))
+for path in sorted(Path(sys.argv[2]).glob('backfill-*.json')):
+    derived = load_config(path)
+    expected = base.to_mapping()
+    expected['backfill'] = derived.to_mapping()['backfill']
+    print(path.name, derived.config_sha256, derived.to_mapping() == expected)
+PY
+git status --short -- conf/stage2/1b
+```
+
+Expected:
+
+- The first line is `backfill-2020Q1-open.json 2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, the new live effective hash. That file is then removed.
+- Then 8 lines. Each ends in `True` and shows exactly its F13 hash: `2020Q1-2020Q4` `6af8dd95…`, `2021Q1-2021Q4` `403ee6d8…`, `2022Q1-2022Q4` `ce09a643…`, `2023Q1-2023Q4` `12b29832…`, `2024Q1-2024Q4` `b3800ebb…`, `2025Q1-2025Q4` `1d733369…`, `2026Q1-2026Q3` `d84919ef…`, `2026Q4-open` `aab50ee2…`.
+- `git status` shows only the five `D` lines from Step 4. The kept configs are byte-identical.
+
+Any other hash, a `False`, or a modified kept config stops the plan.
+
+- [ ] **Step 6: Known answers on the live store under the edited config**
+
+```sh
+# prelude
+out="$evidence/pre-campaign/rev2"
+tool audit --config "$project/conf/sec-edgar-local.json" > "$out/audit.json"; echo "audit exit=$?"
+tool coverage --config "$project/conf/sec-edgar-local.json" --start 2020Q1 --end 2026Q4 --open-quarter 2026Q4 \
+  --check integrity > "$out/coverage-integrity.json"; echo "integrity exit=$?"
+tool coverage --config "$project/conf/sec-edgar-local.json" --start 2020Q1 --end 2026Q4 --open-quarter 2026Q4 \
+  --check full > "$out/coverage-full.json"; echo "full exit=$?"
+tool timing --config "$project/conf/sec-edgar-local.json" > "$out/timing.json"; echo "timing exit=$?"
+mkdir -p "$campaign_logs"
+tool files --root "$project/data" --recorded specs/evidence/local-port/sec-acceptance.json > "$campaign_logs/files-rev2.json"; echo "files exit=$?"
+native - "$campaign_logs/files-rev2.json" <<'PY' > "$out/files.json"
+import json, sys
+value = json.load(open(sys.argv[1]))
+print(json.dumps({'file_count': value['inventory']['file_count'], 'byte_count': value['inventory']['byte_count'],
+                  'comparison': value['comparison']}, sort_keys=True, indent=1))
+PY
+native - "$out" <<'PY'
+import json, sys
+from pathlib import Path
+out = Path(sys.argv[1])
+print(json.load(open(out / 'audit.json'))['store_total'])
+for name in ('coverage-integrity.json', 'coverage-full.json'):
+    value = json.load(open(out / name))
+    views = [unit['filing_quarter'] for unit in value['units'] if unit['filing_quarter']['status'] == 'published']
+    print(value['check'], value['verdicts'], len(views), sorted({str(view['validated_rows']) for view in views})[:1],
+          sum(view['validated_rows'] or 0 for view in views),
+          sorted({view['membership_source_id'] for view in views}, key=str), value['other_filing_quarters'])
+timing = json.load(open(out / 'timing.json'))
+print(timing['runs'], timing['child_call_rows'], json.load(open(out / 'files.json')))
+PY
+```
+
+Expected, as planning observed on 2026-10-29 (F15, F22):
+
+- `audit exit=0`, `integrity exit=0`, `full exit=0`, `timing exit=0`, `files exit=0`. The full coverage takes about one minute.
+- `store_total` has `attempts: 10`, `distinct_urls: 10`, `max_ordinal: 1`, `received_bytes: 4946565`, `uncertain: 0`, `access_denied: 0`.
+- `integrity {'no_campaign_result': 28} 16 ['None'] 0 [None] []`.
+- `full {'no_campaign_result': 28} 16 ['1'] 6744 [None] []`.
+- `[] 0`, then 153 files and a comparison with only SQLite journal files under `changed_state`.
+
+Any other value stops the plan.
+
+- [ ] **Step 7: Amend the spec and the runbook**
+
+Spec-level edits (D10), approved with this revision. Each new spec line carries `(owner, plan 2, 2026-10-29)`. The spec's status line is not touched.
+
+```sh
+# prelude
+native - "$project/specs/sec-filing-index-ingestion-spec.md" "$project/docs/runbooks/local-ingestion.md" <<'PY'
+import sys
+from pathlib import Path
+spec, runbook = Path(sys.argv[1]), Path(sys.argv[2])
+EDITS = {
+    spec: [
+        ('| Backfill / handoff | `2015Q1` through `open`; daily handoff `2026-10-01`. |\n',
+         '| Backfill / handoff | `2020Q1` through `open`; daily handoff `2026-10-01` (owner, plan 2, 2026-10-29). |\n'),
+        ('The effective-config SHA-256 is\n'
+         '`db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.\n',
+         'The effective-config SHA-256 was\n'
+         '`db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.\n'
+         'Plan 2 Revision 2 moved the backfill start to `2020Q1`. The effective-config SHA-256 is now\n'
+         '`2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, confirmed by offline preflight\n'
+         '(owner, plan 2, 2026-10-29).\n')],
+    runbook: [('backfill `2015Q1` to `open`', 'backfill `2020Q1` to `open`')],
+}
+for path, edits in EDITS.items():
+    text = path.read_text()
+    for old, new in edits:
+        if text.count(old) != 1:
+            raise SystemExit(f'{path.name}: expected exactly one match for: {old[:60]}')
+        text = text.replace(old, new)
+    path.write_text(text)
+    print(path.name, len(edits), 'edits')
+PY
+git diff --stat -- specs/sec-filing-index-ingestion-spec.md docs/runbooks/local-ingestion.md
+```
+
+Expected: `sec-filing-index-ingestion-spec.md 2 edits` and `local-ingestion.md 1 edits`, then 2 files changed. The spec diff changes the §4.8 backfill row and adds three lines after the `db62e7fb…` hash. The runbook diff changes only `2015Q1` to `2020Q1` on line 23.
+
+- [ ] **Step 8: Edit `specs/evidence/baseline-campaign/campaign.json` (O19)**
+
+Replace the whole file with:
+
+```json
+{
+ "format_version": "sec-baseline-campaign-budget-v1",
+ "max_distinct_urls": 300,
+ "max_invocations": 24,
+ "max_member_wall_seconds": 1056,
+ "max_received_bytes": 1073741824,
+ "max_request_attempts": 1500,
+ "max_request_attempts_per_invocation": 700
+}
+```
+
+Only `max_invocations` changes, from 40 to 24.
+
+- [ ] **Step 9: Edit `specs/evidence/baseline-campaign/campaign.md` for the 2020Q1 range**
+
+```sh
+# prelude
+native - "$evidence/campaign.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+EDITS = [
+    ('**Plan:** [plan 2](../../plans/2-sec-filing-index-ingestion-spec.md), Revision 1.\n',
+     '**Plan:** [plan 2](../../plans/2-sec-filing-index-ingestion-spec.md), Revisions 1 and 2.\n'),
+    ('release gate stayed closed (plan 2, F11). This version replaces it.\n',
+     'release gate stayed closed (plan 2, F11). This version replaces it. Plan 2 Revision 2 (D10) moved the\n'
+     'range start from 2015Q1 to 2020Q1 in this file and in the live config.\n'),
+    ('| Live config | `conf/sec-edgar-local.json`, effective SHA-256 `db62e7fb…`, file SHA-256 `de6c0dd9…` |\n',
+     '| Live config | `conf/sec-edgar-local.json`, range `2020Q1`–`open`, effective SHA-256 `2512fdcb…`, '
+     'file SHA-256 `bfdf2985…` |\n'),
+    ('| Slice configs | `conf/stage2/1b/`, 13 files. Effective hashes: plan 2, F13. |\n',
+     '| Slice configs | `conf/stage2/1b/`, 8 files. Effective hashes: plan 2, F13 (the pilot and the 2020–2026 rows). |\n'),
+    ('| Slice generator check | `2015Q1`–`open` reproduces the live effective hash `db62e7fb…` |\n',
+     '| Slice generator check | `2020Q1`–`open` reproduces the live effective hash `2512fdcb…` |\n'),
+    ('([pre-campaign.md](pre-campaign.md), Revision 1 section).\n',
+     '([pre-campaign.md](pre-campaign.md), Revision 2 section).\n'),
+    ('- Requested units: the quarterly sources 2015Q1–2026Q4, which is 48 units.',
+     '- Requested units: the quarterly sources 2020Q1–2026Q4, which is 28 units.'),
+    ('  2. The calendar years 2015, 2016, …, 2025, one slice each, in ascending order.\n',
+     '  2. The calendar years 2020, 2021, …, 2025, one slice each, in ascending order.\n'),
+    ('  quarters (findings §4.7).\n',
+     '  quarters (findings §4.7). Rows back-dated before 2020Q1 publish daily-only filing quarters outside\n'
+     '  the range. Coverage lists them under `other_filing_quarters` (plan 2 F23).\n'),
+    ('Possible quarantines for 2015Q1 and 2026Q3 (retained conflict specimens).',
+     'A possible quarantine for 2026Q3 (retained conflict specimen).'),
+    ('| Invocations | 40 | audit, stop rule 4 | pilot 2–4; about 24 for the year slices at about 2 full-size members each; reruns |\n',
+     '| Invocations | 24 | audit, stop rule 4 | pilot 2–4; about 14 for the year slices at about 2 full-size members each; '
+     'reruns (plan 2 O19) |\n'),
+    ('about 1 + 12 + 48 full-index listings, 48 quarterly bodies, 4 daily listings and about 90 daily bodies, about 203 |\n',
+     'about 1 + 7 + 28 full-index listings, 28 quarterly bodies, 4 daily listings and about 90 daily bodies, about 158 |\n'),
+    ('about 47 × 4.3 MB + 90 × 0.35 MB, about 235 MB', 'about 27 × 4.3 MB + 90 × 0.35 MB, about 148 MB'),
+    ('Expected launcher time: about 26–30 invocations of about 2,200 s each.',
+     'Expected launcher time: about 16–20 invocations of about 2,200 s each.'),
+    ('12. **Finish** when every quarter 2015Q1–2026Q4 has a campaign result',
+     '12. **Finish** when every quarter 2020Q1–2026Q4 has a campaign result'),
+    ('`pre-campaign.md`, `pre-campaign/1b/`, `invocations.md`,',
+     '`pre-campaign.md`, `pre-campaign/1b/`, `pre-campaign/rev2/`, `invocations.md`,'),
+    ("The owner's approval of Revision 1 authorizes Tasks 3a and 3b.\n",
+     "The owner's approval of Revision 1 authorizes Tasks 3a and 3b.\n"
+     "  The owner's approval of Revision 2 authorizes Task 3c, including its one live config edit.\n"),
+]
+for old, new in EDITS:
+    if text.count(old) != 1:
+        raise SystemExit('campaign.md: expected exactly one match for: ' + old[:60])
+    text = text.replace(old, new)
+for stale in ('2015', '48 units', 'db62e7fb', 'de6c0dd9', '13 files'):
+    if stale in text.replace('from 2015Q1 to 2020Q1', ''):
+        raise SystemExit('campaign.md still names ' + stale)
+path.write_text(text)
+print('campaign.md: %d edits' % len(EDITS))
+PY
+```
+
+Expected: `campaign.md: 17 edits`. Planning dry-ran this script on a copy of the `c9a9cb3` file. Any `SystemExit` stops the plan. The Approval section stays "To be completed in Task 4".
+
+- [ ] **Step 10: Append the Revision 2 section to `pre-campaign.md`**
+
+Every value below must equal the Step 2–6 outputs. A difference stops the plan.
+
+```markdown
+
+## Known-answer checks after the 2020Q1 range change (plan 2 Revision 2)
+
+- The live config now starts at `2020Q1` (plan 2, D10). File bytes `bfdf2985…`, effective config `2512fdcb…`.
+- [rev2/preflight.json](pre-campaign/rev2/preflight.json): effective config `2512fdcb…`, release `9fa189a0…`,
+  range 2020Q1–open, reserve 1800.
+- Slice generator: `2020Q1`–`open` reproduces `2512fdcb…`. The 8 configs left in `conf/stage2/1b/` keep
+  their plan 2 F13 hashes and equal the live config except for the range. The five 2015–2019 configs were
+  removed (plan 2, O18).
+- [rev2/audit.json](pre-campaign/rev2/audit.json): 10 transport attempts, 10 URLs, 4,946,565 received bytes,
+  ordinal 1 only. This equals L12.
+- [rev2/coverage-integrity.json](pre-campaign/rev2/coverage-integrity.json) and
+  [rev2/coverage-full.json](pre-campaign/rev2/coverage-full.json): 28 requested units without a campaign
+  result; 16 published quarters, all daily-only and all inside the range. The full check reads 6,744 rows.
+  The integrity check reads no row.
+- [rev2/timing.json](pre-campaign/rev2/timing.json): no workflow result yet, 0 `WorkflowChildCall` rows.
+- [rev2/files.json](pre-campaign/rev2/files.json): 153 files. Against L12, only SQLite journal state changed.
+```
+
+- [ ] **Step 11: Commit**
+
+```sh
+git diff --check
+git add conf/sec-edgar-local.json conf/stage2/1b/ specs/sec-filing-index-ingestion-spec.md \
+  docs/runbooks/local-ingestion.md specs/evidence/baseline-campaign/
+git status --short
+git commit -m "chore(config): start the Stage 2 range at 2020Q1"
+```
+
+Expected: `git status` lists the live config, the five deleted configs, the spec, the runbook, `campaign.json`, `campaign.md`, `pre-campaign.md` and the six `pre-campaign/rev2/` files, all staged.
+
+---
+
 ### Task 4: Release gate and owner live-execution gate (human checkpoint)
 
 > Revision 1: rewritten for release `9fa189a0…`. The 2026-10-21 text gated `fc68adef…` and stays in git history at `4004f2e`.
+>
+> Revision 2: Step 1 checks the edited config and the Task 3c commit. Step 2 asks all ten items again for the 2020Q1 range. Step 1 ran once under Revision 1 on 2026-10-29 and found the gate standing for the 2015Q1 config. It is unticked so that it runs again after Task 3c.
 
 **Files:**
 - Modify: `specs/evidence/baseline-campaign/campaign.md` (`Status` and `Approval` sections)
 - Modify: `specs/evidence/baseline-campaign/campaign.json` (only if the owner changes a limit)
 
 **Interfaces:**
-- Consumes: the Task 3a and 3b commits, and `specs/evidence/baseline-campaign/pre-campaign/1b/preflight.json`.
+- Consumes: the Task 3a, 3b and 3c commits, and `specs/evidence/baseline-campaign/pre-campaign/rev2/preflight.json`.
 - Produces: either a stop that ends the plan, or the approval commit that Task 5 checks before every invocation.
 
-- [x] **Step 1: Check the release gate**
+- [ ] **Step 1: Check the release gate**
 
 ```sh
 # prelude
 native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["release_id"], v["effective_config_sha256"], v["dispatch_reserve_seconds"])' \
-  "$evidence/pre-campaign/1b/preflight.json"
+  "$evidence/pre-campaign/rev2/preflight.json"
 shasum -a 256 conf/sec-edgar-local.json
 git log -1 --format='%H %s' -- specs/evidence/baseline-campaign/campaign.md
 ```
 
-Expected: `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1 1800`, then the file hash `de6c0dd9…`, then the Task 3b commit.
+Expected: `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b 2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5 1800`, then the file hash `bfdf29859325fa396520c0fabd0bcd6f6e34d8854b558d56e4bf4a7731038204`, then the Task 3c commit.
 
-- If the release, the effective hash, the file hash or the reserve differs, stop. The owner has selected another release or config, and this revision pins `9fa189a0…`. Revise the plan again (Global Constraints, Task 3a Step 5, Task 3b) and get owner review before any gate.
+- If the release, the effective hash, the file hash or the reserve differs, stop. The owner has selected another release or config, and this revision pins `9fa189a0…` and the 2020Q1 config. Revise the plan again (Global Constraints, Task 3a Step 5, Tasks 3b and 3c) and get owner review before any gate.
 - Otherwise the Release gate that Task 3b wrote stands. Continue to Step 2.
 
 - [ ] **Step 2: Present the revision and the campaign files to the owner**
 
-Present `pre-campaign.md` (its Revision 1 section), `campaign.md`, and plan 2's O12–O17. Ask the owner to confirm or change each of these:
+Present `pre-campaign.md` (its Revision 1 and Revision 2 sections), `campaign.md`, and plan 2's O12–O19 and D10. Ask the owner to confirm or change each of these. Ask every item again, including the ones answered before Revision 2 (Revision 2, item 5). Ask one question for each item, so that a changed answer to one item cannot silently replace the others.
 
-1. The range, 2015Q1–2026Q4 (O1).
-2. The slice list, the budget and the stop rules (O13).
+1. The range, 2020Q1–2026Q4, 28 units (O1, D10).
+2. The slice list (8 configs), the budget (`max_invocations` 24) and the stop rules (O13, O18, O19).
 3. The runtime per invocation: 3,300 s, or another value above the 1,800 s reserve and at most 3,600 s.
 4. The member-wall limit, 1,056 s (O14).
 5. The pilot as the first measurement of the A1 member class (O15).
@@ -2065,6 +2432,8 @@ Replace the Approval section with the following, filled only from the owner's wo
 - Sole-issuer declaration, verbatim: "<owner's words>"
 ```
 
+If the owner selects wording that the operator drafted, in place of typing it, record the declaration line as `- Sole-issuer declaration: the owner selected this drafted wording: "<exact text>"`. The record then shows where the words came from.
+
 Set `**Status:** Approved for live execution within the limits above.`
 
 - If the owner changes a limit, the member-wall limit included, update `campaign.json` in the same commit.
@@ -2083,6 +2452,8 @@ git commit -m "docs(evidence): record the Stage 2 release gate and owner decisio
 ### Task 5: Campaign invocations (live, after Task 4 approval)
 
 > Revision 1: rewritten for release `9fa189a0…`: a fixed slice list instead of a sizing rule, integrity coverage and member timing after each invocation, and stop rules 7 and 8.
+>
+> Revision 2: the 8 configs from 2020Q1, the edited live config hash, and coverage from 2020Q1.
 
 **Files:**
 - Create: `specs/evidence/baseline-campaign/invocations.md`
@@ -2090,13 +2461,13 @@ git commit -m "docs(evidence): record the Stage 2 release gate and owner decisio
 - Create (ignored): `logs/baseline-campaign/coverage-after-<k>.json`, `audit-after-<k>.json`, `timing-after-<k>.json`, `files-after-<k>.json`, `launcher-exit-<k>`, `invocation-<k>.json`
 
 **Interfaces:**
-- Consumes: the Task 4 approval commit, `campaign.json`, the 13 configs in `conf/stage2/1b/`, and Task 3a's `tool audit / coverage --check integrity / timing / files`.
+- Consumes: the Task 4 approval commit, `campaign.json`, the 8 configs in `conf/stage2/1b/`, and Task 3a's `tool audit / coverage --check integrity / timing / files`.
 - Produces: the result refs and run IDs for Task 6, in `invocations/*.json`. Each record has an `after` block.
 
 The slice order is fixed (O13). Each entry is a file in `conf/stage2/1b/`:
 
 1. `backfill-2026Q4-open.json` (the pilot). It reruns under stop rule 9 until no daily source is pending.
-2. `backfill-2015Q1-2015Q4.json`, then each year to `backfill-2025Q1-2025Q4.json`, in ascending order.
+2. `backfill-2020Q1-2020Q4.json`, then each year to `backfill-2025Q1-2025Q4.json`, in ascending order.
 3. `backfill-2026Q1-2026Q3.json`.
 
 Repeat Steps 1–7 for k = 1, 2, … until a stop rule says finish or halt. Never start an invocation while another writer runs. Never read the store while the launcher runs.
@@ -2132,7 +2503,7 @@ Expected:
 
 - `no writer`.
 - The last `campaign.md` commit is the Task 4 approval commit.
-- The live config file hash is `de6c0dd9…`. A different hash means the config or its release changed: halt (Global Constraints, release history).
+- The live config file hash is `bfdf2985…` (F21). A different hash means the config or its release changed: halt (Global Constraints, release history).
 - At least 50 GiB available.
 - Store growth since pre-campaign (12 MB) of at most 30 GiB.
 - The UTC time is inside the approved window and before 2027-01-01T00:00:00Z.
@@ -2231,7 +2602,7 @@ for f in "$evidence"/invocations/*-*.json; do
 done
 this=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["result_ref"])' "$record")
 limit=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["max_member_wall_seconds"])' "$evidence/campaign.json")
-tool coverage --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --start 2015Q1 --end 2026Q4 \
+tool coverage --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --start 2020Q1 --end 2026Q4 \
   --open-quarter 2026Q4 --check integrity > "$campaign_logs/coverage-after-$k.json"; echo "coverage exit=$?"
 tool timing --config "$project/conf/sec-edgar-local.json" --result "$this" --max-member-wall "$limit" \
   > "$campaign_logs/timing-after-$k.json"; echo "timing exit=$?"
@@ -2294,6 +2665,8 @@ On Rerun or Next slice, go back to Step 1. On Finish, go to Task 6. On Halt, rep
 ### Task 6: Final coverage inventory, integrity and quarantine enumeration (offline)
 
 > Revision 1: Step 1 now runs the full content check once (`--check full`) and adds the final timing report.
+>
+> Revision 2: the range starts at 2020Q1, which is 28 units.
 
 **Files:**
 - Create: `specs/evidence/baseline-campaign/final/coverage.json`, `audit.json`, `timing.json`, `files.json`
@@ -2305,7 +2678,7 @@ On Rerun or Next slice, go back to Step 1. On Finish, go to Task 6. On Halt, rep
 
 - [ ] **Step 1: Final full coverage, audit and timing**
 
-The full check reads every published quarter once through the release's full content check. That is about 415 s for each full-size quarter (F16), so expect about 6 hours for the 48 units. Run it in the background with the agent harness's background mode, and wait for the exit notification. No writer may run until it ends.
+The full check reads every published quarter once through the release's full content check. That is about 415 s for each full-size quarter (F16), so expect about 3.5 hours for the 28 units. Run it in the background with the agent harness's background mode, and wait for the exit notification. No writer may run until it ends.
 
 ```sh
 # prelude
@@ -2317,7 +2690,7 @@ for f in "$evidence"/invocations/*-*.json; do
   flags+=(--run-id "$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$f")")
 done
 limit=$(native -c 'import json,sys; print(json.load(open(sys.argv[1]))["max_member_wall_seconds"])' "$evidence/campaign.json")
-tool coverage --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --start 2015Q1 --end 2026Q4 \
+tool coverage --config "$project/conf/sec-edgar-local.json" "${refs[@]}" --start 2020Q1 --end 2026Q4 \
   --open-quarter 2026Q4 --check full > "$evidence/final/coverage.json"; echo "coverage exit=$?"
 tool audit --config "$project/conf/sec-edgar-local.json" "${flags[@]}" --budget "$evidence/campaign.json" \
   > "$evidence/final/audit.json"; echo "audit exit=$?"
@@ -2327,7 +2700,7 @@ native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(v["check"], v[
 native -c 'import json,sys; v=json.load(open(sys.argv[1])); print(len(v["runs"]), v["child_call_rows"], v["max_member_wall"], len(v["breaches"]))' "$evidence/final/timing.json"
 ```
 
-Expected: `coverage exit=0`, `audit exit=0` and `timing exit=0`. The coverage check is `full`, and the verdicts cover exactly 48 units with no `published_unchecked`. The timing report has one run for each invocation with a result, and 0 breaches against the limit in `campaign.json`. If the owner approved a higher limit after a halt, `campaign.json` already carries it.
+Expected: `coverage exit=0`, `audit exit=0` and `timing exit=0`. The coverage check is `full`, and the verdicts cover exactly 28 units with no `published_unchecked`. The timing report has one run for each invocation with a result, and 0 breaches against the limit in `campaign.json`. If the owner approved a higher limit after a halt, `campaign.json` already carries it.
 
 - [ ] **Step 2: Final integrity comparison**
 
@@ -2378,6 +2751,8 @@ git commit -m "docs(evidence): record final Stage 2 coverage and quarantine enum
 ### Task 7: G2 coverage finding, owner dispositions and operating decision
 
 > Revision 1: §2 adds the timing evidence, §4 names a refused incremental candidate, and the new §8 records the revisit triggers deferred into Stage 2 (O17).
+>
+> Revision 2: the range is 2020Q1–2026Q4, and §5 reports filing quarters before 2020Q1.
 
 **Files:**
 - Create: `specs/evidence/baseline-campaign/coverage-finding.md`
@@ -2394,7 +2769,7 @@ Use these sections in this order. Take every number from the cited JSON files. D
 # Stage 2 baseline coverage finding (G2)
 
 **Status:** Proposed for owner disposition. **Plan:** [plan 2](../../plans/2-sec-filing-index-ingestion-spec.md).
-**Range:** 2015Q1–2026Q4 (48 quarterly units; 2026Q4 open). **Release:** `9fa189a0…` (reserve 1,800 s).
+**Range:** 2020Q1–2026Q4 (28 quarterly units; 2026Q4 open; start set by plan 2 D10). **Release:** `9fa189a0…` (reserve 1,800 s).
 Slice configs: `conf/stage2/1b/`, see invocations.md.
 
 ## 1. Result
@@ -2427,7 +2802,8 @@ parser/schema design (Size: design)", "deferred to Stage 4 reconciliation approv
 gets "deferred to Stage 4 recovery disposition"; its objects stay in the store.
 
 ## 5. Other output
-- Filing quarters outside the range (other_filing_quarters).
+- Filing quarters outside the range (other_filing_quarters). Quarters before 2020Q1 hold only back-dated
+  daily rows: no quarterly source was requested for them (plan 2 D10, F23).
 - Daily sources processed as retained work (daily_sources): count, period range, outcomes. These are
   Stage 3 inputs.
 - The open quarter 2026Q4: the snapshot receipt time, and the fact that its absences are not withdrawal
@@ -2534,11 +2910,11 @@ git commit -m "docs(specs): record tracked config and absent L12 external eviden
 
 ## After the last task
 
-When Tasks 3a–7 have run under Revision 1, run the writing-plans Plan Completion Protocol, step 3a included. Rewrite the Handoff below from what then ships. In step 3, tick or update the deferred items that Task 7 §8 found met, and keep the others open.
+When Tasks 3a–7 have run under Revisions 1 and 2, run the writing-plans Plan Completion Protocol, step 3a included. Rewrite the Handoff below from what then ships. In step 3, tick or update the deferred items that Task 7 §8 found met, and keep the others open.
 
 ## Handoff to later stages
 
-Revision 1 (2026-10-29) re-plans Tasks 3a–7 for release `9fa189a0…`. Nothing in it has run. The bullets below are the 2026-10-21 state on release `fc68adef…`. Their F11, D5-release and slice-config statements are superseded by Revision 1. The Plan Completion Protocol rewrites this section.
+Revision 1 (2026-10-29) re-plans Tasks 3a–7 for release `9fa189a0…`, and Revision 2 (2026-10-29) moves the range start to 2020Q1. Tasks 3a and 3b have run. Nothing live has run. The bullets below are the 2026-10-21 state on release `fc68adef…`. Their F11, D5-release and slice-config statements are superseded by Revision 1. Their 2015Q1 statements, such as a possible 2015Q1 quarantine for Stage 4, are superseded by Revision 2. The Plan Completion Protocol rewrites this section.
 
 On 2026-10-21, Stage 2 was blocked at Task 4, not complete. At that time it had produced only the offline preparation. It has not produced the roadmap's per-invocation results and captures, the coverage inventory or the operating decision. No item went to `specs/deferred_items.md`.
 
