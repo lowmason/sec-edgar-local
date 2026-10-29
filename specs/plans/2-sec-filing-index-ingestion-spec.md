@@ -1,6 +1,6 @@
 # Stage 2 Baseline Campaign and Coverage Decision Implementation Plan
 
-**Status: REVISED for release `9fa189a0…` (Revision 1, 2026-10-29), approved by the owner (D9)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Their text is the execution record and stays as run. Revision 1 adds Tasks 3a and 3b and rewrites Tasks 4–7 for the 1b release. Nothing in Revision 1 has run. Roadmap Stage 2 stays unticked. Read `## Revision 1 for the 1b release` first.
+**Status: REVISED for release `9fa189a0…` (Revision 1, 2026-10-29), approved by the owner (D9)** — Tasks 1–3 and 8 executed via executing-plans on release `fc68adef…` (commits `4508859`, `7b63168`, `ea482dd`, `780ea51`, and the D7 fix `4004f2e`). Their text is the execution record and stays as run. Revision 1 adds Tasks 3a and 3b and rewrites Tasks 4–7 for the 1b release. Tasks 3a and 3b executed on release `9fa189a0…` (commits `b176598`, `c9a9cb3`), and Task 4 Step 1 found the release gate standing. Task 4 Step 2 awaits the owner. Nothing live has run. Roadmap Stage 2 stays unticked. Read `## Revision 1 for the 1b release` first.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1289,7 +1289,7 @@ git commit -m "docs(evidence): propose Stage 2 campaign scope, slices and budget
 
 Timing rules. A member starts at its first child's start. Members run one at a time, so a member's wall runs to the next timed member's start. The last timed member's wall runs to its own last child's end. The run's `tail_seconds` runs from there to the result's `ended_at`: the finish step and the bookkeeping for deferred members. No member's wall holds the tail, so a slow finish step cannot trip the member-wall limit (O14). That is the plan 4 definition (collect start to next collect start), not the plan 5 one (`sibling_completion` call to receipt), so the two can differ by the engine time before a member's first child, and by the last member's receipt after its last child (0.1–0.4% of a full-size member, `measurement.md` §6). Engine seconds are the wall minus the member's own child seconds. A child ref names its run, command and attempt (`runs/sec/{run}/{command}/{attempt}/result.json`). A child of another run is listed under `reused_children` and not timed. A member that ends `unchanged` with no child ref is a B4 sibling completion. A member deferred at the cutoff has no child ref and is not B4. `repeated_sources` lists the sources with more than one member that ran children in one result (F10).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `packages/sec-edgar-ingest/tests/test_baseline_campaign.py`, add these two methods to `PureRuleTests`, directly before `test_budget_breaches_name_each_exceeded_limit`:
 
@@ -1415,7 +1415,7 @@ with this helper and two new tests:
 
 The fixture settings carry no reserve key, so `dispatch_cutoff` is null there.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```sh
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1426,7 +1426,7 @@ UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never uv run --offline --locked --package sec-e
 
 Expected: `Ran 15 tests` and `FAILED (failures=1, errors=3)`. The failure is `'publication_mismatch' != 'published_unchecked'`. The errors are `KeyError: 'child_attempts'`, `invalid choice: 'timing'` and the unknown `--check` argument.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 In `scripts/baseline-campaign.py`, make these changes.
 
@@ -1671,13 +1671,13 @@ with:
         return 0
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run the Step 2 command again.
 
 Expected: `Ran 15 tests` and `OK`, in about 2.5 minutes. On 2026-10-29, planning applied this task's blocks to a throwaway copy of `4004f2e`'s files as Steps 1 and 3 say: Step 2 gave exactly the result above, and this step passed (147.7 s).
 
-- [ ] **Step 5: Check the tool under the release interpreter, read-only**
+- [x] **Step 5: Check the tool under the release interpreter, read-only**
 
 ```sh
 # prelude (Global Constraints)
@@ -1689,7 +1689,7 @@ tool timing --config "$project/conf/sec-edgar-local.json"; echo "timing exit=$?"
 
 Expected: `no writer`. Then `153` and a comparison with `missing`, `added` and `changed_immutable` empty, and `changed_state` empty or listing only `state.sqlite3-shm` and `state.sqlite3-wal` (F14). Then a timing report with `runs: []`, `child_call_rows: 0` and `max_member_wall: null`, and `timing exit=0`. Any other result stops the plan. Report it to the owner.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 The full offline checker is not required: no file under `packages/sec-edgar-ingest/src` changes, and the release is unchanged.
 
@@ -1713,7 +1713,7 @@ git commit -m "feat(scripts): add integrity coverage and member timing to the ca
 - Consumes: the Task 3a tool and its commit hash, and the live root as Task 2 left it (F14).
 - Produces: the 13 slice configs with the F13 effective hashes; `campaign.json` with `max_member_wall_seconds`, which Task 5 passes to `timing`; and `campaign.md`, which Task 4 gates and Task 5 obeys.
 
-- [ ] **Step 1: Offline preflight of the live config**
+- [x] **Step 1: Offline preflight of the live config**
 
 ```sh
 # prelude
@@ -1735,7 +1735,7 @@ PY
 
 Expected: file hash `de6c0dd9a67ff4bb29adf82d6df8eb5c69b934ed801ea7f5c2f3c26cc9d47fcc`, then `backfill` `["2015Q1", "open"]`, `dispatch_reserve_seconds` `1800`, `effective_config_sha256` `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1` and `release_id` `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b`. Any difference stops the plan.
 
-- [ ] **Step 2: Known answers on the live store**
+- [x] **Step 2: Known answers on the live store**
 
 ```sh
 # prelude
@@ -1780,7 +1780,7 @@ Expected, as planning observed on 2026-10-29 (F15):
 
 Any other value stops the plan. Report it, because the campaign checks would then measure something else.
 
-- [ ] **Step 3: Make the 13 slice configs**
+- [x] **Step 3: Make the 13 slice configs**
 
 The `slice_config` function writes into `conf/stage2/1b/`. Do not touch the two files directly under `conf/stage2/`.
 
@@ -1819,7 +1819,7 @@ ls "$project/conf/stage2/1b" | wc -l
 
 Expected: the first line is `backfill-2015Q1-open.json db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, the live effective hash, which confirms the generator. That file is then removed. The next 13 lines each print a file name and exactly the effective hash in the F13 table. The last line is `13`. Any other hash stops the plan.
 
-- [ ] **Step 4: Rewrite `specs/evidence/baseline-campaign/campaign.json`**
+- [x] **Step 4: Rewrite `specs/evidence/baseline-campaign/campaign.json`**
 
 ```json
 {
@@ -1835,7 +1835,7 @@ Expected: the first line is `backfill-2015Q1-open.json db62e7fb8c941f125f84992c5
 
 `check_budget` reads only its named limits. Task 5 passes `max_member_wall_seconds` to `timing --max-member-wall`.
 
-- [ ] **Step 5: Rewrite `specs/evidence/baseline-campaign/campaign.md`**
+- [x] **Step 5: Rewrite `specs/evidence/baseline-campaign/campaign.md`**
 
 Replace the whole file with the text below. Put the Task 3a commit hash (`git log -1 --format=%h -- scripts/baseline-campaign.py`) in the Evidence tool row.
 
@@ -1975,7 +1975,7 @@ not a failure of the plan.
 To be completed in Task 4 with the owner's exact words.
 ```
 
-- [ ] **Step 6: Append the Revision 1 section to `pre-campaign.md`**
+- [x] **Step 6: Append the Revision 1 section to `pre-campaign.md`**
 
 Fill each value from the Step 1–3 outputs.
 
@@ -1996,7 +1996,7 @@ Fill each value from the Step 1–3 outputs.
 - [1b/files.json](pre-campaign/1b/files.json): 153 files. Against L12, only SQLite journal state changed.
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```sh
 git add conf/stage2/1b/ specs/evidence/baseline-campaign/
@@ -2017,7 +2017,7 @@ git commit -m "docs(evidence): rebase the Stage 2 campaign onto the 1b release"
 - Consumes: the Task 3a and 3b commits, and `specs/evidence/baseline-campaign/pre-campaign/1b/preflight.json`.
 - Produces: either a stop that ends the plan, or the approval commit that Task 5 checks before every invocation.
 
-- [ ] **Step 1: Check the release gate**
+- [x] **Step 1: Check the release gate**
 
 ```sh
 # prelude
