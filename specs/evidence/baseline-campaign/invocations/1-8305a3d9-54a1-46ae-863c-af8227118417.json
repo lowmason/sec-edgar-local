@@ -1,0 +1,100 @@
+{
+ "after": {
+  "campaign_total": {
+   "access_denied": 0,
+   "attempts": 5,
+   "distinct_urls": 5,
+   "max_ordinal": 1,
+   "outcomes": {
+    "failed": 1,
+    "received": 4
+   },
+   "received_bytes": 577884,
+   "statuses": {
+    "0": 1,
+    "200": 4
+   },
+   "uncertain": 0
+  },
+  "child_call_rows": null,
+  "daily_open": [],
+  "daily_sources": 0,
+  "eligible": [],
+  "files": {
+   "added": 173,
+   "changed_immutable": 0,
+   "changed_state": [
+    "state.sqlite3",
+    "state.sqlite3-shm",
+    "state.sqlite3-wal"
+   ],
+   "exit": 0,
+   "missing": 0
+  },
+  "refused": [],
+  "timing": null,
+  "timing_breaches": null,
+  "timing_not_run": "result_ref is null; tool timing needs a workflow result",
+  "untouched": [
+   "2020Q1",
+   "2020Q2",
+   "2020Q3",
+   "2020Q4",
+   "2021Q1",
+   "2021Q2",
+   "2021Q3",
+   "2021Q4",
+   "2022Q1",
+   "2022Q2",
+   "2022Q3",
+   "2022Q4",
+   "2023Q1",
+   "2023Q2",
+   "2023Q3",
+   "2023Q4",
+   "2024Q1",
+   "2024Q2",
+   "2024Q3",
+   "2024Q4",
+   "2025Q1",
+   "2025Q2",
+   "2025Q3",
+   "2025Q4",
+   "2026Q1",
+   "2026Q2",
+   "2026Q3",
+   "2026Q4"
+  ],
+  "verdicts": {
+   "no_campaign_result": 28
+  }
+ },
+ "attempt_id": "e030d6a0-a172-490b-94eb-9e5827f47060",
+ "backfill": {
+  "end_quarter": "open",
+  "start_quarter": "2026Q4"
+ },
+ "command": "backfill",
+ "config_sha256": "aab50ee232bfe0c062931593ea976cec485c82335e8a1e03503678b7d4d6573d",
+ "deadline": "2026-10-29T14:35:26.041945+00:00",
+ "dispatch_reserve_seconds": 1800,
+ "ended_at": null,
+ "invocation_sha256": "4992cf520411771f23b69fc17dd0b570ab1d652073ab3187624a6bc7b14cc8c5",
+ "k": 1,
+ "launcher_exit": 9,
+ "log_directory": "/Users/lowell/Projects/sec-edgar-local/logs/8305a3d9-54a1-46ae-863c-af8227118417/e030d6a0-a172-490b-94eb-9e5827f47060",
+ "release_id": "9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b",
+ "result_ref": null,
+ "result_sha256": null,
+ "run_id": "8305a3d9-54a1-46ae-863c-af8227118417",
+ "started_at": "2026-10-29T13:40:26.041945+00:00",
+ "stdout": [
+  {
+   "counts": null,
+   "outcome": "state_conflict",
+   "result_ref": null,
+   "source_workset_ref": null
+  }
+ ],
+ "workflow_summary": null
+}
