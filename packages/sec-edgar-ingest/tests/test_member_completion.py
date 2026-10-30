@@ -9,27 +9,26 @@ import json
 import tempfile
 import unittest
 import zipfile
+from dataclasses import replace
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
+from support_process import checked_clock, checked_dispatcher, checked_fault
 from support_workflow_evidence import EvidenceFixture, quarterly_bytes
+from support_workflows import CommandHarness, simple_pack
+
 from sec_edgar_ingest.cli import main
+from sec_edgar_ingest.config import pin_context
 from sec_edgar_ingest.etl.commands import PublicationRepairPending
 from sec_edgar_ingest.etl.contracts import decode_transformed
-from sec_edgar_ingest.models import RunContext, canonical_json, to_mapping_value
+from sec_edgar_ingest.models import Error, RunContext, canonical_json, error_text, require_text, to_mapping_value
+from sec_edgar_ingest.runtime import configured_descriptor
 from sec_edgar_ingest.storage.contracts import Conflict
 from sec_edgar_ingest.workflows import completion
 from sec_edgar_ingest.workflows.completion import evaluate_member
-from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
-from dataclasses import replace
-from datetime import date, datetime, timedelta, timezone
-
-from support_process import checked_clock, checked_dispatcher, checked_fault
-from support_workflows import CommandHarness, simple_pack
-from sec_edgar_ingest.config import pin_context
-from sec_edgar_ingest.models import Error, error_text, require_text
-from sec_edgar_ingest.runtime import configured_descriptor
-from sec_edgar_ingest.workflows.contracts import CompletionEvaluation
+from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT, CompletionEvaluation
+from sec_edgar_ingest.workflows.members import WorkflowMembers
 from sec_edgar_ingest.workflows.processing import process_member
 from sec_edgar_ingest.workflows.provenance import project_member
 from sec_edgar_ingest.worksets import decode_source_workset
@@ -218,6 +217,38 @@ class LegacyInventoryTests(unittest.TestCase):
                 self.assertRaisesRegex(Conflict, f'^{INVENTORY}legacy publish transformed input address differs$'):
             completion._publish_calls(self.f.store, changed_input)
 
+    def test_the_real_chain_stops_an_unfinished_incomplete_publish_before_dispatch(self):
+        """I1 (M1 to M4, nothing patched): a real store with an unfinished publish and an incomplete input stops."""
+        ref = self.transform(conflicting_bytes('2026-07-01'))
+        _, context, value = self.standalone_publish(ref, 'unfinished-incomplete', self.unfinished())
+        self.assertIsNone(value['result'])
+        command_path = f'runs/sec/{context.run_id}/publish/{context.attempt_id}/command.json'
+        frozen = json.loads(self.f.objects.read(command_path))
+        frozen['intent']['force'] = 'changed'
+        changed_command = Rewritten(self.f.objects, command_path, canonical_json(to_mapping_value(frozen)))
+        dispatcher = checked_dispatcher(self.f.workflow, self.f.settings, self.f.pack, self.f.root.parent,
+                                        self.f.store, self.f.objects)
+        member_id = self.f.value['member_id']
+
+        def rows():
+            return {kind: [r.to_mapping() for r in self.f.store.scan(kind, {})]
+                    for kind in ('Attempt', 'WorkflowChildCall', 'QuarterPublication')}
+        cases = (('stored command', self.f.objects, f'{INVENTORY}{REFUSAL}'),
+                 ('changed command', changed_command, f'{INVENTORY}legacy publish frozen intent differs'))
+        for label, objects, text in cases:
+            with self.subTest(label):
+                before = rows()
+                self.assertTrue(before['Attempt'])
+                with patch.object(dispatcher, 'execute', wraps=dispatcher.execute) as spy, \
+                        self.assertRaises(Conflict) as raised:
+                    process_member(self.f.value, self.f.workflow, dispatcher, self.f.store, objects)
+                self.assertIs(type(raised.exception), Conflict)
+                self.assertEqual(str(raised.exception),
+                                 f'member {member_id} completion check cannot pass before dispatch: '
+                                 f'state_conflict: {text}')
+                spy.assert_not_called()
+                self.assertEqual(rows(), before)
+
 
 class ProcessMemberTests(unittest.TestCase):
     EVALUATE = 'sec_edgar_ingest.workflows.processing.evaluate_member'
@@ -268,8 +299,37 @@ class ProcessMemberTests(unittest.TestCase):
         require_text(expected, 'message')
         self.assertEqual(len(seen), 2)
 
+    def test_the_completion_conflict_without_gaps_is_the_stock_text_alone(self):
+        """§5 item 5 (M3): when the evaluation has no gap, the message is the stock text with no colon suffix."""
+        h, context, dispatcher, value = self.prepare()
+        seen = []
+
+        def second_incomplete(*args):
+            seen.append(args)
+            return evaluate_member(*args) if len(seen) == 1 else CompletionEvaluation(False, None, (), ())
+        with patch(self.EVALUATE, side_effect=second_incomplete), self.assertRaises(Conflict) as raised:
+            process_member(value, context, dispatcher, h.store, h.objects)
+        self.assertIs(type(raised.exception), Conflict)
+        self.assertEqual(str(raised.exception), STOCK)
+        self.assertEqual(error_text(raised.exception), STOCK)
+        self.assertEqual(len(seen), 2)
+
+    def test_a_recorded_receipt_replays_before_any_stop(self):
+        """§5 item 6 (M4): the stop sits after the replay check, so a member with a receipt replays, not stops."""
+        h, context, dispatcher, value = self.prepare()
+        processed = process_member(value, context, dispatcher, h.store, h.objects)
+        WorkflowMembers(h.store, h.objects).record(processed.result, context, processed.evidence)
+        gaps = (self.gap('state_conflict', 'fixture conflict after the receipt', False, value),)
+        with patch(self.EVALUATE, return_value=CompletionEvaluation(False, None, (), gaps)), \
+                patch.object(dispatcher, 'execute', side_effect=AssertionError('receipt replay dispatched')):
+            replay = process_member(value, context, dispatcher, h.store, h.objects)
+        self.assertEqual(replay, processed)
+
     def test_a_non_retryable_gap_stops_the_member_before_dispatch(self):
-        """§5 item 6 (M4): no child runs and no pointer moves. Only the non-retryable gaps are named."""
+        """§5 item 6 (M4): no child is dispatched and no pointer row exists. Only the non-retryable gaps are named.
+
+        The real-chain test in LegacyInventoryTests checks that no stored row changes.
+        """
         h, context, dispatcher, value = self.prepare()
         gaps = (self.gap('state_conflict', 'first fixture conflict', False, value),
                 self.gap('publication_pending', 'affected quarter has no publication', True, value),
