@@ -1,5 +1,7 @@
 # Member-Completion Conflict Fix and the 1c Release Implementation Plan
 
+**Status: COMPLETE (2026-10-30)** — executed via subagent-driven-development; deferred items in specs/deferred_items.md
+
 **Approval:** Approved by the owner, 2026-10-29, with P1–P8 as proposed (D4 below), as committed at `de4a85b`. This plan authorizes no SEC request.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: implement this plan task-by-task via subagent-driven-development (the default) — or executing-plans when your human partner chose inline execution at the handoff. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -71,6 +73,9 @@ Execution environment (planning facts, not spec text):
 - **D2** (owner, brief, 2026-10-29): the platform member stays off `main` until the 1c release is built (spec S2). Applied in: Global Constraints, Task 4 Step 4, Task 5 Step 3, Handoff (platform bullet).
 - **D3** (owner, brief, 2026-10-29): the approach is "fix + explain + stop", M1–M4 (spec S3). Applied in: Tasks 2 and 3.
 - **D4** (owner, plan review, 2026-10-29): plan 6 approved with P1–P8 as proposed, as committed at `de4a85b`. No plan-level or spec-level change. Owner's words: "Approve as proposed". Applied in: Before Task 1 Steps 1–2, and Tasks 1–4 (P1–P8).
+- **D5** (owner, Task 4 Step 7, 2026-10-30): the merge of `stage1c-member-completion` into `main` is approved. Owner's words: "Approve merge". Applied in: Task 4 Step 8 (fast-forward `4a28009..3af121a`).
+- **D6** (owner, Task 7 Step 3, 2026-10-30): the live-config selection of the 1c release is approved. It authorizes no SEC traffic. Owner's words: "Approve selection". Applied in: Task 7 Step 4 (`f64c212`).
+- **D7** (owner, Plan Completion gate, 2026-10-30): parent spec §4.9 says "no outcome or exit-code format (M6)", not "no outcome or exit code". Owner's words: "exit-code format" (the recommended option). Applied in: Task 8 Step 4 (`91485b4`).
 
 ## Defaults for owner review
 
@@ -140,8 +145,8 @@ Planning settled these points. Each one is plan-level: none changes what the spe
 
 ## Before Task 1
 
-- [ ] **Step 1: Plan review (HUMAN).** The owner reviews the plan and answers P1–P8. Log the answer as D4 in `## Decisions`, in the owner's words. Apply each plan-level change the owner asks for, and re-run the writing-plans Self-Review on what changed.
-- [ ] **Step 2: Commit the review changes on `main`.** The plan itself was committed on `main` at planning. The worktree is cut from `main`, so commit the reviewed plan, with D4, before Step 3:
+- [x] **Step 1: Plan review (HUMAN).** The owner reviews the plan and answers P1–P8. Log the answer as D4 in `## Decisions`, in the owner's words. Apply each plan-level change the owner asks for, and re-run the writing-plans Self-Review on what changed.
+- [x] **Step 2: Commit the review changes on `main`.** The plan itself was committed on `main` at planning. The worktree is cut from `main`, so commit the reviewed plan, with D4, before Step 3:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -149,7 +154,7 @@ git add specs/plans/6-sec-filing-index-member-completion.md
 git commit -m "docs(plans): record the owner review of plan 6"
 ```
 
-- [ ] **Step 3: Create the worktree and the shadow venv.** Use the using-git-worktrees skill for branch `stage1c-member-completion` at `.claude/worktrees/stage1c-member-completion`. Then run the shadow-venv commands in Global Constraints, "Execution environment".
+- [x] **Step 3: Create the worktree and the shadow venv.** Use the using-git-worktrees skill for branch `stage1c-member-completion` at `.claude/worktrees/stage1c-member-completion`. Then run the shadow-venv commands in Global Constraints, "Execution environment".
 
 ---
 
@@ -163,13 +168,13 @@ git commit -m "docs(plans): record the owner review of plan 6"
 - Consumes: `support_release.origin_release(project, cache, revision=…)`, `support_release.proof_releases(project, cache)`, `support_workflows.CommandHarness`, `simple_pack`, `replace_pack_body`, `idx`, `BASE`.
 - Produces: `support_release.ONE_B_REVISION`; `test_release_1c.MemberCompletionReleaseTests`, whose two 1c-side tests carry `@unittest.expectedFailure` until Task 2.
 
-- [ ] **Step 1: Add the 1b revision constant.** In `support_release.py`, after the `D5_REVISION` line, add:
+- [x] **Step 1: Add the 1b revision constant.** In `support_release.py`, after the `D5_REVISION` line, add:
 
 ```python
 ONE_B_REVISION = '50423a404fb50a959b3ca4077301117d32804cc6'  # source revision of the 1b release 9fa189a0…
 ```
 
-- [ ] **Step 2: Write the tests.** Create `packages/sec-edgar-ingest/tests/test_release_1c.py`:
+- [x] **Step 2: Write the tests.** Create `packages/sec-edgar-ingest/tests/test_release_1c.py`:
 
 ```python
 """Stage 1c §5 items 1 and 4: the member-completion conflict on the 1b release, and its repair on the 1c code.
@@ -340,12 +345,12 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 3: Run the module.** It builds the 1b origin release and the proof releases first (several minutes).
+- [x] **Step 3: Run the module.** It builds the 1b origin release and the proof releases first (several minutes).
 
 Run: the test command with `test_release_1c`.
 Expected: `OK (expected failures=2)`. `test_the_1b_release_halts_after_its_publish_moves_a_pointer` passes, because today's code is the 1b code. If a `poisoned` assertion fails, the fixture differs from the planning probe (F2). Stop and report the failing line. Do not change the fixture to make the 1b test pass.
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/tests/support_release.py packages/sec-edgar-ingest/tests/test_release_1c.py
@@ -365,7 +370,7 @@ git commit -m "test: reproduce the member-completion conflict on the 1b release"
 - Consumes: `support_workflow_evidence.EvidenceFixture` (`invoke`, `snapshot_input`, `revised_member`, `config`, `workflow`, `store`, `objects`, `value`), `quarterly_bytes`.
 - Produces: `completion._legacy_publish_descriptor(context, objects, *, require_complete=False) -> tuple[dict, TransformedWorkset]`; `completion._require_complete_input(workset) -> None`; `_legacy_publish_call(context, objects) -> dict`, with unchanged signature and behavior (P1). In `test_member_completion.py`: the module constants `INVENTORY`, `REFUSAL`, `STOCK` and the helper `conflicting_bytes(day)`, which Task 3 reuses.
 
-- [ ] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_member_completion.py`:
+- [x] **Step 1: Write the failing tests.** Create `packages/sec-edgar-ingest/tests/test_member_completion.py`:
 
 ```python
 """Stage 1c M1–M4: the legacy publish inventory, the completion conflict text and the stop before dispatch."""
@@ -581,12 +586,12 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
-- [ ] **Step 2: Run them to verify the expected failures.**
+- [x] **Step 2: Run them to verify the expected failures.**
 
 Run: the test command with `test_member_completion`.
 Expected: `test_the_descriptor_bytes_are_unchanged_for_accepted_attempts` and `test_the_builder_does_not_refuse_an_incomplete_input` fail with `AttributeError: … has no attribute '_legacy_publish_descriptor'`. `test_a_finished_publish_with_an_incomplete_input_is_not_kept` fails with `Conflict: ordinary publication authority inventory uncertain: legacy unfinished publication has no complete publishable input`. The other three tests pass, because they guard behavior that stays.
 
-- [ ] **Step 3: Implement M1.** In `completion.py`, replace the whole `_legacy_publish_call` function (`:451–478`) with:
+- [x] **Step 3: Implement M1.** In `completion.py`, replace the whole `_legacy_publish_call` function (`:451–478`) with:
 
 ```python
 def _require_complete_input(workset):
@@ -634,7 +639,7 @@ def _legacy_publish_call(context, objects):
     return _legacy_publish_descriptor(context, objects, require_complete=True)[0]
 ```
 
-- [ ] **Step 4: Implement M2.** In `_publish_calls`, replace the body of the legacy loop's `try` block:
+- [x] **Step 4: Implement M2.** In `_publish_calls`, replace the body of the legacy loop's `try` block:
 
 ```python
             context = RunContext.from_mapping(value['context'])
@@ -669,22 +674,26 @@ with:
 
 The `except` clause stays, so a refusal keeps today's wrapped message.
 
-- [ ] **Step 5: Run the unit tests.**
+> Deviation: plan P1 says the input-versions message replaces the complete-input message "for a kept Attempt". The loop now runs every other builder check on every Attempt, so the words should read "for any Attempt" (spec §4.3 item 2). The code follows the spec.
+
+- [x] **Step 5: Run the unit tests.**
 
 Run: the test command with `test_member_completion`.
 Expected: 6 tests, `OK`.
 
-- [ ] **Step 6: Remove the expected-failure markers.** In `test_release_1c.py`, delete both lines `    @unittest.expectedFailure  # Plan 6 Task 2 removes this decorator.`.
+- [x] **Step 6: Remove the expected-failure markers.** In `test_release_1c.py`, delete both lines `    @unittest.expectedFailure  # Plan 6 Task 2 removes this decorator.`.
 
 Run: the test command with `test_release_1c`.
 Expected: 3 tests, `OK`. If only a §4.2 path assertion of `test_a_1c_rerun_completes_the_halted_member_and_moves_no_pointer` fails while every M5 assertion before it passes, apply P7: change that assertion to the observed path, and add a `> Deviation:` line under this step.
 
-- [ ] **Step 7: Run the neighbors.**
+> Deviation: Task 1's test compared `capture['affected_quarters']`, a tuple from `read_workflow_result`, with the list `['2026Q4']`. `expectedFailure` had hidden the mismatch. Commit `a8eefca` compares `list(capture['affected_quarters'])` with the same expected value.
+
+- [x] **Step 7: Run the neighbors.**
 
 Run: the test command with `test_workflow_completion test_workflow_legacy test_local_workflow_contracts test_workflow_processing test_release_origin`.
 Expected: `OK`. These modules exercise the other callers of `_legacy_publish_call`.
 
-- [ ] **Step 8: Commit.**
+- [x] **Step 8: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/completion.py packages/sec-edgar-ingest/tests/test_member_completion.py packages/sec-edgar-ingest/tests/test_release_1c.py
@@ -703,7 +712,7 @@ git commit -m "fix(workflows): keep a finished publish with an incomplete input 
 - Consumes: `test_member_completion.STOCK`; `support_process.checked_dispatcher`, `checked_clock`, `checked_fault`; `support_workflows.CommandHarness`, `simple_pack`.
 - Produces: `processing._gap_text(gaps) -> str`. The M3 and M4 message formats of P3.
 
-- [ ] **Step 1: Write the failing tests.** In `test_member_completion.py`, add these imports after the existing ones:
+- [x] **Step 1: Write the failing tests.** In `test_member_completion.py`, add these imports after the existing ones:
 
 ```python
 from dataclasses import replace
@@ -838,12 +847,12 @@ class ProcessMemberTests(unittest.TestCase):
                 f.close()
 ```
 
-- [ ] **Step 2: Run them to verify the expected failures.**
+- [x] **Step 2: Run them to verify the expected failures.**
 
 Run: the test command with `test_member_completion.ProcessMemberTests`.
 Expected: `test_the_completion_conflict_names_each_gap_in_order` fails: the message is the stock text alone. `test_a_non_retryable_gap_stops_the_member_before_dispatch` fails: `dispatched` is not empty, or a different exception is raised. The other two pass, because they guard behavior that stays.
 
-- [ ] **Step 3: Implement.** In `processing.py`, add this function after the `ProcessedMember` class:
+- [x] **Step 3: Implement.** In `processing.py`, add this function after the `ProcessedMember` class:
 
 ```python
 def _gap_text(gaps) -> str:
@@ -877,17 +886,17 @@ with:
         raise Conflict(f'{stock}: {_gap_text(evaluated.gaps)}' if evaluated.gaps else stock)
 ```
 
-- [ ] **Step 4: Run the stage tests.**
+- [x] **Step 4: Run the stage tests.**
 
 Run: the test command with `test_member_completion test_release_1c`.
 Expected: 13 tests, `OK`.
 
-- [ ] **Step 5: Guard the existing workflow tests (P8).**
+- [x] **Step 5: Guard the existing workflow tests (P8).**
 
 Run: the test command with `test_workflow_processing test_workflow_runner test_workflow_acceptance test_workflow_drain test_local_failures test_reconcile_workflow test_workflow_completion test_release_origin test_release_1b`.
 Expected: `OK`. If a test fails because a member now stops before dispatch, stop and ask the owner. Do not change that test.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/processing.py packages/sec-edgar-ingest/tests/test_member_completion.py
@@ -905,7 +914,7 @@ git commit -m "fix(workflows): name completion gaps and stop a member that canno
 - Consumes: the branch after Tasks 1–3.
 - Produces: `main` holding the reviewed change, from which Task 5 builds.
 
-- [ ] **Step 1: Run the full gate in the background.** From the worktree root, with `run_in_background`. Two `test_local_launcher.InstalledLauncherTests` need a `.venv` in the worktree (plan 5, `specs/evidence/stage1b/gate.md`, deviation 2), so link it first and remove it after the gate:
+- [x] **Step 1: Run the full gate in the background.** From the worktree root, with `run_in_background`. Two `test_local_launcher.InstalledLauncherTests` need a `.venv` in the worktree (plan 5, `specs/evidence/stage1b/gate.md`, deviation 2), so link it first and remove it after the gate:
 
 ```bash
 ln -s /Users/lowell/Projects/sec-edgar-local/.venv .venv
@@ -914,14 +923,14 @@ env -u PYTHONDONTWRITEBYTECODE UV_PROJECT_ENVIRONMENT=/tmp/s1c-venv UV_NO_SYNC=1
 
 Expected: the log ends with `exit 0`, and unittest prints `OK`. The count is about 1112 (F8) plus 13 new tests, in 73 modules: 71 plus `test_member_completion` and `test_release_1c`. Record the exact count. Do not change `src` while the gate runs. If the gate fails for a reason other than a test, stop and ask. Do not move the gate after the merge. Then run `rm .venv`. It is a symlink, never staged.
 
-- [ ] **Step 2: Record the gate.** Create `specs/evidence/stage1c/gate.md` with the branch, the gated commit, the command and environment, the start and end times, the `Ran N tests in S s` line, `OK` and the module count. List any environment deviation. Commit:
+- [x] **Step 2: Record the gate.** Create `specs/evidence/stage1c/gate.md` with the branch, the gated commit, the command and environment, the start and end times, the `Ran N tests in S s` line, `OK` and the module count. List any environment deviation. Commit:
 
 ```bash
 git add specs/evidence/stage1c/gate.md
 git commit -m "docs(evidence): record the Stage 1c branch gate"
 ```
 
-- [ ] **Step 3: Evidence run on the installed 1b release (P2).** From the worktree root:
+- [x] **Step 3: Evidence run on the installed 1b release (P2).** From the worktree root:
 
 ```bash
 SEC_LOCAL_1B_RELEASE=/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json SEC_LOCAL_PROOF_CACHE=/Users/lowell/Projects/sec-edgar-local/releases/artifact-cache /tmp/s1c-venv/bin/python packages/sec-edgar-ingest/tests/network_guard.py test_release_1c -v > /Users/lowell/Projects/sec-edgar-local/fixture-data/stage1c-installed-1b.log 2>&1; echo "exit $?" >> /Users/lowell/Projects/sec-edgar-local/fixture-data/stage1c-installed-1b.log
@@ -929,7 +938,7 @@ SEC_LOCAL_1B_RELEASE=/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa1
 
 Expected: 3 tests, `OK`, `exit 0`. The 1b-side runs use the installed `9fa189a0…` interpreter.
 
-- [ ] **Step 4: Write the reproduction evidence.** Create `specs/evidence/stage1c/reproduction.md` with:
+- [x] **Step 4: Write the reproduction evidence.** Create `specs/evidence/stage1c/reproduction.md` with:
   1. `## Store shape`: the P4 recipe, and the line "This is the shape of the L12 2024Q1 Attempt (diagnosis, Cause item 4)."
   2. `## Item 1: fails on the 1b release, passes on the 1c code`: the test names. Name the gate run, which used the 1b application built from `50423a4`, and the Step 3 run, which used the installed `9fa189a0…`. The 1b run ends exit 9, `state_conflict`, with pointer 2026Q4 moved and no member receipt. The 1c run completes the member with its 2026Q4 capture.
   3. `## Item 4: repair (M5)`: the pointer list is unchanged, the member is under `already_complete` and in `already_complete_sources`, and no repair record exists. Name the path the test observed (spec §4.2), and any P7 deviation.
@@ -941,7 +950,7 @@ git add specs/evidence/stage1c/reproduction.md
 git commit -m "docs(evidence): record the Stage 1c reproduction and repair proofs"
 ```
 
-- [ ] **Step 5: Whole-branch review.** Use the requesting-code-review skill. It dispatches the `code-reviewer` agent on `main..stage1c-member-completion`, against the spec, this plan and its Decisions. Name these review focuses:
+- [x] **Step 5: Whole-branch review.** Use the requesting-code-review skill. It dispatches the `code-reviewer` agent on `main..stage1c-member-completion`, against the spec, this plan and its Decisions. Name these review focuses:
   - M1 byte identity and the P1 order consequence.
   - M2: every other caller still uses `_legacy_publish_call`.
   - M4: the stop fires only with no obligation and a non-retryable gap.
@@ -949,7 +958,9 @@ git commit -m "docs(evidence): record the Stage 1c reproduction and repair proof
 
   Fix each accepted finding with a test, re-run the affected modules, and commit. If a fix changes `src`, re-run Step 1 and update `gate.md`.
 
-- [ ] **Step 6: Check that the branch carries no platform member (M7, D2).**
+> Deviation: the Opus review ran at `bbd547c` while the gate ran (read-only). Codex ran after Steps 2–4, on `10c41f5`, and found nothing. The Opus review found one Important and four Minor test gaps. Commit `c8184c7` fixed all five in `test_member_completion.py` only (3 new tests, a docstring, import order). A scoped Opus re-review accepted it. No `src` file changed after the gated commit, so the gate was not re-run. `gate.md` records this.
+
+- [x] **Step 6: Check that the branch carries no platform member (M7, D2).**
 
 ```bash
 git -C /Users/lowell/Projects/sec-edgar-local show stage1c-member-completion:pyproject.toml | grep -n 'members'
@@ -959,9 +970,9 @@ git -C /Users/lowell/Projects/sec-edgar-local diff --stat main stage1c-member-co
 
 Expected: `members = ["packages/sec-edgar-ingest"]`, no output from the second command, and the third lists only `workflows/completion.py` and `workflows/processing.py`.
 
-- [ ] **Step 7: Owner checkpoint (HUMAN).** Show the owner `gate.md`, `reproduction.md`, the review result and `git log --oneline main..stage1c-member-completion`. Ask for approval to merge the branch into `main` before the release build. Stop until the owner answers. Log the answer as a Decision, with the owner's words.
+- [x] **Step 7: Owner checkpoint (HUMAN).** Show the owner `gate.md`, `reproduction.md`, the review result and `git log --oneline main..stage1c-member-completion`. Ask for approval to merge the branch into `main` before the release build. Stop until the owner answers. Log the answer as a Decision, with the owner's words.
 
-- [ ] **Step 8: Merge.** In the main checkout:
+- [x] **Step 8: Merge.** In the main checkout:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -985,7 +996,7 @@ Run in the main checkout on `main`.
 - Consumes: clean committed `main` after Task 4.
 - Produces: `releases/sha256=<1C>/`. Its ID, manifest path and `git_revision` feed Tasks 6–8 and the Handoff.
 
-- [ ] **Step 1: Confirm a clean tree.**
+- [x] **Step 1: Confirm a clean tree.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -995,7 +1006,7 @@ git rev-parse HEAD
 
 Expected: no status output. Record the revision.
 
-- [ ] **Step 2: Build.**
+- [x] **Step 2: Build.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1006,7 +1017,7 @@ UV_OFFLINE=1 uv run --offline --locked --package sec-edgar-ingest python scripts
 
 Expected: one printed path, `…/releases/sha256=<1C>`. Record `<1C>`.
 
-- [ ] **Step 3: Check identity, lock and export against the 1b build inputs (M7, D2).** `runtime-requirements.txt` holds a comment with a random temporary path, so compare the requirement lines only.
+- [x] **Step 3: Check identity, lock and export against the 1b build inputs (M7, D2).** `runtime-requirements.txt` holds a comment with a random temporary path, so compare the requirement lines only.
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1020,7 +1031,7 @@ python3 -c "import json,sys; ids=[json.load(open(p))['identity'] for p in sys.ar
 
 Expected: `lock-identical`, `export-lines-identical`, `inputs-identical`. Both versions are `0.2.0`. The 1c `git_revision` equals Step 1's revision. The two dependency name lists are equal, with no platform package.
 
-- [ ] **Step 4: Offline verification on the 1c interpreter.** The harness guard refuses any path inside a checkout, and the verifier's children inherit the working directory (plan 4). So the harness and evidence go under a directory outside the checkout:
+- [x] **Step 4: Offline verification on the 1c interpreter.** The harness guard refuses any path inside a checkout, and the verifier's children inherit the working directory (plan 4). So the harness and evidence go under a directory outside the checkout:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1049,7 +1060,9 @@ cp -R "$outside/evidence" "$project/fixture-data/s1c-verify-evidence"
 
 Expected: the verifier prints JSON with `"exit": 0` and `"release_id": "<1C>"`. `preflight_current` prints `<1C>`.
 
-- [ ] **Step 5: Confirm retention (§4.9).**
+> Deviation: the implementer ran the Step 4 commands from a temporary script, `/tmp/s1c-step4.sh`, so that they could run in the background. The commands are the same.
+
+- [x] **Step 5: Confirm retention (§4.9).**
 
 ```bash
 ls /Users/lowell/Projects/sec-edgar-local/releases
@@ -1057,7 +1070,7 @@ ls /Users/lowell/Projects/sec-edgar-local/releases
 
 Expected: `sha256=49b7a2ed…`, `sha256=900952a8…`, `sha256=9fa189a0…`, `sha256=aa8de1ac…`, `sha256=d718ae5f…`, `sha256=fc68adef…` and `sha256=<1C>`, plus `artifact-cache` and `task14-guard-proofs` (F9).
 
-- [ ] **Step 6: Write the release evidence.** Create `specs/evidence/stage1c/release.md` with:
+- [x] **Step 6: Write the release evidence.** Create `specs/evidence/stage1c/release.md` with:
   1. `## Release`: the 1c release ID, its manifest path and its `git_revision` (§6 item 2).
   2. `## Locked inputs (M7)`: the Step 3 results: identical lock, export lines and inputs against the 1b build inputs, version `0.2.0`, and no platform package (§6 item 3).
   3. `## Offline verification`: the verifier JSON, the preflight output and the evidence directory, with 1b, D5, `fc68adef…` and older releases kept (§6 item 4).
@@ -1067,6 +1080,8 @@ Expected: `sha256=49b7a2ed…`, `sha256=900952a8…`, `sha256=9fa189a0…`, `sha
 git add specs/evidence/stage1c/release.md
 git commit -m "docs(evidence): record the 1c release build and offline verification"
 ```
+
+> Deviation: two wording Minors from the task review were fixed in `2744bae`.
 
 ---
 
@@ -1082,7 +1097,7 @@ Run in the main checkout on `main`. This step reads `data/` once to copy it, and
 - Consumes: `<1C>` from Task 5; `specs/evidence/stage1c/diagnosis/scripts/diag2.py` and `diag5.py`, unchanged.
 - Produces: the §6 item 5 replay record.
 
-- [ ] **Step 1: Confirm that no writer runs.**
+- [x] **Step 1: Confirm that no writer runs.**
 
 ```bash
 pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_bootstrap'
@@ -1090,7 +1105,7 @@ pgrep -fl -- '-m sec_edgar_ingest|scripts/sec-edgar-local|local-bootstrap|local_
 
 Expected: no output. If a writer runs, stop and ask.
 
-- [ ] **Step 2: Hash `data/`, then make a fresh scratch copy.** Use the method of the diagnosis's `live-data-before.sha256`: one `shasum -a 256` line per file, with paths relative to `data/`, sorted.
+- [x] **Step 2: Hash `data/`, then make a fresh scratch copy.** Use the method of the diagnosis's `live-data-before.sha256`: one `shasum -a 256` line per file, with paths relative to `data/`, sorted.
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1103,7 +1118,7 @@ echo "$W"
 
 Record `$W`.
 
-- [ ] **Step 3: Run the two scripts on the 1c interpreter.** Root binding as in the diagnosis: each script opens the copy with its stored binding and takes the root as its first argument.
+- [x] **Step 3: Run the two scripts on the 1c interpreter.** Root binding as in the diagnosis: each script opens the copy with its stored binding and takes the root as its first argument.
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1117,7 +1132,7 @@ diff "$W/diag5-obligations-pointers.txt" "$D/outputs/diag5-obligations-pointers.
 
 Expected: `complete: True obligations: 0`, and no `gap:` line. `pointers-equal`. If `diag5` differs, stop and report the diff.
 
-- [ ] **Step 4: Confirm `data/` is unchanged.**
+- [x] **Step 4: Confirm `data/` is unchanged.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1127,7 +1142,7 @@ cmp "$W/live-data-before.sha256" "$W/live-data-after.sha256" && echo data-unchan
 
 Expected: `data-unchanged`. Under plan 2 D7, only `state.sqlite3-wal` and `state.sqlite3-shm` may differ. If they do, record it. If any other line differs, stop and ask.
 
-- [ ] **Step 5: Record and commit.** Copy the four files to `specs/evidence/stage1c/replay/`. Append a section `## Diagnosis replay (§5 item 7)` to `release.md`, with the scratch path, the interpreter, the member ID, the `diag2` result, the `pointers-equal` result, the `data-unchanged` result and the line "The committed diagnosis scripts ran unchanged." Then:
+- [x] **Step 5: Record and commit.** Copy the four files to `specs/evidence/stage1c/replay/`. Append a section `## Diagnosis replay (§5 item 7)` to `release.md`, with the scratch path, the interpreter, the member ID, the `diag2` result, the `pointers-equal` result, the `data-unchanged` result and the line "The committed diagnosis scripts ran unchanged." Then:
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1138,6 +1153,8 @@ git commit -m "docs(evidence): replay the Stage 1c diagnosis on the 1c release"
 ```
 
 Remove the scratch copy afterwards with `rm -rf "$W"`. It is a copy that this task made.
+
+> Deviation: one wording Minor from the task review (the basis of the no-network line) was fixed in `945e1f9`.
 
 ---
 
@@ -1151,9 +1168,9 @@ Remove the scratch copy afterwards with `rm -rf "$W"`. It is a copy that this ta
 - Consumes: `<1C>`.
 - Produces: the new effective-config SHA-256 and the selection commit, which Task 8 and the Handoff name.
 
-- [ ] **Step 1: Edit the config.** In `conf/sec-edgar-local.json`, set `runtime.release_manifest` to `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1C>/release.json`. Change nothing else. `execution.dispatch_reserve_seconds` stays 1800 (M8).
+- [x] **Step 1: Edit the config.** In `conf/sec-edgar-local.json`, set `runtime.release_manifest` to `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1C>/release.json`. Change nothing else. `execution.dispatch_reserve_seconds` stays 1800 (M8).
 
-- [ ] **Step 2: Offline preflight and hash on the 1c interpreter.**
+- [x] **Step 2: Offline preflight and hash on the 1c interpreter.**
 
 ```bash
 cd /Users/lowell/Projects/sec-edgar-local
@@ -1174,9 +1191,9 @@ git diff conf/sec-edgar-local.json
 
 Expected: `floor 480`, `reserve 1800`, `release <1C>`, and `effective` a new SHA-256 (before: `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, F7). The diff shows one changed value. `binding` holds no `execution` field. Run no launcher command, because `prepare_invocation` writes logs.
 
-- [ ] **Step 3: Owner checkpoint (HUMAN).** Show the owner the diff and the Step 2 output. Ask for approval of the live-config selection. Stop until the owner answers. Log the answer as a Decision, with the owner's words. The approval authorizes no SEC traffic (spec §9).
+- [x] **Step 3: Owner checkpoint (HUMAN).** Show the owner the diff and the Step 2 output. Ask for approval of the live-config selection. Stop until the owner answers. Log the answer as a Decision, with the owner's words. The approval authorizes no SEC traffic (spec §9).
 
-- [ ] **Step 4: Record and commit.** Append a section `## Live-config selection` to `release.md`, with the effective-config SHA-256, the floor, the reserve, the binding output and the line "No SEC request was sent in this stage." Then:
+- [x] **Step 4: Record and commit.** Append a section `## Live-config selection` to `release.md`, with the effective-config SHA-256, the floor, the reserve, the binding output and the line "No SEC request was sent in this stage." Then:
 
 ```bash
 git add conf/sec-edgar-local.json specs/evidence/stage1c/release.md
@@ -1197,7 +1214,7 @@ Add the commit hash to `release.md` in the Task 8 commit, not by amending.
 **Interfaces:**
 - Consumes: `<1C>`, the Task 7 SHA-256 and commit, and the Task 4 and Task 7 Decisions.
 
-- [ ] **Step 1: §4.7.** After the paragraph whose last line is `actual engine status where known.` (spec line 290 at planning), add this paragraph:
+- [x] **Step 1: §4.7.** After the paragraph whose last line is `actual engine status where known.` (spec line 290 at planning), add this paragraph:
 
 ```text
 A finished publish Attempt whose input workset is incomplete, with no repair record, moved no pointer.
@@ -1207,9 +1224,9 @@ and no pointer moves. When a completed child leaves a member incomplete, the con
 of the completion check. (Stage 1c, plan 6.)
 ```
 
-- [ ] **Step 2: §4.8 selected manifest.** In the code block under `The selected manifest is:`, replace the path line with `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1C>/release.json`.
+- [x] **Step 2: §4.8 selected manifest.** In the code block under `The selected manifest is:`, replace the path line with `/Users/lowell/Projects/sec-edgar-local/releases/sha256=<1C>/release.json`.
 
-- [ ] **Step 3: §4.8 selection text.** Before the paragraph that begins `Stage 1b (plan 5) selected the 1b release`, add:
+- [x] **Step 3: §4.8 selection text.** Before the paragraph that begins `Stage 1b (plan 5) selected the 1b release`, add:
 
 ```text
 Stage 1c (plan 6) selected the 1c release `<1C>` at commit `<Task 7 commit>`. The reserve stays at
@@ -1223,7 +1240,9 @@ Then make three edits in the following text:
 
 Write the full release ID, commit hash and SHA-256 in place of the bracketed names.
 
-- [ ] **Step 4: §4.9.** After the paragraph that ends `[two-release evidence](evidence/stage1b/two-release.md).)`, add:
+> Deviation: the implementer re-wrapped the new selection paragraph at about 100 columns because the filled-in tokens are long. No word changed.
+
+- [x] **Step 4: §4.9.** After the paragraph that ends `[two-release evidence](evidence/stage1b/two-release.md).)`, add:
 
 ```text
 The 1c release changes no generation, manifest, receipt, member evidence, selection, Attempt or config
@@ -1234,7 +1253,9 @@ store is unsupported. (Stage 1c, plan 6; §4.3 item 7 of the
 [1c spec](completed/sec-filing-index-member-completion.md).)
 ```
 
-- [ ] **Step 5: Runbook.** In `docs/runbooks/local-recovery.md`, replace the row:
+> Deviation: the owner ruled at the Plan Completion gate (D7) that the sentence reads "and no outcome or exit-code format (M6)". Commit `91485b4` made that edit, so the spec has one word more than the text above.
+
+- [x] **Step 5: Runbook.** In `docs/runbooks/local-recovery.md`, replace the row:
 
 ```text
 | Crash after pointer update | Re-run through the checked publish/workflow boundary to repair immutable result/index completion. Do not advance the pointer a second time. A pointer without member completion remains a repair obligation. |
@@ -1246,9 +1267,9 @@ with:
 | Crash after pointer update | Re-run through the checked publish/workflow boundary to repair immutable result/index completion. Do not advance the pointer a second time. A pointer without member completion remains a repair obligation. The completion conflict names each gap of the completion check. A member whose first completion check reports a non-retryable gap and no obligation stops before any child runs, so it leaves no pointer to repair. (Stage 1c.) |
 ```
 
-- [ ] **Step 6: Close the release evidence.** In `release.md`, add the Task 7 commit hash to `## Live-config selection`. End the file with a section `## Statement` that holds the line "No SEC request was sent in Stage 1c. Nothing was written under `data/`." (§6 item 7).
+- [x] **Step 6: Close the release evidence.** In `release.md`, add the Task 7 commit hash to `## Live-config selection`. End the file with a section `## Statement` that holds the line "No SEC request was sent in Stage 1c. Nothing was written under `data/`." (§6 item 7).
 
-- [ ] **Step 7: Verify and commit.**
+- [x] **Step 7: Verify and commit.**
 
 ```bash
 grep -n "Stage 1c, plan 6" specs/sec-filing-index-ingestion-spec.md
@@ -1277,18 +1298,18 @@ Remove the `stage1c-member-completion` worktree and `/tmp/s1c-venv` after the re
 
 ## Handoff to later stages
 
-Fill each `<…>` token from the evidence at plan completion. The 1c spec is `specs/completed/sec-filing-index-member-completion.md` after the retire commit.
+The 1c spec is `specs/completed/sec-filing-index-member-completion.md`.
 
 - **Stage 2 (baseline campaign; the plan 2 revision).** Consumes, as built:
-  - Release `<1C>` (manifest `releases/sha256=<1C>/release.json`, `git_revision` `<1C revision>`), selected in the live config at commit `<Task 7 commit>`. Effective-config SHA-256 `<Task 7 SHA-256>`. Reserve 1800 s. Floor 480 s. Evidence: `specs/evidence/stage1c/release.md`, `gate.md`, `reproduction.md`.
-  - The plan 2 revision must change: its Global Constraints (release and effective-config SHA-256); the slice configs, regenerated for the 1c manifest (today `conf/stage2/1b/backfill-2020Q1-2020Q4.json` through `backfill-2025Q1-2025Q4.json`, `backfill-2026Q1-2026Q3.json` and `backfill-2026Q4-open.json`, eight files bound to `9fa189a0…`); `scripts/baseline-campaign.py`, re-verified against `<1C>` (plan 2 Task 1 Steps 4–5); and the `campaign.md` Release gate, read against `<1C>`.
+  - Release `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` (manifest `releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/release.json`, `git_revision` `3af121a468fdd6b3ec7d8286d5cf619493992d49`), selected in the live config at commit `f64c212cd1fd11688785442666299270f0103262`. Effective-config SHA-256 `fb93b0e8e05dbc1cbc9bd167ae02ef2d775629905c15938055a6a93c5fb95e96`. Reserve 1800 s. Floor 480 s. Evidence: `specs/evidence/stage1c/release.md`, `gate.md`, `reproduction.md`.
+  - The plan 2 revision must change: its Global Constraints (release and effective-config SHA-256); the slice configs, regenerated for the 1c manifest (today `conf/stage2/1b/backfill-2020Q1-2020Q4.json` through `backfill-2025Q1-2025Q4.json`, `backfill-2026Q1-2026Q3.json` and `backfill-2026Q4-open.json`, eight files bound to `9fa189a0…`); `scripts/baseline-campaign.py`, re-verified against `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` (plan 2 Task 1 Steps 4–5); and the `campaign.md` Release gate, read against `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7`.
   - Changed modules: `workflows/completion.py` and `workflows/processing.py` only. The tool imports `workflows.results`, which imports `completion` and calls `WorkflowMembers.completed`, so the re-verify runs (F6). No result format changed (M6). The stop rules read the workflow `outcome`, so the longer conflict text does not touch them.
-  - Repair of member `3554e8efb093532572ea5a35a1bf627a175784f0eac74b92e0777cb2e5d461ff` and ledger row k = 1: on `<1C>`, the next invocation evaluates this member complete. It lists the member's capture under `already_complete`, and its source (`924fd5f5…`) under `already_complete_sources`. No child runs for it, and no pointer moves (spec §4.2; `reproduction.md`, item 4 path: `<observed path>`). Task 5 treats that as completion of the runbook's repair obligation. Row k = 1 of `specs/evidence/baseline-campaign/invocations.md` stays as recorded: exit 9, `state_conflict`. It is not re-run.
+  - Repair of member `3554e8efb093532572ea5a35a1bf627a175784f0eac74b92e0777cb2e5d461ff` and ledger row k = 1: on `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7`, the next invocation evaluates this member complete. It lists the member's capture under `already_complete`, and its source (`924fd5f5…`) under `already_complete_sources`. No child runs for it, and no pointer moves (spec §4.2; `reproduction.md`, item 4 path: `the member is selected as already complete. It is not in `selection['jobs']`, the report lists no member entry for it, and it has no receipt after the run. There was no P7 deviation`). Task 5 treats that as completion of the runbook's repair obligation. Row k = 1 of `specs/evidence/baseline-campaign/invocations.md` stays as recorded: exit 9, `state_conflict`. It is not re-run.
   - Three sources appear as already complete in every invocation, because these members have no `WorkflowMemberResult` receipt: the daily members `3554e8ef…` (2026-07-01), `dc790624e85455feb79174c5d0ccbcab31c2b54c2e8b9de01ff503b551270a30` (2026-10-14) and `00c1f46d1f14a72ba1a949f89ff9bc93cb0b95109ace8de6e2799b40af95a4c6` (2026-10-15) (F10). The campaign ledger and the `coverage` tool must count them as complete without a receipt, and must not count them as new work in each invocation.
   - The skipped daily-index listing: in invocation 1, the `discover` child's request for `https://www.sec.gov/Archives/edgar/daily-index/index.json` was refused at 13:40:42Z with `permit_expired` ("child refused a stale dispatch window"), status 0, empty body (`quarantine/discovery/sha256=e3b0c442…`). The local design treats a safely refused expired permit as an explicit deferral (spec §4.3 item 6). The revision must account for the listing that was skipped.
   - The campaign window ends 2026-11-05T13:00:00Z. The open quarter must stay 2026Q4 (before 2027-01-01T00:00:00Z).
-  - Traps: (a) the stop before dispatch (M4) ends the command with `state_conflict`, exit 9 and no workflow result, as invocation 1 did, but no child runs and no pointer moves. The message names the member and its gaps. (b) On a poisoned store, the `discover` child still sends its requests before the first member stops (spec §8, second call). (c) Selecting the 1b release again for the live store is unsupported (parent §4.9). (d) Plan 5's traps still apply (plan 5, Handoff, Stage 2 bullet). (e) Under M4, any registered member whose first evaluation on `<1C>` returns a non-retryable gap, with no obligation, stops the whole invocation with exit 9. The Task 6 replay evaluated only `3554e8ef…`. Before the revision spends an invocation, it can evaluate every registered member on a scratch copy of `data/` on `<1C>`.
+  - Traps: (a) the stop before dispatch (M4) ends the command with `state_conflict`, exit 9 and no workflow result, as invocation 1 did, but no child runs and no pointer moves. The message names the member and its gaps. (b) On a poisoned store, the `discover` child still sends its requests before the first member stops (spec §8, second call). (c) Selecting the 1b release again for the live store is unsupported (parent §4.9). (d) Plan 5's traps still apply (plan 5, Handoff, Stage 2 bullet). (e) Under M4, any registered member whose first evaluation on `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` returns a non-retryable gap, with no obligation, stops the whole invocation with exit 9. The Task 6 replay evaluated only `3554e8ef…`. Before the revision spends an invocation, it can evaluate every registered member on a scratch copy of `data/` on `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7`. This is stricter than the `:96` check of the 1b release, which fired only after a child ended with a complete outcome. On 1b, a member with such a gap whose child ended `quarantined` could still get a receipt, and the run went on. The owner saw this before the merge (D5).
   - Deferred into this stage: none new. "Two-release proof covers only first-generation 1b stores" stays open in section `5-sec-filing-index-per-member-cost — 2026-10-28`, with the Stage 1c note.
-- **Stages 3, 4 and 5.** Consume `<1C>` wherever they name the 1b release (roadmap default (ix)), with the same config, reserve and floor as Stage 2. Each later invocation lists the three members above as already complete. Trap (a) of the Stage 2 bullet applies to every workflow command.
-- **Platform roadmap (not a stage of this roadmap).** S2 is satisfied once `<1C>` is built. The platform member may then merge to `main` under plan 3's Merge gate. That merge belongs to the platform roadmap.
-- **Roadmap resume.** Amend Stage 1c's Exit to the real cause (spec S1). Its first clause still names the F17 shape, which the diagnosis ruled out.
+- **Stages 3, 4 and 5.** Consume `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` wherever they name the 1b release (roadmap default (ix)), with the same config, reserve and floor as Stage 2. Each later invocation lists the three members above as already complete. Trap (a) of the Stage 2 bullet applies to every workflow command.
+- **Platform roadmap (not a stage of this roadmap).** S2 is satisfied once `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` is built. The platform member may then merge to `main` under plan 3's Merge gate. That merge belongs to the platform roadmap.
+- **Roadmap resume.** Amend Stage 1c's Exit to the real cause (spec S1). Its first clause still names the F17 shape, which the diagnosis ruled out. Also refresh the roadmap's status text near line 24, which still says that the current config selects the 1b release `9fa189a0…`. The config now selects the 1c release `c4de77b8…` (commit `f64c212…`).

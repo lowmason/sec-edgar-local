@@ -250,5 +250,23 @@
       parent spec §4.9 and in specs/evidence/stage1b/two-release.md, "Limits of the proof". A
       stronger scenario needs new fixture design: 1b publishes an incremental generation, then D5
       runs and publishes on top. Related: the plan 4 item "Order-aware two-release proofs".
+      Stage 1c (plan 6): the live store now holds such generations: eight incremental 1b
+      generations on `fc68adef…` bases, from invocation 1. The Stage 1c diagnosis compared their
+      data rows with a full rebuild and found them equal. Change rows were not compared
+      (specs/evidence/stage1c/diagnosis/diagnosis.md). The item stays open.
       Size: plan. Revisit if: the D5 release must run again on a store that holds an incremental
       1b generation, or a later stage plans to select D5 after a live 1b run.
+
+## 6-sec-filing-index-member-completion — 2026-10-30
+- [ ] The completion conflict names no cause when the evaluation has no gap (plan 6 Task 3, from
+      the whole-branch review; the owner was told at the Task 4 checkpoint. See
+      specs/plans/completed/6-sec-filing-index-member-completion.md). In
+      packages/sec-edgar-ingest/src/sec_edgar_ingest/workflows/processing.py, the completion
+      check after a finished child raises `child completion lacks all affected quarter/repair
+      evidence` with no suffix when the evaluation has no gap, for example when it holds only
+      repair obligations (spec M3 requires the stock text alone in that case). An operator then
+      cannot see which obligation is open. Deferred: spec M3 fixes the text, and the 1c release is
+      already built from this source. To do: decide a text that names the open obligations, add a
+      test beside `test_member_completion.ProcessMemberTests`, and ship it in the next release.
+      Size: quick-fix. Revisit if: an acceptance or campaign run ends with this stock conflict and
+      the cause is not visible from the gaps or the obligation rows.

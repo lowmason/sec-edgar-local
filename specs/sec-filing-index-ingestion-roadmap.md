@@ -194,7 +194,7 @@ to live execution, not prerequisites to writing the plan that defines them.
   > Stage 1b: COMPLETE (2026-10-28) — implemented by plan 5 (specs/plans/completed/5-sec-filing-index-per-member-cost.md). Its Handoff section names what Stages 2–5 consume.
   > Next: resume the roadmap.
 
-- [ ] Stage 1c: Member-completion conflict fix and its release (approved at resume, 2026-10-29)
+- [x] Stage 1c: Member-completion conflict fix and its release (approved at resume, 2026-10-29)
       Objective: Ship a reviewed native release on which a member whose publish completes also passes the member-completion check, and which repairs the store state that invocation 1 left.
       Spec: §3 R5, R6, R9, R12; §§4.6–4.9, 5–6, 9; plan 2 D12, F17.
       Gap closed: None directly; removes the plan 2 D12 blocker that keeps G2 and G3 open.
@@ -202,6 +202,9 @@ to live execution, not prerequisites to writing the plan that defines them.
       Produces: A stage spec and plan; a written diagnosis of the `processing.py:96` conflict; the fix with offline tests; a recovery path for the nine filing-quarter pointers that moved without member completion, exercised offline; a reviewed release with setup, preflight and review evidence; the reviewed live-config selection with its effective-config SHA-256; and a plan Handoff that names every value the plan 2 revision must change, including how Task 5 treats the repair obligation and ledger row k = 1.
       Exit: An offline reproduction that fails on the 1b release passes on the new release: one daily member whose publish writes a first publication and incremental generations on `fc68adef…`-written bases completes with all affected quarter evidence; offline, a re-run through the checked boundary completes a member whose pointers moved without member completion and moves no pointer twice (§4.7); the offline checker and preflight pass on the new release, with the 1b release and older releases retained (§4.9); the provenance and reader contracts hold or an explicit versioned transition is reviewed (§9); no SEC request was sent and nothing was written under `data/`.
       ROUTING: brainstorming
+
+  > Stage 1c: COMPLETE (2026-10-30) — implemented by plan 6 (specs/plans/completed/6-sec-filing-index-member-completion.md). Its Handoff section names what Stages 2–5 consume.
+  > Next: resume the roadmap.
 
 - [ ] Stage 2: Baseline campaign and coverage decision
       Objective: Produce an accepted written finding on the requested historical baseline, including every unresolved exception.
