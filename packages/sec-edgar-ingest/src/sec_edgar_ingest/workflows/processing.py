@@ -17,6 +17,10 @@ class ProcessedMember(Record):
     def __post_init__(self):
         validate_record_fields(self)
 
+def _gap_text(gaps) -> str:
+    """Each gap as `code: message`, in order, on one line (Stage 1c, M3 and M4)."""
+    return '; '.join(f'{gap.code}: {gap.message}' for gap in gaps)
+
 def process_member(value, context, dispatcher, store, objects, observer=None) -> ProcessedMember:
     value = to_mapping_value(value)
     member = read_member(value, store, objects)
@@ -27,6 +31,12 @@ def process_member(value, context, dispatcher, store, objects, observer=None) ->
     source = member.members[0]
     origin = Settings.from_mapping(member.context.to_mapping()['effective_config'])
     initial = evaluate_member(value, context.parser_version, context.schema_version, store, objects)
+    # Stage 1c (M4): with no obligation to repair, a non-retryable gap means completion cannot pass,
+    # so stop before any child runs. Obligations keep the repair path; the final check stays the guard.
+    blocking = tuple(gap for gap in initial.gaps if not gap.retryable)
+    if blocking and not initial.obligations:
+        raise Conflict(f"member {value['member_id']} completion check cannot pass before dispatch: "
+                       f'{_gap_text(blocking)}')
     resolutions, calls, gaps, quarters = [], [], [], ()
     for obligation in initial.obligations:
         objects.verify(obligation['ref'], obligation['sha256'], obligation['bytes'])
@@ -93,7 +103,8 @@ def process_member(value, context, dispatcher, store, objects, observer=None) ->
         tuple(quarters), tuple(gaps), context.parser_version, context.schema_version)
     evaluated = evaluate_member(value, context.parser_version, context.schema_version, store, objects)
     if result.outcome in COMPLETE and not evaluated.complete:
-        raise Conflict('child completion lacks all affected quarter/repair evidence')
+        stock = 'child completion lacks all affected quarter/repair evidence'
+        raise Conflict(f'{stock}: {_gap_text(evaluated.gaps)}' if evaluated.gaps else stock)
     evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-member-evidence-v1', 'member': dict(value),
         'calls': calls, 'completion': evaluated.capture if result.outcome in COMPLETE else None,
         'resolutions': resolutions, 'terminal_error': terminal_error}

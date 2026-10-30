@@ -21,6 +21,18 @@ from sec_edgar_ingest.storage.contracts import Conflict
 from sec_edgar_ingest.workflows import completion
 from sec_edgar_ingest.workflows.completion import evaluate_member
 from sec_edgar_ingest.workflows.contracts import LOCAL_CONTRACT
+from dataclasses import replace
+from datetime import date, datetime, timedelta, timezone
+
+from support_process import checked_clock, checked_dispatcher, checked_fault
+from support_workflows import CommandHarness, simple_pack
+from sec_edgar_ingest.config import pin_context
+from sec_edgar_ingest.models import Error, error_text, require_text
+from sec_edgar_ingest.runtime import configured_descriptor
+from sec_edgar_ingest.workflows.contracts import CompletionEvaluation
+from sec_edgar_ingest.workflows.processing import process_member
+from sec_edgar_ingest.workflows.provenance import project_member
+from sec_edgar_ingest.worksets import decode_source_workset
 
 INVENTORY = 'ordinary publication authority inventory uncertain: '
 REFUSAL = 'legacy unfinished publication has no complete publishable input'
@@ -205,6 +217,121 @@ class LegacyInventoryTests(unittest.TestCase):
         with self.subTest('input address'), \
                 self.assertRaisesRegex(Conflict, f'^{INVENTORY}legacy publish transformed input address differs$'):
             completion._publish_calls(self.f.store, changed_input)
+
+
+class ProcessMemberTests(unittest.TestCase):
+    EVALUATE = 'sec_edgar_ingest.workflows.processing.evaluate_member'
+
+    def scratch(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return Path(tmp.name)
+
+    def prepare(self):
+        """One fresh daily member, as in test_workflow_processing.ProcessingTests.prepare."""
+        root = self.scratch()
+        h = CommandHarness(root, simple_pack(root / 'pack'))
+        self.addCleanup(h.close)
+        now = datetime.now(timezone.utc)
+        context = RunContext('processing', 'manual', 'daily', 'a', h.settings.etl.parser_version,
+            h.settings.etl.schema_version, h.settings.config_sha256, now, now + timedelta(seconds=1800), 'daily',
+            runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
+        context = pin_context(h.settings, context, date(2026, 10, 7))[0]
+        dispatcher = checked_dispatcher(context, h.settings, h.pack, root, h.store, h.objects)
+        found = dispatcher.execute('discover', 'discover', h.settings,
+                                   ('--mode', 'daily', '--discovery-id', 'processing-daily'))
+        parent = decode_source_workset(h.objects.read(found.result.source_workset_ref))
+        value = project_member(found.result.source_workset_ref, parent.members[0].source_id, h.store, h.objects)
+        return h, context, dispatcher, value
+
+    def gap(self, code, message, retryable, value):
+        return Error(code, message, retryable, value['source']['source_id'],
+                     {'type': 'Conflict'} if code == 'state_conflict' else {})
+
+    def test_the_completion_conflict_names_each_gap_in_order(self):
+        """§5 item 5 (M3): one line, the stock text, then each gap's code and message in order."""
+        h, context, dispatcher, value = self.prepare()
+        gaps = (self.gap('publication_pending', 'affected quarter has no publication', True, value),
+                self.gap('state_conflict', INVENTORY + REFUSAL, False, value))
+        seen = []
+
+        def second_incomplete(*args):
+            seen.append(args)
+            return evaluate_member(*args) if len(seen) == 1 else CompletionEvaluation(False, None, (), gaps)
+        with patch(self.EVALUATE, side_effect=second_incomplete), self.assertRaises(Conflict) as raised:
+            process_member(value, context, dispatcher, h.store, h.objects)
+        expected = (f'{STOCK}: publication_pending: affected quarter has no publication; '
+                    f'state_conflict: {INVENTORY}{REFUSAL}')
+        self.assertIs(type(raised.exception), Conflict)
+        self.assertEqual(str(raised.exception), expected)
+        self.assertEqual(error_text(raised.exception), expected)
+        require_text(expected, 'message')
+        self.assertEqual(len(seen), 2)
+
+    def test_a_non_retryable_gap_stops_the_member_before_dispatch(self):
+        """§5 item 6 (M4): no child runs and no pointer moves. Only the non-retryable gaps are named."""
+        h, context, dispatcher, value = self.prepare()
+        gaps = (self.gap('state_conflict', 'first fixture conflict', False, value),
+                self.gap('publication_pending', 'affected quarter has no publication', True, value),
+                self.gap('state_conflict', 'second fixture conflict', False, value))
+        dispatched = []
+        with patch(self.EVALUATE, return_value=CompletionEvaluation(False, None, (), gaps)), \
+                patch.object(dispatcher, 'execute', side_effect=lambda *args: dispatched.append(args)), \
+                self.assertRaises(Conflict) as raised:
+            process_member(value, context, dispatcher, h.store, h.objects)
+        self.assertEqual(str(raised.exception),
+                         f"member {value['member_id']} completion check cannot pass before dispatch: "
+                         'state_conflict: first fixture conflict; state_conflict: second fixture conflict')
+        self.assertEqual(dispatched, [])
+        self.assertEqual(tuple(h.store.scan('QuarterPublication', {})), ())
+
+    def test_retryable_gaps_dispatch_as_today(self):
+        """§5 item 6 (M4): a member that starts with only retryable gaps runs its children."""
+        h, context, dispatcher, value = self.prepare()
+        pending = (self.gap('transform_pending', 'member has no current Processing identity', True, value),)
+        seen = []
+
+        def first_pending(*args):
+            seen.append(args)
+            return CompletionEvaluation(False, None, (), pending) if len(seen) == 1 else evaluate_member(*args)
+        with patch(self.EVALUATE, side_effect=first_pending):
+            processed = process_member(value, context, dispatcher, h.store, h.objects)
+        self.assertEqual(processed.result.outcome, 'success')
+        self.assertEqual(len(processed.result.child_refs), 3)
+
+    def test_obligations_take_the_repair_path_even_with_a_non_retryable_gap(self):
+        """§5 item 6, mixed case (M4): obligations repair as today; the :96 check stays the final guard."""
+        with tempfile.TemporaryDirectory() as tmp:
+            f = EvidenceFixture(Path(tmp) / '.fixture-state')
+            try:
+                _, _, transformed = f.invoke('transform', f.snapshot_input(quarterly_bytes('2026-07-01')))
+                with checked_fault(f.root):
+                    code, _, result = f.invoke('publish', transformed.transformed_workset_ref)
+                self.assertEqual((code, result), (9, None))
+                pointers = [r.to_mapping() for r in f.store.scan('QuarterPublication', {})]
+                clock = f.workflow.deadline + timedelta(seconds=1)
+                fresh = replace(f.workflow, attempt_id='fresh-repair', started_at=clock,
+                                deadline=clock + timedelta(seconds=3600))
+                dispatcher = checked_dispatcher(fresh, f.settings, f.pack, f.root.parent, f.store, f.objects)
+                seen = []
+
+                def mixed(*args):
+                    evaluation = evaluate_member(*args)
+                    if seen:
+                        return evaluation
+                    seen.append(evaluation)
+                    self.assertEqual(len(evaluation.obligations), 1)
+                    extra = Error('state_conflict', 'fixture non-retryable gap', False,
+                                  f.value['source']['source_id'], {'type': 'Conflict'})
+                    return replace(evaluation, gaps=evaluation.gaps + (extra,))
+                with checked_clock(f.root, clock), patch('sec_edgar_ingest.cli.Clock.now', return_value=clock), \
+                        patch(self.EVALUATE, side_effect=mixed):
+                    processed = process_member(f.value, fresh, dispatcher, f.store, f.objects)
+                self.assertIn(processed.result.outcome, ('success', 'unchanged'))
+                self.assertEqual(len(processed.evidence['resolutions']), 1)
+                self.assertEqual([r.to_mapping() for r in f.store.scan('QuarterPublication', {})], pointers)
+            finally:
+                f.close()
 
 
 if __name__ == '__main__':
