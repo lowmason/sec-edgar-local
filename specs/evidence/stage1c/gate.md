@@ -22,6 +22,8 @@ The branch also adds one constant, `ONE_B_REVISION`, to the helper `tests/suppor
 ## Deviations from the plan's test code
 > Deviation: in `test_release_1c.test_the_1c_code_completes_the_member_on_the_same_store`, the plan compared `capture['affected_quarters']` with a list. `read_workflow_result` returns a tuple, so the comparison failed with `('2026Q4',) != ['2026Q4']`. The `expectedFailure` decorator from Task 1 had hidden this. Commit `a8eefca` wraps the value in `list(...)` and keeps the expected value. The commit message says so. The test still checks the same fact.
 
+> Deviation: the whole-branch review came after the gate. Commit `c8184c7` changes only `packages/sec-edgar-ingest/tests/test_member_completion.py` (it adds 3 tests and fixes one docstring and the import order). It changes no file under `packages/sec-edgar-ingest/src`, so the plan (Task 4 Step 5) does not require a new gate. `git diff bbd547c HEAD -- packages/sec-edgar-ingest/src` is empty. After the commit, `test_member_completion` and `test_release_1c` ran together: `Ran 16 tests in 135.661s`, `OK`. The branch tip therefore holds 1128 tests by count (1125 plus 3). The full suite was not run on the tip. Every later commit on the branch is a test or evidence file.
+
 ## Checks of the branch (plan Task 4 Step 6)
 - `stage1c-member-completion:pyproject.toml` has `members = ["packages/sec-edgar-ingest"]`. No platform member.
 - `git diff --stat 50423a404fb50a959b3ca4077301117d32804cc6 stage1c-member-completion -- uv.lock pyproject.toml packages/sec-edgar-ingest/pyproject.toml` is empty.
