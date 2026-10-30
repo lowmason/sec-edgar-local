@@ -403,7 +403,7 @@ generation is also not tested. (Stage 1b, plan 5; C5 and C7 in the
 [1b spec](completed/sec-filing-index-per-member-cost.md); [two-release evidence](evidence/stage1b/two-release.md).)
 
 The 1c release changes no generation, manifest, receipt, member evidence, selection, Attempt or config
-format, and no outcome or exit code (M6). The 1b release can still read a store that the 1c release
+format, and no outcome or exit-code format (M6). The 1b release can still read a store that the 1c release
 wrote. But on a store that holds a finished publish Attempt with an incomplete input, such as the live
 store, the 1b release fails the member-completion check. So selecting the 1b release again for that
 store is unsupported. (Stage 1c, plan 6; §4.3 item 7 of the
