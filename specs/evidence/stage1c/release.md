@@ -67,3 +67,22 @@ The replay shows that the 1c interpreter evaluates the member that halted in inv
 **Files:** `specs/evidence/stage1c/replay/diag2-evaluate-member.txt`, `diag5-obligations-pointers.txt`, `live-data-before.sha256` and `live-data-after.sha256`.
 
 **Network:** No SEC request was sent. Both scripts open only local stores on the scratch root. No network monitor ran, so this follows from what the scripts open. The "no writer" check and the scratch size come from the task report.
+
+## Live-config selection
+The owner approved the live-config selection ("Approve selection"). The approval authorizes no SEC traffic (spec §9).
+
+**Change:** one line in `conf/sec-edgar-local.json`. The value of `runtime.release_manifest` moved from the `9fa189a0…` release (1b) to the `c4de77b8…` release (1c). The new value is `/Users/lowell/Projects/sec-edgar-local/releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/release.json`. `execution.dispatch_reserve_seconds` stays 1800. Nothing else changed.
+
+**Offline preflight** ran on the 1c interpreter (`-I -B -X pycache_prefix=/dev/null`) from the repository root. It loaded the config and checked the release. It ran no launcher command.
+
+- **Effective-config SHA-256:** `fb93b0e8e05dbc1cbc9bd167ae02ef2d775629905c15938055a6a93c5fb95e96`. The value before was `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`.
+- **Floor:** 480.
+- **Reserve:** 1800.
+- **Release:** `c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7`.
+- **Binding:** the output line below holds no `execution` field.
+
+```
+binding {'binding_version': 'sec-local-binding-v1', 'root': '/Users/lowell/Projects/sec-edgar-local/data', 'acquisition_mode': 'live', 'namespace': 'sec-owner-lowell-mason', 'sec': {'user_agent': 'Lowell Mason sec-edgar-ingest mason.lowell@mac.com', 'requests_per_second': 3.0, 'max_active_collectors': 1}, 'coordination': {'lease_seconds': 60.0, 'renew_every_seconds': 20.0, 'namespace': 'sec-owner-lowell-mason', 'clock_uncertainty_seconds': 2.0}, 'storage_contract': 'sec-local-storage-v1'}
+```
+
+No SEC request was sent in this stage.

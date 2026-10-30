@@ -44,7 +44,7 @@
   },
   "runtime": {
     "kind": "native",
-    "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json"
+    "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/release.json"
   },
   "logging": {
     "root": "../logs"
