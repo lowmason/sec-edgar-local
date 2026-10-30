@@ -66,4 +66,4 @@ The replay shows that the 1c interpreter evaluates the member that halted in inv
 
 **Files:** `specs/evidence/stage1c/replay/diag2-evaluate-member.txt`, `diag5-obligations-pointers.txt`, `live-data-before.sha256` and `live-data-after.sha256`.
 
-**Network:** No SEC request was sent. The scripts only read the local copy.
+**Network:** No SEC request was sent. Both scripts open only local stores on the scratch root. No network monitor ran, so this follows from what the scripts open. The "no writer" check and the scratch size come from the task report.
