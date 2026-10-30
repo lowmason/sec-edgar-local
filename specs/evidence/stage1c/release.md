@@ -16,7 +16,7 @@ The 1b release is `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc2
 | `runtime-requirements.txt` (the `uv export --package sec-edgar-ingest --no-dev --no-emit-workspace` output), without comment lines | `export-lines-identical`. Both files give SHA-256 `def62c21599d615c1945f47a984f6e7e053eeed63130422f8db65ed5a81fcb76`. See the note below. |
 | `git diff --exit-code 50423a404fb50a959b3ca4077301117d32804cc6 HEAD -- uv.lock pyproject.toml packages/sec-edgar-ingest/pyproject.toml` | `inputs-identical`. The diff is empty. |
 | Package version | `0.2.0` in both releases. |
-| `git_revision` in the 1c manifest | `3af121a468fdd6b3ec7d8286d5cf619493992d49`. It equals `HEAD` of the clean tree. |
+| `git_revision` in the 1c manifest | `3af121a468fdd6b3ec7d8286d5cf619493992d49`. It equals `HEAD` of the clean tree before the build. |
 | Dependencies | `certifi`, `charset-normalizer`, `idna`, `pyarrow`, `requests`, `urllib3`. The same six as the 1b release. No platform package. |
 
 > Note: line 2 of `runtime-requirements.txt` is a comment. It records the random temporary directory that `uv export` used. So the check compares the requirement lines only, as plan 4 and plan 5 did.
@@ -43,7 +43,7 @@ The verifier ran on the 1c interpreter (`-I -B -X pycache_prefix=/dev/null`) wit
 - `sha256=9fa189a0…` (1b)
 - `sha256=c4de77b8…` (1c, new)
 
-`releases/` also holds `artifact-cache` and `task14-guard-proofs`. The 1b release, the D5 release, `fc68adef…` and the older releases are all kept. No existing release directory changed.
+`releases/` also holds `artifact-cache` and `task14-guard-proofs`. The 1b release, the D5 release, `fc68adef…` and the older releases are all kept. No existing release directory changed. Among the existing entries of `releases/`, the build touched only `artifact-cache`, which holds build inputs.
 
 ## Network
 No SEC request was sent. Verification used fixture acquisition only.
