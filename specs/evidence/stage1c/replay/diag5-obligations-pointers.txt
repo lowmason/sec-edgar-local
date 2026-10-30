@@ -1,0 +1,19 @@
+WorkflowRepairObligation rows: 0
+QuarterPublication rows: 17
+  None {'generation_id': '887cfe89f5fc96113ade4494ec2d727265baaa0dfc69b4ad9c26cbec08d15001', 'quarter': '2021Q1'}
+  None {'generation_id': '922205a8baeaeb6c1907f3c0985a0280e62338d41a8cce60cb73bd4dee9e6068', 'quarter': '2021Q2'}
+  None {'generation_id': 'de13f2b5c99dbc5103df4ede21d684ea79a3f1e386dbadd0426aedcb2c4ec129', 'quarter': '2021Q3'}
+  None {'generation_id': '095813ae5beabf8230d10b836e36b3a1dc7aac3c95f35a700826c7059631c082', 'quarter': '2021Q4'}
+  None {'generation_id': 'c2659e72d5ecbaccbf06803a9919608c9d9114631571d210c62fc682458aa78a', 'quarter': '2022Q1'}
+  None {'generation_id': 'df8dc6d90911239c14374d2f1d16844fe4cb4f2e14843bdac71c1ecb72d879b4', 'quarter': '2022Q2'}
+  None {'generation_id': 'c1d4a82e16923e5071085c4f80d72b17507d792362558e4234ea0ffbe9f9048a', 'quarter': '2023Q3'}
+  None {'generation_id': '32202368488ca57022ec37a6ede266d29cb6954fc7be4fc9c0fad67dc43f485f', 'quarter': '2024Q3'}
+  None {'generation_id': '4bd62fa5457a5a477c4a8d1606c2ce7ba56f512a966e9a180fc00dfe006b4b9b', 'quarter': '2024Q4'}
+  None {'generation_id': '3c139947b062fc920a0d503de3b86449f102e53a70492dafbec04b1eb18b4ef2', 'quarter': '2025Q1'}
+  None {'generation_id': '06076ee7211e2e24166b5c4d26ff13b195c371177f9c6d0fc908b16f6f774cae', 'quarter': '2025Q2'}
+  None {'generation_id': 'd09ecb5c140d982d45158c017ddc2cd0c0b38112fba42e7e2bba1884bd18108c', 'quarter': '2025Q3'}
+  None {'generation_id': '678e8d5ac8d3c079b9530a278778a978d2eac5fb5ba29a7d888c820214235915', 'quarter': '2025Q4'}
+  None {'generation_id': 'cf1f7031a3387fb66e0f9868a3e5d6ad650b5d8f5c84b7fd445cb2dcf81fd7aa', 'quarter': '2026Q1'}
+  None {'generation_id': 'b8016f5bb5f3e4792be2ea3e4c0bdb1b999270e8b3d7e458a5c5860186b61945', 'quarter': '2026Q2'}
+  None {'generation_id': '74ed264c7c73517a2fa83c40bf4c8b8f9ba7142a6209d564c276ac896ba6c8da', 'quarter': '2026Q3'}
+  None {'generation_id': 'ad66529417ebe8c4d5c33a3fe243a1634731da292294fe10fb937c2abe3c3247', 'quarter': '2026Q4'}

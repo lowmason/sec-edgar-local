@@ -47,3 +47,23 @@ The verifier ran on the 1c interpreter (`-I -B -X pycache_prefix=/dev/null`) wit
 
 ## Network
 No SEC request was sent. Verification used fixture acquisition only.
+
+## Diagnosis replay (§5 item 7)
+The replay shows that the 1c interpreter evaluates the member that halted in invocation 1 as complete. It ran on a scratch copy of `data/`. It wrote nothing under `data/`.
+
+- **Scratch copy:** `/tmp/stage1c-replay-20261030T151949Z/data`. It was made with `cp -Rp data` after `data/` was hashed. It holds 326 files and 20 MB. No writer ran at that time (`pgrep` printed nothing). The scratch directory is temporary and is not kept.
+- **Interpreter:** `releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/venv/bin/python -I -B -X pycache_prefix=/dev/null`
+- **Member ID:** `3554e8efb093532572ea5a35a1bf627a175784f0eac74b92e0777cb2e5d461ff` (daily index `2026-07-01`, source `924fd5f5b380e8a8603bab21b91edcd9408962b3a25fe812f067b25777063d58`).
+- **Scripts:** `specs/evidence/stage1c/diagnosis/scripts/diag2.py` and `diag5.py`. The committed diagnosis scripts ran unchanged.
+
+| Check | Result |
+|---|---|
+| `diag2.py` on the 1c interpreter (`grep -n 'complete:\|gap:'`) | One line: `2:complete: True obligations: 0`. No `gap:` line. The 1b code gave `complete: False` and a `state_conflict` gap for this member (`diagnosis/outputs/diag2-evaluate-member.txt`). |
+| `diag5.py` against `diagnosis/outputs/diag5-obligations-pointers.txt` | `pointers-equal`. The output has 0 `WorkflowRepairObligation` rows and 17 `QuarterPublication` rows. |
+| `live-data-before.sha256` against `live-data-after.sha256` | `data-unchanged`. `cmp` found no difference in any of the 326 lines. `data/` holds `state.sqlite3` and no WAL or SHM file, so the plan 2 D7 exception was not needed. |
+
+`live-data-before.sha256` is also byte-identical to the diagnosis's `live-data-before.sha256`. So `data/` held the same state as at diagnosis time. The hash method is one `shasum -a 256` line for each file, with paths relative to `data/`, sorted.
+
+**Files:** `specs/evidence/stage1c/replay/diag2-evaluate-member.txt`, `diag5-obligations-pointers.txt`, `live-data-before.sha256` and `live-data-after.sha256`.
+
+**Network:** No SEC request was sent. The scripts only read the local copy.
