@@ -448,7 +448,17 @@ def accounts_for(active: ObservationRef | None, ref: ObservationRef) -> bool:
 LEGACY_PUBLISH_FORMAT = 'sec-local-workflow-legacy-publish-v1'
 
 
-def _legacy_publish_call(context, objects):
+def _require_complete_input(workset):
+    if not workset.complete:
+        raise Conflict('legacy unfinished publication has no complete publishable input')
+
+
+def _legacy_publish_descriptor(context, objects, *, require_complete=False):
+    """Build the legacy publish call and read its input (Stage 1c, M1).
+
+    The inventory loop builds without the complete-input refusal. `_legacy_publish_call` sets
+    `require_complete`, so its checks run in today's order.
+    """
     if context.command != 'publish':
         raise Conflict('legacy repair context is not a publish command')
     settings = Settings.from_mapping(context.to_mapping()['effective_config'])
@@ -469,13 +479,18 @@ def _legacy_publish_call(context, objects):
     workset = decode_transformed(objects.read(intent['workset']))
     if transformed_ref(workset) != intent['workset']:
         raise Conflict('legacy publish transformed input address differs')
-    if not workset.complete:
-        raise Conflict('legacy unfinished publication has no complete publishable input')
+    if require_complete:
+        _require_complete_input(workset)
     if (workset.context.parser_version, workset.context.schema_version) != (
             context.parser_version, context.schema_version):
         raise Conflict('legacy publish input versions differ')
-    return {'contract_version': LOCAL_CONTRACT, 'format_version': LEGACY_PUBLISH_FORMAT, 'context': context.to_mapping(),
+    call = {'contract_version': LOCAL_CONTRACT, 'format_version': LEGACY_PUBLISH_FORMAT, 'context': context.to_mapping(),
             'intent': intent, 'input_ref': intent['workset'], 'result_ref': path}
+    return call, workset
+
+
+def _legacy_publish_call(context, objects):
+    return _legacy_publish_descriptor(context, objects, require_complete=True)[0]
 
 
 def read_legacy_publish(call, store, objects):
@@ -555,12 +570,15 @@ def _publish_calls(store, objects):
             context = RunContext.from_mapping(value['context'])
             if context.command != 'publish' or result_path(context) in checked_paths:
                 continue
-            call = _legacy_publish_call(context, objects)
+            call, workset = _legacy_publish_descriptor(context, objects)
             _transformed_input(call['input_ref'], None, objects)
             call_key = hashlib.sha256(canonical_json(to_mapping_value(call))).hexdigest()
+            # Stage 1c (M2): only a kept call must have a complete input. A finished Attempt with an
+            # incomplete input and no repair record moved no pointer, so it is not an obligation.
             if (value['result'] is None
                     or store.get('WorkflowRepairObligation', call_key) is not None
                     or _read_repair_authority(call_key, objects) is not None):
+                _require_complete_input(workset)
                 legacy.append(call)
         except (ValueError, OSError, Conflict, KeyError, TypeError) as error:
             raise Conflict(f'ordinary publication authority inventory uncertain: {error}') from error

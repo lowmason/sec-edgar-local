@@ -119,7 +119,6 @@ class MemberCompletionReleaseTests(unittest.TestCase):
         self.assertEqual(self.quarters(h), ['2026Q4'])
         self.assertEqual(self.receipts(h, value), 0)
 
-    @unittest.expectedFailure  # Plan 6 Task 2 removes this decorator.
     def test_the_1c_code_completes_the_member_on_the_same_store(self):
         """§5 item 1, second half: the 1c code completes the member with all affected quarter evidence."""
         h = self.poisoned()
@@ -132,10 +131,9 @@ class MemberCompletionReleaseTests(unittest.TestCase):
         self.assertEqual(self.receipts(h, value), 1)
         self.assertEqual(self.quarters(h), ['2026Q4'])
         capture = next(c for c in report.intent['completion_captures'] if c['member']['member_id'] == value['member_id'])
-        self.assertEqual(capture['affected_quarters'], ['2026Q4'])
+        self.assertEqual(list(capture['affected_quarters']), ['2026Q4'])
         self.assertEqual([q['quarter'] for q in capture['quarters']], ['2026Q4'])
 
-    @unittest.expectedFailure  # Plan 6 Task 2 removes this decorator.
     def test_a_1c_rerun_completes_the_halted_member_and_moves_no_pointer(self):
         """§5 item 4 and M5: the store that the 1b release left, re-run on the 1c code."""
         h = self.poisoned()
