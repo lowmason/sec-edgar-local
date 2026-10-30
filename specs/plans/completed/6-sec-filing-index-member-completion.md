@@ -26,7 +26,7 @@ The code lands on a feature branch in a worktree. It merges to `main` after the 
 
 **Tech Stack:** Python 3.14 (CPython 3.14.0, macOS arm64). SQLite through `sqlite3`. Stdlib `unittest` under `packages/sec-edgar-ingest/tests/network_guard.py`. `uv` offline and locked. Installed releases under `releases/sha256=<id>/`.
 
-**Spec:** [specs/sec-filing-index-member-completion.md](../sec-filing-index-member-completion.md) (Stage 1c, approved 2026-10-29 at `097bea1`). Parent spec: [specs/sec-filing-index-ingestion-spec.md](../sec-filing-index-ingestion-spec.md). Inputs: the [Stage 1c diagnosis](../evidence/stage1c/diagnosis/diagnosis.md), [plan 2](2-sec-filing-index-ingestion-spec.md) D12 and Handoff bullet "Task 5 halt (2026-10-29)", [completed plan 5](completed/5-sec-filing-index-per-member-cost.md).
+**Spec:** [specs/sec-filing-index-member-completion.md](../../completed/sec-filing-index-member-completion.md) (Stage 1c, approved 2026-10-29 at `097bea1`). Parent spec: [specs/sec-filing-index-ingestion-spec.md](../../sec-filing-index-ingestion-spec.md). Inputs: the [Stage 1c diagnosis](../../evidence/stage1c/diagnosis/diagnosis.md), [plan 2](../2-sec-filing-index-ingestion-spec.md) D12 and Handoff bullet "Task 5 halt (2026-10-29)", [completed plan 5](5-sec-filing-index-per-member-cost.md).
 
 ## Global Constraints
 

@@ -1,16 +1,18 @@
 # Member-completion conflict fix and the 1c release — Stage 1c Design Spec
 
-**Status: APPROVED (2026-10-29)**, awaiting its plan.
+**Status: COMPLETE (2026-10-30)** — implemented by plan 6
+([completed member-completion plan](../plans/completed/6-sec-filing-index-member-completion.md)); deferred items in
+`specs/deferred_items.md`.
 **Approval:** Approved by the owner, 2026-10-29, as committed at `097bea1`. Owner's words: "I approve the
 written Stage 1c spec as committed at 097bea1."
 **Project:** `/Users/lowell/Projects/sec-edgar-local`.
-**Parent spec:** [SEC filing-index ingestion](sec-filing-index-ingestion-spec.md) (§§3 R5, R6, R9, R12; 4.6–4.9; 5–6; 9).
-**Roadmap:** [ingestion roadmap](sec-filing-index-ingestion-roadmap.md), Stage 1c.
-**Inputs:** the [Stage 1c diagnosis](evidence/stage1c/diagnosis/diagnosis.md) and its scripts and outputs;
-[plan 2](plans/2-sec-filing-index-ingestion-spec.md) D12, F17 and Handoff, bullet "Task 5 halt (2026-10-29)";
+**Parent spec:** [SEC filing-index ingestion](../sec-filing-index-ingestion-spec.md) (§§3 R5, R6, R9, R12; 4.6–4.9; 5–6; 9).
+**Roadmap:** [ingestion roadmap](../sec-filing-index-ingestion-roadmap.md), Stage 1c.
+**Inputs:** the [Stage 1c diagnosis](../evidence/stage1c/diagnosis/diagnosis.md) and its scripts and outputs;
+[plan 2](../plans/2-sec-filing-index-ingestion-spec.md) D12, F17 and Handoff, bullet "Task 5 halt (2026-10-29)";
 the invocation 1 record `specs/evidence/baseline-campaign/invocations/1-8305a3d9-54a1-46ae-863c-af8227118417.json`;
 the 1b release `9fa189a0…` and its evidence (`specs/evidence/stage1b/`);
-[local recovery](../docs/runbooks/local-recovery.md), row "Crash after pointer update".
+[local recovery](../../docs/runbooks/local-recovery.md), row "Crash after pointer update".
 
 ## 1. Purpose
 
