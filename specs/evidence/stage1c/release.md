@@ -71,6 +71,8 @@ The replay shows that the 1c interpreter evaluates the member that halted in inv
 ## Live-config selection
 The owner approved the live-config selection ("Approve selection"). The approval authorizes no SEC traffic (spec §9).
 
+**Commit:** `f64c212cd1fd11688785442666299270f0103262` (`chore(config): select the 1c release`).
+
 **Change:** one line in `conf/sec-edgar-local.json`. The value of `runtime.release_manifest` moved from the `9fa189a0…` release (1b) to the `c4de77b8…` release (1c). The new value is `/Users/lowell/Projects/sec-edgar-local/releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/release.json`. `execution.dispatch_reserve_seconds` stays 1800. Nothing else changed.
 
 **Offline preflight** ran on the 1c interpreter (`-I -B -X pycache_prefix=/dev/null`) from the repository root. It loaded the config and checked the release. It ran no launcher command.
@@ -86,3 +88,6 @@ binding {'binding_version': 'sec-local-binding-v1', 'root': '/Users/lowell/Proje
 ```
 
 No SEC request was sent in this stage.
+
+## Statement
+No SEC request was sent in Stage 1c. Nothing was written under `data/`.

@@ -289,6 +289,12 @@ not permission for an automatic whole-worker relaunch. Interruption, deadline, a
 retain status/drain evidence; required launcher logging failure returns 9 while preserving the
 actual engine status where known.
 
+A finished publish Attempt whose input workset is incomplete, with no repair record, moved no pointer.
+It is not a repair obligation. A member stops before any child dispatch when its first completion
+check reports no obligation and a non-retryable gap. The conflict names the member and each such gap,
+and no pointer moves. When a completed child leaves a member incomplete, the conflict names each gap
+of the completion check. (Stage 1c, plan 6.)
+
 Operator commands `candidates`, `history`, `approve`, and `rollback` verify an existing store without
 initializing one. Approver/operator/reason labels are explicit audit text, not authenticated user
 identity. Data rollback names exact from/to generations and is distinct from selecting a retained
@@ -329,19 +335,25 @@ from the canonical normalized effective-config hash.
 The selected manifest is:
 
 ```text
-/Users/lowell/Projects/sec-edgar-local/releases/sha256=9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b/release.json
+/Users/lowell/Projects/sec-edgar-local/releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/release.json
 ```
 
-Stage 1b (plan 5) selected the 1b release
+Stage 1c (plan 6) selected the 1c release
+`c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` at commit
+`f64c212cd1fd11688785442666299270f0103262`. The reserve stays at 1800 s. The effective-config SHA-256
+is `fb93b0e8e05dbc1cbc9bd167ae02ef2d775629905c15938055a6a93c5fb95e96`, confirmed by offline
+preflight.
+
+Before that, Stage 1b (plan 5) selected the 1b release
 `9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` at commit
 `6d80da4d9e1f30461c45a826fecbf8eefc899201`. The reserve stays at 1800 s, which Stage 1a set. The
 Stage 1b [measurement](evidence/stage1b/measurement.md) now backs it. The effective-config SHA-256 was
 `db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.
-Plan 2 Revision 2 moved the backfill start to `2020Q1`. The effective-config SHA-256 is now
+Plan 2 Revision 2 moved the backfill start to `2020Q1`. The effective-config SHA-256 was then
 `2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, confirmed by offline preflight
 (owner, plan 2, 2026-10-29).
 
-Before that, Stage 1a (plan 4) selected the D5 release
+Earlier, Stage 1a (plan 4) selected the D5 release
 `aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4` and added the dispatch reserve,
 at commit `62ce1403f192ff18537d28842548af1be2ecfe57`. The effective-config SHA-256 is
 `32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e`, confirmed by offline preflight.
@@ -389,6 +401,13 @@ once, on fixture packs. D5 reading an incremental 1b generation is not tested. I
 identity of an incremental generation with the full rebuild (C5). A D5 publish on top of a 1b
 generation is also not tested. (Stage 1b, plan 5; C5 and C7 in the
 [1b spec](completed/sec-filing-index-per-member-cost.md); [two-release evidence](evidence/stage1b/two-release.md).)
+
+The 1c release changes no generation, manifest, receipt, member evidence, selection, Attempt or config
+format, and no outcome or exit code (M6). The 1b release can still read a store that the 1c release
+wrote. But on a store that holds a finished publish Attempt with an incomplete input, such as the live
+store, the 1b release fails the member-completion check. So selecting the 1b release again for that
+store is unsupported. (Stage 1c, plan 6; §4.3 item 7 of the
+[1c spec](completed/sec-filing-index-member-completion.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,
