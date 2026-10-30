@@ -229,3 +229,87 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(pinned.to_mapping()["pinned_on"], "2026-07-15")
         with self.assertRaises(FrozenInstanceError):
             pinned.pinned_on = date(2026, 7, 16)
+
+
+import json
+
+PROJECT = Path(__file__).resolve().parents[3]
+# conf/sec-edgar-local.json normalized in the main checkout (plan 4 F-P5); embedded so worktrees hash the same.
+LIVE_EFFECTIVE = {
+    "config_version": "sec-local-config-v1",
+    "backfill": {"start_quarter": "2015Q1", "end_quarter": "open"},
+    "daily": {"start_date": "2026-10-01"},
+    "sec": {"user_agent": "Lowell Mason sec-edgar-ingest mason.lowell@mac.com",
+            "requests_per_second": 3.0, "max_active_collectors": 1},
+    "http": {"max_attempts": 5, "retry_base_seconds": 2.0, "retry_cap_seconds": 120.0,
+             "connect_timeout_seconds": 15.0, "read_timeout_seconds": 60.0,
+             "exchange_deadline_seconds": 90.0, "max_received_bytes": 67108864,
+             "max_expanded_bytes": 536870912},
+    "coordination": {"lease_seconds": 60.0, "renew_every_seconds": 20.0,
+                     "namespace": "sec-owner-lowell-mason", "clock_uncertainty_seconds": 2.0},
+    "storage": {"backend": "local", "root": "/Users/lowell/Projects/sec-edgar-local/data"},
+    "acquisition": {"mode": "live"},
+    "runtime": {"kind": "native", "release_manifest": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json"},
+    "logging": {"root": "/Users/lowell/Projects/sec-edgar-local/logs"},
+    "execution": {"max_run_seconds": 3600},
+    "etl": {"parser_version": "sec-index-parser-v1", "schema_version": "sec-index-v1"},
+    "reconciliation": {"require_withdrawal_approval": True},
+}
+LIVE_SHA256 = "088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d"
+L12_QUARTERLY_SHA256 = "32b4da638464758c2926fc9040e207696a081d452b2af3813ddd36d179441740"
+
+
+class DispatchReserveConfigTests(unittest.TestCase):
+    def live(self, **execution):
+        value = copy.deepcopy(LIVE_EFFECTIVE)
+        value["execution"].update(execution)
+        return value
+
+    def test_absent_key_leaves_every_effective_hash_unchanged(self):
+        from sec_edgar_ingest.config import Settings
+        settings = Settings.from_mapping(self.live())
+        self.assertIsNone(settings.execution.dispatch_reserve_seconds)
+        self.assertNotIn("dispatch_reserve_seconds", settings.to_mapping()["execution"])
+        self.assertEqual(settings.config_sha256, LIVE_SHA256)
+        quarterly = self.live()
+        quarterly["backfill"] = {"start_quarter": "2024Q1", "end_quarter": "2024Q1"}
+        self.assertEqual(Settings.from_mapping(quarterly).config_sha256, L12_QUARTERLY_SHA256)
+
+    def test_present_key_round_trips_and_changes_the_hash(self):
+        from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS, Settings
+        settings = Settings.from_mapping(self.live(dispatch_reserve_seconds=DISPATCH_RESERVE_FLOOR_SECONDS))
+        self.assertEqual(settings.to_mapping()["execution"]["dispatch_reserve_seconds"],
+                         DISPATCH_RESERVE_FLOOR_SECONDS)
+        self.assertEqual(Settings.from_mapping(settings.to_mapping()), settings)
+        self.assertNotEqual(settings.config_sha256, LIVE_SHA256)
+
+    def test_key_is_a_positive_integer_and_never_null(self):
+        from sec_edgar_ingest.config import Settings
+        for bad in (None, 0, -1, 1.5, True, "600"):
+            with self.subTest(value=bad), self.assertRaisesRegex(ValueError, "dispatch_reserve_seconds|invalid type"):
+                Settings.from_mapping(self.live(dispatch_reserve_seconds=bad))
+
+    def test_admission_requires_the_key_in_range_for_live_work_only(self):
+        from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS as floor, Settings, admit_dispatch_reserve
+        with self.assertRaisesRegex(ValueError, "dispatch_reserve_seconds"):
+            admit_dispatch_reserve(Settings.from_mapping(self.live()))
+        for bad in (floor - 1, 3600, 3601):
+            with self.subTest(value=bad), self.assertRaisesRegex(ValueError, "dispatch_reserve_seconds"):
+                admit_dispatch_reserve(Settings.from_mapping(self.live(dispatch_reserve_seconds=bad)))
+        for good in (floor, 3599):
+            with self.subTest(value=good):
+                self.assertEqual(admit_dispatch_reserve(Settings.from_mapping(self.live(dispatch_reserve_seconds=good))), good)
+        self.assertIsNone(admit_dispatch_reserve(fixture_settings()))
+
+    def test_fc68adef_origin_live_child_contexts_validate_without_the_key(self):
+        from sec_edgar_ingest.config import Settings
+        from sec_edgar_ingest.models import RunContext
+        evidence = json.loads((PROJECT / "specs/evidence/local-port/sec-acceptance.json").read_text())
+        contexts = [source[step]["context"] for source in evidence["selected_sources"]
+                    for step in ("transform", "publish")]
+        self.assertEqual(len(contexts), 6)
+        for value in contexts:
+            with self.subTest(run=value["run_id"], command=value["command"]):
+                context = RunContext.from_mapping(value)
+                self.assertNotIn("dispatch_reserve_seconds", value["effective_config"]["execution"])
+                self.assertEqual(Settings.from_mapping(value["effective_config"]).config_sha256, context.config_sha256)

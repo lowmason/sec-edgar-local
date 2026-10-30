@@ -10,7 +10,8 @@ from typing import Iterator
 from ..models import Versioned, canonical_json, parse_json, require_hash
 from ..storage.contracts import Conflict, ObjectStore
 from .contracts import Candidate, GenerationCapture, GenerationManifest, IndexRow
-from .manifest import gate_ref, generation_base, iter_file_rows, read_approval, read_manifest, validate_candidate
+from .manifest import (check_candidate_integrity, gate_ref, generation_base, iter_file_rows, read_approval,
+                       read_manifest, validate_candidate)
 from .state import EtlState, POINTER_FIELDS
 
 
@@ -25,18 +26,28 @@ def capture_from_pointer(row: Versioned) -> GenerationCapture:
     return capture
 
 
-def validated_manifest(capture: GenerationCapture, objects: ObjectStore) -> GenerationManifest:
+def _pinned_manifest(capture: GenerationCapture, objects: ObjectStore, check) -> GenerationManifest:
     manifest = read_manifest(capture, objects)
     candidate = Candidate(manifest, capture.manifest_ref, capture.manifest_sha256,
                           capture.manifest_bytes, gate_ref(manifest))
     if manifest.gate != 'clear':
-        # Cheap binding check first; validate_candidate then proves content and the gate record.
+        # Cheap binding check first; the check then proves the files and the gate record.
         try:
             read_approval(candidate, objects)
         except FileNotFoundError as error:
             raise ValueError('an awaiting-approval generation cannot be current without its exact approval') from error
-    validate_candidate(candidate, objects)
+    check(candidate, objects)
     return manifest
+
+
+def validated_manifest(capture: GenerationCapture, objects: ObjectStore) -> GenerationManifest:
+    """The full content check: public readers, approval and rollback keep it (C3)."""
+    return _pinned_manifest(capture, objects, validate_candidate)
+
+
+def checked_manifest(capture: GenerationCapture, objects: ObjectStore) -> GenerationManifest:
+    """C1 for engine paths: exact manifest and file hashes, and the approval binding; no row is read."""
+    return _pinned_manifest(capture, objects, check_candidate_integrity)
 
 
 def capture_quarter(quarter: str, objects: ObjectStore, state: EtlState) -> GenerationCapture | None:
@@ -46,7 +57,7 @@ def capture_quarter(quarter: str, objects: ObjectStore, state: EtlState) -> Gene
     capture = capture_from_pointer(pointer)
     if capture.quarter != quarter:
         raise ValueError('pointer belongs to another quarter')
-    manifest = validated_manifest(capture, objects)
+    manifest = checked_manifest(capture, objects)
     if manifest.source_fingerprint != pointer.value['source_fingerprint']:
         raise Conflict('pointer source fingerprint differs from captured manifest')
     return capture

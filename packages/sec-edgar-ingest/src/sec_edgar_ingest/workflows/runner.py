@@ -2,21 +2,22 @@ from .contracts import LOCAL_CONTRACT, validate_invocation
 from collections.abc import Mapping
 from ..config import Settings
 from ..models import RunContext, to_mapping_value
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from ..models import Error, Source, canonical_json, error_text, parse_json
 from ..collection import HALTING_OUTCOMES
 from ..state import AcquisitionState
 from ..storage.contracts import Conflict, observe
 from ..discovery import quarter_span
-from ..etl.reader import capture_from_pointer, capture_quarter, validated_manifest
+from ..etl.reader import capture_from_pointer, capture_quarter, checked_manifest
 from ..etl.state import EtlState
-from .contracts import MemberResult, WorkflowResult, FATAL, summarize, workflow_path
-from .checked import ChildUnfinished, Dispatcher
+from ..etl.contracts import PublicationResult
+from .contracts import COMPLETE, MemberResult, WorkflowResult, FATAL, summarize, workflow_path
+from .checked import ChildUnfinished, Dispatcher, child_attempt_id
 from .completion import evaluate_member, capture_member_provenance, capture_parent_provenance, validate_parent_provenance
 from .legacy import bootstrap_legacy
 from .members import SourceDownloads, WorkflowMembers
-from .processing import process_member, validate_member_evidence
+from .processing import ProcessedMember, process_member, validate_member_evidence
 from .provenance import project_member, read_parent, read_member, transfer_binding, immutable
 from .results import freeze_selection
 
@@ -60,6 +61,43 @@ def reuse_exact_binding(value: Mapping, store, objects) -> tuple[Error, ...]:
     return tuple(gaps)
 
 
+def sibling_completion(value: Mapping, previous: MemberResult | None, completed_sources: frozenset[str],
+                       context: RunContext, store, objects) -> ProcessedMember | None:
+    """B4: complete a member without child work when this run already completed its source.
+
+    The source counts as completed when the preceding loop member is a complete sibling, or when the
+    frozen selection already holds a capture of it. Any refusal returns None: the member then runs its
+    ordinary checked child sequence, which reports every gap as before (plan 4 P8).
+    """
+    identity = value['source']['source_id']
+    preceded = previous is not None and previous.source.source_id == identity and previous.outcome in COMPLETE
+    if not (preceded or identity in completed_sources):
+        return None
+    # A resumed attempt that already began this member's own children must finish them (spec 4.3 item 3).
+    # The dispatcher writes the collect call object before its child launches: the earliest durable signal.
+    step = child_attempt_id(context.run_id, context.command, context.attempt_id, 'collect-' + value['member_id'], 'collect')
+    try:
+        objects.read(f'runs/sec/{context.run_id}/{context.command}/{context.attempt_id}/children/{step}/call.json')
+    except FileNotFoundError:
+        pass
+    else:
+        return None
+    if reuse_exact_binding(value, store, objects):
+        return None
+    evaluated = evaluate_member(value, context.parser_version, context.schema_version, store, objects)
+    if not evaluated.complete:  # A complete evaluation carries no obligation and no gap.
+        return None
+    capture = evaluated.capture
+    quarters = tuple(PublicationResult(quarter['quarter'], 'unchanged', quarter['generation_id'],
+                                       quarter['manifest_ref'], None, 0) for quarter in capture['quarters'])
+    result = MemberResult(value['member_id'], Source.from_mapping(value['source']), value['parent_ref'],
+        None, None, (), 'unchanged', False, False, False, quarters, (), context.parser_version, context.schema_version)
+    evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-member-evidence-v1',
+                'member': dict(value), 'calls': [], 'completion': capture, 'resolutions': [], 'terminal_error': None}
+    validate_member_evidence(result, evidence, objects)
+    return ProcessedMember(result, evidence)
+
+
 def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispatcher: Dispatcher,
                  store, objects, observer=None) -> WorkflowResult:
     validate_invocation(intent)
@@ -75,6 +113,10 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
         selection = freeze_selection(context, parse_json(selection_body), store, objects)
     results, receipt_descriptors, evidences = [], [], []
     halted = selection['halted']
+    reserve = settings.execution.dispatch_reserve_seconds
+    # B3: stop dispatch early enough that the finish step writes the durable result before the deadline.
+    cutoff = context.deadline if reserve is None else context.deadline - timedelta(seconds=reserve)
+    completed_sources = frozenset(capture['member']['source']['source_id'] for capture in selection['already_complete'])
     for job in selection['jobs']:
         value = job['member']
         receipt_path = workflow_path(context).rsplit('/', 1)[0] + '/members/' + value['member_id'] + '/result.json'
@@ -91,14 +133,17 @@ def run_workflow(context: RunContext, settings: Settings, intent: Mapping, dispa
                 context.attempt_id, result.member_id, result.parser_version, result.schema_version]))).hexdigest()
             # Frozen provenance and the checked receipt authorize historical index repair.
             immutable(store, 'WorkflowMemberResult', key, descriptor)
-        elif halted or datetime.now(timezone.utc) >= context.deadline:
+        elif halted or datetime.now(timezone.utc) >= cutoff:
             result = MemberResult(value['member_id'], Source.from_mapping(value['source']), value['parent_ref'],
                 None, None, (), 'pending', False, False, False, (),
                 (Error('workflow_deferred', 'halt/deadline left source undispatched', True,
                        value['source']['source_id'], {}),), context.parser_version, context.schema_version)
             descriptor = evidence = None  # Frozen selection is the undispatched-work authority.
         else:
-            processed = process_member(value, context, dispatcher, store, objects, observer)
+            processed = sibling_completion(value, results[-1] if results else None, completed_sources,
+                                           context, store, objects)
+            if processed is None:
+                processed = process_member(value, context, dispatcher, store, objects, observer)
             result = processed.result
             evidence = parse_json(canonical_json(to_mapping_value(processed.evidence)))
             descriptor = registry.record(result, context, evidence)
@@ -304,7 +349,7 @@ def source_revert_gaps(results, store, objects) -> tuple[Error, ...]:
                 continue
             capture = capture_from_pointer(pointer)
             if capture.generation_id not in manifests:
-                manifests[capture.generation_id] = validated_manifest(capture, objects)
+                manifests[capture.generation_id] = checked_manifest(capture, objects)
             manifest = manifests[capture.generation_id]
             active = next((ref for ref in manifest.sources if ref.source.source_id == identity), None)
             if active is None or active.snapshot.sha256 == latest:

@@ -1,0 +1,143 @@
+{
+ "format_version": "sec-1b-cost-measurement-v1",
+ "kind": "summary",
+ "measures": {
+  "authority_wall_seconds": 985.4445142089389,
+  "closed_fanout_wall_seconds": 20.99850562494248,
+  "closed_first_publication_wall_seconds": {
+   "2021Q1": 960.0798095000209,
+   "2021Q2": 965.3290203749202,
+   "2021Q3": 1010.8621787920129,
+   "2021Q4": 962.1175725830253,
+   "2022Q1": 935.775073708035,
+   "2022Q2": 917.8020321249496,
+   "2022Q3": 5.101285874960013,
+   "2022Q4": 5.15851949993521,
+   "2023Q1": 5.25240320910234,
+   "2023Q2": 5.322881040978245,
+   "2023Q3": 911.8742712090025,
+   "2023Q4": 5.457685707951896,
+   "2024Q1": 5.593193750013597,
+   "2024Q2": 5.599940916988999,
+   "2024Q3": 5.679379667039029,
+   "2024Q4": 932.2881600830005,
+   "2025Q1": 918.5599148329347,
+   "2025Q2": 978.5112237909343,
+   "2025Q3": 1009.1785770000424,
+   "2025Q4": 992.7936677089892,
+   "2026Q1": 990.7877348749898,
+   "2026Q2": 7.424498666077852,
+   "2026Q3": 990.8177603749791
+  },
+  "closed_measure_1_wall_seconds": 16.665574500104412,
+  "exits": {
+   "authority": [
+    0,
+    10
+   ],
+   "closed": [
+    0,
+    0
+   ],
+   "finish": [
+    0
+   ],
+   "open": [
+    0
+   ]
+  },
+  "finish_seconds": {
+   "closed-0": 36.975356374983676,
+   "closed-1": 2.9342002097982913,
+   "finish-0": 97.82490704208612
+  },
+  "history": {
+   "authority": {
+    "intercept_seconds": 0.5648666668998328,
+    "points": 11,
+    "projected_engine_seconds": {
+     "1200": 28.903971455706472,
+     "400": 10.01123492983538
+    },
+    "slope_seconds_per_child_call": 0.023615920657338866
+   },
+   "closed": {
+    "intercept_seconds": 1.3774389172664727,
+    "points": 25,
+    "projected_engine_seconds": {
+     "1200": 36.16724040934533,
+     "400": 12.974039414626093
+    },
+    "slope_seconds_per_child_call": 0.02899150124339905
+   },
+   "finish": {
+    "intercept_seconds": 2.066410617866353,
+    "points": 48,
+    "projected_engine_seconds": {
+     "1200": 28.280970290601243,
+     "400": 10.80459717544465
+    },
+    "slope_seconds_per_child_call": 0.02184546639394574
+   },
+   "open": {
+    "intercept_seconds": 0.6455247762616736,
+    "points": 81,
+    "projected_engine_seconds": {
+     "1200": 31.036882652544268,
+     "400": 10.775977401689206
+    },
+    "slope_seconds_per_child_call": 0.02532613156356883
+   }
+  },
+  "incomplete_reasons": {},
+  "incomplete_scenarios": [],
+  "load_at_start": {
+   "authority": [
+    6.25439453125,
+    9.62255859375
+   ],
+   "closed": [
+    1.677734375,
+    11.0888671875
+   ],
+   "finish": [
+    1.900390625,
+    2.86376953125
+   ],
+   "open": [
+    2.6748046875,
+    18.66162109375
+   ]
+  },
+  "open_member_wall_seconds": {
+   "1": 8.843139332951978,
+   "10": 9.736560792080127,
+   "40": 12.766482208040543,
+   "80": 16.209490375011228
+  },
+  "slowest_member": {
+   "children": {
+    "collect": 2.0360770829720423,
+    "publish": 719.4997435420519,
+    "transform": 287.5174122080207
+   },
+   "kind": "quarterly",
+   "outcome": "success",
+   "period": "2021Q3",
+   "wall_seconds": 1010.8621787920129
+  }
+ },
+ "proposal": {
+  "fit_gate_passes": true,
+  "floor_changes": false,
+  "floor_seconds": 480,
+  "p4_floor_seconds": 300,
+  "reserve_seconds": 1800,
+  "slowest_member_wall_seconds": 1010.8621787920129
+ },
+ "release_ids": [
+  "9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b"
+ ],
+ "scale": "full",
+ "work": "/Users/lowell/Projects/sec-edgar-local/fixture-data/s1b-measure-20261028T110945Z"
+}

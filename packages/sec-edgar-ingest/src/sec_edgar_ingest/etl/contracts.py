@@ -441,3 +441,13 @@ def decode_transformed(body: bytes) -> TransformedWorkset:
 def transformed_ref(workset: TransformedWorkset) -> str:
     encode_transformed(workset)
     return f'worksets/sec/transformed/sha256={workset.workset_id}/workset.json'
+
+
+BUSINESS_FIELDS = ('cik', 'company_name', 'form_type', 'archive_path', 'filing_date', 'accession_number')
+ABSENCE_REASON = 'absence is not authoritative withdrawal evidence'
+WITHDRAWAL_REASON = 'absent from closed quarterly membership'
+
+
+def arrow_row(value: Mapping[str, object]) -> dict[str, object]:
+    """A canonical row mapping with its filing date as a `date`, as the Arrow schemas need."""
+    return {**value, 'filing_date': IndexRow.from_mapping(value).filing_date}

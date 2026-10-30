@@ -1,0 +1,3 @@
+inventory calls kept: 1 kept with incomplete input: 0
+Attempts whose input is incomplete (built, then not kept): ['2024Q1-publish-attempt-000']
+complete: True obligations: 0 gaps: []

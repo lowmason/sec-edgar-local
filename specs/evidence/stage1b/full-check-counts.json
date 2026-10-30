@@ -1,0 +1,161 @@
+{
+ "run": "fixture-data/s1b-count-smoke-20261027T184538Z",
+ "release_id": "aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4",
+ "total": 517,
+ "by_chain": [
+  {
+   "count": 57,
+   "chain": "run_workflow > process_member > evaluate_member > _affected_quarters > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 45,
+   "chain": "_read_receipt > validate_member_evidence > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 38,
+   "chain": "_validate_report > _read_receipt > validate_member_evidence > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 26,
+   "chain": "_read_publish_call > read_child > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 26,
+   "chain": "_obligations > _read_publish_call > read_child > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "_check_exit > read_child > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "execute > _check_exit > read_child > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "run_workflow > process_member > evaluate_member > capture_quarter > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "_workflow_main > run_workflow > process_member > evaluate_member > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "run_workflow > process_member > evaluate_member > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "process_member > validate_member_evidence > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "run_workflow > process_member > validate_member_evidence > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "record > validate_member_evidence > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "run_workflow > record > validate_member_evidence > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "baseline_gaps > validate_member_evidence > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "run_workflow > baseline_gaps > validate_member_evidence > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "_workflow_main > write_workflow_result > _validate_report > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "write_workflow_result > _validate_report > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "write_workflow_result > read_workflow_result > _validate_report > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 19,
+   "chain": "read_workflow_result > _validate_report > read_child_capture > _validate_input_output > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 15,
+   "chain": "main > _workflow_main > run_workflow > source_revert_gaps > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 11,
+   "chain": "_workflow_main > run_workflow > baseline_gaps > capture_quarter > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 7,
+   "chain": "completed > _read_receipt > validate_member_evidence > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  },
+  {
+   "count": 7,
+   "chain": "run_workflow > select_work > completed > validate_capture > validated_manifest > validate_candidate > validate_candidate_content"
+  }
+ ],
+ "by_members_done": {
+  "0": {
+   "member": 10
+  },
+  "1": {
+   "member": 12
+  },
+  "2": {
+   "member": 12
+  },
+  "3": {
+   "member": 24,
+   "finish": 19
+  },
+  "4": {
+   "member": 13
+  },
+  "5": {
+   "member": 14
+  },
+  "6": {
+   "member": 15
+  },
+  "7": {
+   "member": 16
+  },
+  "8": {
+   "member": 17
+  },
+  "9": {
+   "member": 18
+  },
+  "10": {
+   "member": 84,
+   "finish": 56,
+   "select": 7
+  },
+  "11": {
+   "member": 39
+  },
+  "12": {
+   "member": 36,
+   "finish": 33
+  },
+  "13": {
+   "member": 13
+  },
+  "14": {
+   "member": 14
+  },
+  "15": {
+   "member": 15
+  },
+  "16": {
+   "member": 18,
+   "finish": 32
+  }
+ }
+}

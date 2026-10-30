@@ -45,6 +45,35 @@ class WorkflowCliTests(unittest.TestCase):
         self.assertEqual(self.report(daily).counts['complete_sources'], 1)
         self.assertEqual(len(self.h.capture('2026Q4')[1]), 1)
 
+    def test_live_workflow_without_an_admitted_reserve_refuses_before_any_store(self):
+        from support import local_config_mapping
+        from sec_edgar_ingest.config import DISPATCH_RESERVE_FLOOR_SECONDS as floor
+        value = local_config_mapping()
+        value.pop('fixture', None)
+        value['acquisition'] = {'mode': 'live'}
+        value['etl']['parser_version'] = 'sec-index-parser-v1'
+        value['runtime'] = {'kind': 'native', 'release_manifest': '/missing/releases/sha256=' + 'a' * 64 + '/release.json'}
+        value['storage']['root'] = str(self.root / 'live-data')
+        value['logging']['root'] = str(self.root / 'live-logs')
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=600)).isoformat()
+        config = self.root / 'live.json'
+        argv = ['backfill', '--config', str(config), '--run-id', 'live', '--execution-id', 'manual',
+                '--attempt-id', 'a', '--deadline', deadline]
+        for execution, refused in (({}, True), ({'dispatch_reserve_seconds': floor - 1}, True),
+                                   ({'dispatch_reserve_seconds': 3600}, True),
+                                   ({'dispatch_reserve_seconds': floor}, False)):
+            with self.subTest(execution=execution):
+                value['execution'] = {'max_run_seconds': 3600, **execution}
+                config.write_text(json.dumps(value))
+                code, message, err = cli_call(argv)
+                self.assertEqual(code, 2)
+                self.assertIsNone(message)
+                self.assertEqual(json.loads(err)['outcome'], 'configuration')
+                # An admitted reserve passes on to preflight_current. This test interpreter is not isolated, so the
+                # preflight refuses on interpreter isolation before it reads the release manifest.
+                self.assertEqual('dispatch_reserve_seconds' in err, refused, err)
+                self.assertFalse((self.root / 'live-data').exists())
+
     def test_completed_exact_replay_after_deadline_constructs_no_dispatcher(self):
         code, message = self.h.invoke('backfill')
         self.assertEqual(code, 0)

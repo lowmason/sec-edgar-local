@@ -321,3 +321,28 @@ class SupervisedProcessTests(unittest.TestCase):
             deadline=datetime.now(timezone.utc) + timedelta(seconds=10), environ=os.environ)
         self.assertFalse(result.drained)
         self.assertEqual(len(result.stdout), CHILD_OUTPUT_LIMIT)
+
+    def test_overflow_survives_a_parent_that_reads_slowly(self):
+        # Reproduces the macOS race: a late SIGTERM reaches a dead child group and gets EPERM.
+        import sys
+        import time
+        from datetime import datetime, timedelta, timezone
+        from sec_edgar_ingest.runtime import run_child, native_python_argv, CHILD_OUTPUT_LIMIT
+        python = Path(sys.executable).absolute()
+        real_read = os.read
+        total = 0
+
+        def slow_read(fd, count):
+            nonlocal total
+            data = real_read(fd, count)
+            total += len(data)
+            if total > CHILD_OUTPUT_LIMIT:
+                time.sleep(0.05)
+            return data
+
+        with patch('os.read', slow_read):
+            result = run_child(python, [*native_python_argv(python), '-c',
+                'import os; os.write(1,b"x"*2097152)'],
+                deadline=datetime.now(timezone.utc) + timedelta(seconds=10), environ=os.environ)
+        self.assertFalse(result.drained)
+        self.assertEqual(len(result.stdout), CHILD_OUTPUT_LIMIT)

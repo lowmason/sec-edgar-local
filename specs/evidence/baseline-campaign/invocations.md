@@ -1,0 +1,5 @@
+# Stage 2 campaign invocations
+
+| k | Slice | Run ID | Launcher exit | Outcome | Elapsed (s) | Complete / pending / failed sources | Published quarters | Timed / B4 members | Max member wall (s) | Attempts (run / campaign) | Received bytes (campaign) | Eligible after | Untouched after | Decision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `backfill-2026Q4-open.json` (pilot) | `8305a3d9-54a1-46ae-863c-af8227118417` | 9 | `state_conflict`: "child completion lacks all affected quarter/repair evidence" (`workflows/processing.py:96`). No `result_ref`, no `workflow_summary`. | 67 (shell clock, 13:40:25Z–13:41:32Z; no `ended_at`) | not recorded (no result) | no result. Integrity coverage and files show 9 filing-quarter pointers moved to new generations: 2024Q3 (first publication), 2024Q4–2026Q3 (incremental onto `fc68adef…` bases) | not run (`timing` needs a result) | not run | 5 / 5 (4 received HTTP 200, 1 failed with status 0; 0 uncertain, 0 access denied) | 577,884 | 0 (no result refs) | 28 | Halt: stop rule 1 (exit 9); rules 2 and 3 also match. Files check: 0 missing, 0 changed immutable, 173 added. |

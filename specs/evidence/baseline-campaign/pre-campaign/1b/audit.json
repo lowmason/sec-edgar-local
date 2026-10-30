@@ -1,0 +1,29 @@
+{
+ "format_version": "sec-baseline-campaign-evidence-v1",
+ "kind": "audit",
+ "runs": {},
+ "store_total": {
+  "access_denied": 0,
+  "attempts": 10,
+  "distinct_urls": 10,
+  "max_ordinal": 1,
+  "outcomes": {
+   "received": 10
+  },
+  "received_bytes": 4946565,
+  "statuses": {
+   "200": 10
+  },
+  "uncertain": 0
+ },
+ "total": {
+  "access_denied": 0,
+  "attempts": 0,
+  "distinct_urls": 0,
+  "max_ordinal": 0,
+  "outcomes": {},
+  "received_bytes": 0,
+  "statuses": {},
+  "uncertain": 0
+ }
+}

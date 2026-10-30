@@ -1,0 +1,572 @@
+{
+ "check": "full",
+ "complete": false,
+ "daily_sources": [],
+ "format_version": "sec-baseline-campaign-evidence-v1",
+ "kind": "coverage",
+ "other_filing_quarters": [],
+ "requested": {
+  "end": "2026Q4",
+  "open_quarter": "2026Q4",
+  "quarters": 28,
+  "start": "2020Q1"
+ },
+ "results": [],
+ "units": [
+  {
+   "filing_quarter": {
+    "quarter": "2020Q1",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2020Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2020Q2",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2020Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2020Q3",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2020Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2020Q4",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2020Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "887cfe89f5fc96113ade4494ec2d727265baaa0dfc69b4ad9c26cbec08d15001",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2021/quarter=1/generation=887cfe89f5fc96113ade4494ec2d727265baaa0dfc69b4ad9c26cbec08d15001/manifest.json",
+     "manifest_sha256": "a445d0a836208255d238d92434c98e58f83682bd00de5c4a76860ff24a47f11a",
+     "quarter": "2021Q1"
+    },
+    "daily_rows_considered": 8,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2021Q1",
+    "quarter_mode": "closed",
+    "row_count": 4,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 4
+   },
+   "last_result_gaps": [],
+   "quarter": "2021Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "922205a8baeaeb6c1907f3c0985a0280e62338d41a8cce60cb73bd4dee9e6068",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2021/quarter=2/generation=922205a8baeaeb6c1907f3c0985a0280e62338d41a8cce60cb73bd4dee9e6068/manifest.json",
+     "manifest_sha256": "a2ebba10dde1eef65d4b1167dbd45bfcd421915fb768b834ccc745be26067a1a",
+     "quarter": "2021Q2"
+    },
+    "daily_rows_considered": 7,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2021Q2",
+    "quarter_mode": "closed",
+    "row_count": 5,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 5
+   },
+   "last_result_gaps": [],
+   "quarter": "2021Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "de13f2b5c99dbc5103df4ede21d684ea79a3f1e386dbadd0426aedcb2c4ec129",
+     "manifest_bytes": 5104,
+     "manifest_ref": "curated/sec/filing_index/year=2021/quarter=3/generation=de13f2b5c99dbc5103df4ede21d684ea79a3f1e386dbadd0426aedcb2c4ec129/manifest.json",
+     "manifest_sha256": "86f862021a8a58dc6bc1d97c8114966f8e9f4efbfb326e4224bbcb1fb638f831",
+     "quarter": "2021Q3"
+    },
+    "daily_rows_considered": 20,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2021Q3",
+    "quarter_mode": "closed",
+    "row_count": 11,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 11
+   },
+   "last_result_gaps": [],
+   "quarter": "2021Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "095813ae5beabf8230d10b836e36b3a1dc7aac3c95f35a700826c7059631c082",
+     "manifest_bytes": 5104,
+     "manifest_ref": "curated/sec/filing_index/year=2021/quarter=4/generation=095813ae5beabf8230d10b836e36b3a1dc7aac3c95f35a700826c7059631c082/manifest.json",
+     "manifest_sha256": "78dae409cbe1b668c5010f184ea3af85478be0d13fd208a725387ce661a2712d",
+     "quarter": "2021Q4"
+    },
+    "daily_rows_considered": 17,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2021Q4",
+    "quarter_mode": "closed",
+    "row_count": 12,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 12
+   },
+   "last_result_gaps": [],
+   "quarter": "2021Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "c2659e72d5ecbaccbf06803a9919608c9d9114631571d210c62fc682458aa78a",
+     "manifest_bytes": 5104,
+     "manifest_ref": "curated/sec/filing_index/year=2022/quarter=1/generation=c2659e72d5ecbaccbf06803a9919608c9d9114631571d210c62fc682458aa78a/manifest.json",
+     "manifest_sha256": "c6891d7e68b8f6e360904ee9bac1bb613ec3243f3a2f9ae8890c4a3d6d906e31",
+     "quarter": "2022Q1"
+    },
+    "daily_rows_considered": 17,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2022Q1",
+    "quarter_mode": "closed",
+    "row_count": 14,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 14
+   },
+   "last_result_gaps": [],
+   "quarter": "2022Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "df8dc6d90911239c14374d2f1d16844fe4cb4f2e14843bdac71c1ecb72d879b4",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2022/quarter=2/generation=df8dc6d90911239c14374d2f1d16844fe4cb4f2e14843bdac71c1ecb72d879b4/manifest.json",
+     "manifest_sha256": "ca8bc4b1c413e65a2e1cb8a37d816c59ee377ae49d28c109fdb4ad8c460dde77",
+     "quarter": "2022Q2"
+    },
+    "daily_rows_considered": 1,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2022Q2",
+    "quarter_mode": "closed",
+    "row_count": 1,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 1
+   },
+   "last_result_gaps": [],
+   "quarter": "2022Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2022Q3",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2022Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2022Q4",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2022Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2023Q1",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2023Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2023Q2",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2023Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "c1d4a82e16923e5071085c4f80d72b17507d792362558e4234ea0ffbe9f9048a",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2023/quarter=3/generation=c1d4a82e16923e5071085c4f80d72b17507d792362558e4234ea0ffbe9f9048a/manifest.json",
+     "manifest_sha256": "5af0aa597ff5b3e04df8c88a6751a764e2a20e789de7ce88aa7fc88c43dc1dcb",
+     "quarter": "2023Q3"
+    },
+    "daily_rows_considered": 7,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2023Q3",
+    "quarter_mode": "closed",
+    "row_count": 6,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 6
+   },
+   "last_result_gaps": [],
+   "quarter": "2023Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2023Q4",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2023Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2024Q1",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2024Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2024Q2",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2024Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "quarter": "2024Q3",
+    "status": "unpublished"
+   },
+   "last_result_gaps": [],
+   "quarter": "2024Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "2d2194095e03a82b5f16945f772734900c9ec26f1ea9e2b3e25f5eeb524480ea",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2024/quarter=4/generation=2d2194095e03a82b5f16945f772734900c9ec26f1ea9e2b3e25f5eeb524480ea/manifest.json",
+     "manifest_sha256": "122c1732b474e9638446d4d717bda6cc8522ae1b41f0f59b2e71ab0e41e8e8a1",
+     "quarter": "2024Q4"
+    },
+    "daily_rows_considered": 2,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2024Q4",
+    "quarter_mode": "closed",
+    "row_count": 2,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 2
+   },
+   "last_result_gaps": [],
+   "quarter": "2024Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "01cbe5076c355eb9c4ecdd98c32fb964c727203c8912d1b90fca5453c92f8867",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2025/quarter=1/generation=01cbe5076c355eb9c4ecdd98c32fb964c727203c8912d1b90fca5453c92f8867/manifest.json",
+     "manifest_sha256": "d04169b0b4e136a19795ed9b5eeaa970537bc54519c3f1f7ba838d63566cc44b",
+     "quarter": "2025Q1"
+    },
+    "daily_rows_considered": 5,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2025Q1",
+    "quarter_mode": "closed",
+    "row_count": 5,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 5
+   },
+   "last_result_gaps": [],
+   "quarter": "2025Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "194b3d83a4c15bd5730dd31e7a40ad3ede2e5f7366f2dd086831a939c744f61a",
+     "manifest_bytes": 5100,
+     "manifest_ref": "curated/sec/filing_index/year=2025/quarter=2/generation=194b3d83a4c15bd5730dd31e7a40ad3ede2e5f7366f2dd086831a939c744f61a/manifest.json",
+     "manifest_sha256": "0f60b045b20665365963c38fbe8e2850b2174fe1af290638aaaade96e32176c5",
+     "quarter": "2025Q2"
+    },
+    "daily_rows_considered": 4,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2025Q2",
+    "quarter_mode": "closed",
+    "row_count": 4,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 4
+   },
+   "last_result_gaps": [],
+   "quarter": "2025Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "2a089f104edc2d56fa1d4ec0a3b962068a2ab52704b5ee6c3f3d9e4e181da452",
+     "manifest_bytes": 8896,
+     "manifest_ref": "curated/sec/filing_index/year=2025/quarter=3/generation=2a089f104edc2d56fa1d4ec0a3b962068a2ab52704b5ee6c3f3d9e4e181da452/manifest.json",
+     "manifest_sha256": "58139b693713beb90695c422b07a89f2fd2ff297f5c60852df79bb5efd20833a",
+     "quarter": "2025Q3"
+    },
+    "daily_rows_considered": 15,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2025Q3",
+    "quarter_mode": "closed",
+    "row_count": 15,
+    "source_kinds": {
+     "daily": 2
+    },
+    "status": "published",
+    "validated_rows": 15
+   },
+   "last_result_gaps": [],
+   "quarter": "2025Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "dca08c2cb35a61e4f2b428aecd82770e1e732cdd814a78de6b2d8e93fc5bd4cf",
+     "manifest_bytes": 8894,
+     "manifest_ref": "curated/sec/filing_index/year=2025/quarter=4/generation=dca08c2cb35a61e4f2b428aecd82770e1e732cdd814a78de6b2d8e93fc5bd4cf/manifest.json",
+     "manifest_sha256": "47fe33a7cd8cd6d74c634fc7071390187bb13497f5406bb79eea4b0b1f6eb641",
+     "quarter": "2025Q4"
+    },
+    "daily_rows_considered": 10,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2025Q4",
+    "quarter_mode": "closed",
+    "row_count": 10,
+    "source_kinds": {
+     "daily": 2
+    },
+    "status": "published",
+    "validated_rows": 10
+   },
+   "last_result_gaps": [],
+   "quarter": "2025Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "17afe83f0fbbd2e9ef7285a07fa053c8df2a59dafa5cb382f0937d09fbf6033f",
+     "manifest_bytes": 8896,
+     "manifest_ref": "curated/sec/filing_index/year=2026/quarter=1/generation=17afe83f0fbbd2e9ef7285a07fa053c8df2a59dafa5cb382f0937d09fbf6033f/manifest.json",
+     "manifest_sha256": "54ba71f35214e40ebd46d644c154df4867534d5983bcf47309cd5a2d45e688e0",
+     "quarter": "2026Q1"
+    },
+    "daily_rows_considered": 46,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2026Q1",
+    "quarter_mode": "closed",
+    "row_count": 46,
+    "source_kinds": {
+     "daily": 2
+    },
+    "status": "published",
+    "validated_rows": 46
+   },
+   "last_result_gaps": [],
+   "quarter": "2026Q1",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "e9106ed3d96acf7d740cfa5a3ea4ec7dcdad94ec6c1ad53abd01d6b9104bdeeb",
+     "manifest_bytes": 4976,
+     "manifest_ref": "curated/sec/filing_index/year=2026/quarter=2/generation=e9106ed3d96acf7d740cfa5a3ea4ec7dcdad94ec6c1ad53abd01d6b9104bdeeb/manifest.json",
+     "manifest_sha256": "3692d8ef000fe0b6959a2cbf3c56ccff356d5246d01d7acdb5abd2eb6f090e39",
+     "quarter": "2026Q2"
+    },
+    "daily_rows_considered": 9,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2026Q2",
+    "quarter_mode": "closed",
+    "row_count": 9,
+    "source_kinds": {
+     "daily": 1
+    },
+    "status": "published",
+    "validated_rows": 9
+   },
+   "last_result_gaps": [],
+   "quarter": "2026Q2",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "5f5a95721fd8c5da7825d27827e762e01e3de66e96462e746de1961a27bd4035",
+     "manifest_bytes": 8896,
+     "manifest_ref": "curated/sec/filing_index/year=2026/quarter=3/generation=5f5a95721fd8c5da7825d27827e762e01e3de66e96462e746de1961a27bd4035/manifest.json",
+     "manifest_sha256": "d184fc63351b22d07abc71bd3852b8a7f814d0fe42dc4a530ec9d9cbb1fea0c3",
+     "quarter": "2026Q3"
+    },
+    "daily_rows_considered": 23,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2026Q3",
+    "quarter_mode": "closed",
+    "row_count": 23,
+    "source_kinds": {
+     "daily": 2
+    },
+    "status": "published",
+    "validated_rows": 23
+   },
+   "last_result_gaps": [],
+   "quarter": "2026Q3",
+   "source": null,
+   "verdict": "no_campaign_result"
+  },
+  {
+   "filing_quarter": {
+    "capture": {
+     "generation_id": "ad66529417ebe8c4d5c33a3fe243a1634731da292294fe10fb937c2abe3c3247",
+     "manifest_bytes": 8906,
+     "manifest_ref": "curated/sec/filing_index/year=2026/quarter=4/generation=ad66529417ebe8c4d5c33a3fe243a1634731da292294fe10fb937c2abe3c3247/manifest.json",
+     "manifest_sha256": "3c72bea76bf6b94a677f5a2c756c03295f74980e1a5920f02bed0d8973373495",
+     "quarter": "2026Q4"
+    },
+    "daily_rows_considered": 6681,
+    "gate": "clear",
+    "membership_snapshot_sha256": null,
+    "membership_source_id": null,
+    "quarter": "2026Q4",
+    "quarter_mode": "open",
+    "row_count": 6577,
+    "source_kinds": {
+     "daily": 2
+    },
+    "status": "published",
+    "validated_rows": 6577
+   },
+   "last_result_gaps": [],
+   "quarter": "2026Q4",
+   "source": null,
+   "verdict": "no_campaign_result"
+  }
+ ],
+ "verdicts": {
+  "no_campaign_result": 28
+ }
+}

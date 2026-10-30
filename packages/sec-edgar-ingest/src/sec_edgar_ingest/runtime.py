@@ -617,7 +617,9 @@ def run_child(python: Path, argv: Sequence[str], *, deadline: datetime,
             stopped_at = time.monotonic()
         try:
             os.killpg(process.pid, signum)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
+            # macOS reports EPERM, not ESRCH, while the group leader is exiting
+            # or has exited and is not yet reaped.
             pass
 
     handlers = {}

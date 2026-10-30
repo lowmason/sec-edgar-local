@@ -1,0 +1,1829 @@
+{
+ "ended_at": "2026-10-23T13:40:53.904568+00:00",
+ "flags": {
+  "dont_write_bytecode": true,
+  "isolated": 1,
+  "pycache_prefix": "/dev/null"
+ },
+ "format_version": "sec-d5-drain-measurement-v1",
+ "inputs": {
+  "closed_quarters": [
+   "2021Q1",
+   "2021Q2",
+   "2021Q3",
+   "2021Q4",
+   "2022Q1",
+   "2022Q2",
+   "2023Q3",
+   "2024Q4",
+   "2025Q1",
+   "2025Q2",
+   "2025Q3",
+   "2025Q4",
+   "2026Q1",
+   "2026Q3"
+  ],
+  "closed_start": "2021Q1",
+  "finish_rows": 50,
+  "finish_start": "2015Q1",
+  "open_days": 81
+ },
+ "kind": "run-finish-only",
+ "measures": {
+  "exits": {
+   "finish": [
+    0
+   ]
+  },
+  "finish_label_seconds": {
+   "baseline_gaps": 28.948393500002567,
+   "emit_summary": 0.001299084018683061,
+   "source_revert_gaps": 3.147550624998985,
+   "summarize": 6.458399002440274e-05,
+   "write_workflow_result": 120.05377983301878
+  },
+  "finish_members": 48,
+  "finish_seconds": 152.15108762602904,
+  "invocation_seconds": 878.0517879579857
+ },
+ "python": "/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/venv/bin/python",
+ "release_id": "fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec",
+ "scale": "full",
+ "scenarios": {
+  "finish": {
+   "invocations": [
+    {
+     "command": "backfill",
+     "exit": 0,
+     "members": [
+      {
+       "children": {
+        "collect": 0.8895511659793556,
+        "publish": 1.2732985419861507,
+        "transform": 0.9773366670124233
+       },
+       "kind": "quarterly",
+       "member_id": "f1c3ecfc12f9677acf98a4b63bd356eff5cdc0d829bf6cf37912686525af146a",
+       "outcome": "success",
+       "period": "2015Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2015Q1"
+        }
+       ],
+       "seconds": 5.357176499994239
+      },
+      {
+       "children": {
+        "collect": 0.8997310409904458,
+        "publish": 1.302399542008061,
+        "transform": 0.98597329101176
+       },
+       "kind": "quarterly",
+       "member_id": "3787fe2f06e65ae406a1b28f89f9ebcb721852d5f8f16c186caa0964519a9477",
+       "outcome": "success",
+       "period": "2015Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2015Q2"
+        }
+       ],
+       "seconds": 5.6107166669971775
+      },
+      {
+       "children": {
+        "collect": 0.9183494999888353,
+        "publish": 1.4420179589942563,
+        "transform": 0.9819805409933906
+       },
+       "kind": "quarterly",
+       "member_id": "1b3b2d25f49d7f49b4e1ff0e56a7f4371487e11d77750f5a46dd62d6e5eb404f",
+       "outcome": "success",
+       "period": "2015Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2015Q3"
+        }
+       ],
+       "seconds": 5.95091312500881
+      },
+      {
+       "children": {
+        "collect": 0.8984070000005886,
+        "publish": 1.4922480420209467,
+        "transform": 0.9725007920060307
+       },
+       "kind": "quarterly",
+       "member_id": "9744afaf486c63ae7fe8117e663ec9b1ff74b00b1efee218848a3b9f5ffbbd3e",
+       "outcome": "success",
+       "period": "2015Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2015Q4"
+        }
+       ],
+       "seconds": 6.189894458017079
+      },
+      {
+       "children": {
+        "collect": 0.9282194999977946,
+        "publish": 1.5113770829921123,
+        "transform": 1.0146092500071973
+       },
+       "kind": "quarterly",
+       "member_id": "0ec95f7c6deef9248eafd22a485dfeb4efda59321358edbe0b35fca1a5a73f65",
+       "outcome": "success",
+       "period": "2016Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2016Q1"
+        }
+       ],
+       "seconds": 6.4428118750220165
+      },
+      {
+       "children": {
+        "collect": 0.9181897499947809,
+        "publish": 1.5643318340007681,
+        "transform": 0.9799622079881374
+       },
+       "kind": "quarterly",
+       "member_id": "0021939e7a4c0da131d47fbba853c310d8d3dcf19a6c23a7c5275ed51e2706e6",
+       "outcome": "success",
+       "period": "2016Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2016Q2"
+        }
+       ],
+       "seconds": 6.644656833988847
+      },
+      {
+       "children": {
+        "collect": 0.9033237500116229,
+        "publish": 1.6502249999903142,
+        "transform": 1.0142810409888625
+       },
+       "kind": "quarterly",
+       "member_id": "cfa408e2bba1051ae97216ad25103f9c1aeae5145c679590b7c9112e2ef5ccf3",
+       "outcome": "success",
+       "period": "2016Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2016Q3"
+        }
+       ],
+       "seconds": 7.0714729170140345
+      },
+      {
+       "children": {
+        "collect": 0.9637351669953205,
+        "publish": 1.8297854159900453,
+        "transform": 1.037659875000827
+       },
+       "kind": "quarterly",
+       "member_id": "714ed4ae6a5684edecf83ffb5270ab73884a4dd967f6a3da6fc677279bdc0ec8",
+       "outcome": "success",
+       "period": "2016Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2016Q4"
+        }
+       ],
+       "seconds": 7.695741500006989
+      },
+      {
+       "children": {
+        "collect": 0.9333811250107829,
+        "publish": 1.8748583330016118,
+        "transform": 1.0184918339946307
+       },
+       "kind": "quarterly",
+       "member_id": "53fca81acdc87eff1f0eb48771c44e410939083ae64dee69495982afcecbdb52",
+       "outcome": "success",
+       "period": "2017Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2017Q1"
+        }
+       ],
+       "seconds": 7.841396583011374
+      },
+      {
+       "children": {
+        "collect": 0.9512435829965398,
+        "publish": 1.9641331250022631,
+        "transform": 1.04473920899909
+       },
+       "kind": "quarterly",
+       "member_id": "de2c125fde0d59d90896cba3dde52b04e40694f231adf0df498d9806d3098dd7",
+       "outcome": "success",
+       "period": "2017Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2017Q2"
+        }
+       ],
+       "seconds": 8.10576512501575
+      },
+      {
+       "children": {
+        "collect": 0.9865925000049174,
+        "publish": 2.020849624997936,
+        "transform": 1.0615945419995114
+       },
+       "kind": "quarterly",
+       "member_id": "a6f98b21dc9e2a64aa4166c1efa0fe2707e889900752a00e3882f6be7f35f9e0",
+       "outcome": "success",
+       "period": "2017Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2017Q3"
+        }
+       ],
+       "seconds": 8.603428333997726
+      },
+      {
+       "children": {
+        "collect": 0.951514957996551,
+        "publish": 2.015498458989896,
+        "transform": 1.0226831670152023
+       },
+       "kind": "quarterly",
+       "member_id": "364db6939fbdf9df8a039fbe2b30fa242b32bf27c1c668068334785800efa957",
+       "outcome": "success",
+       "period": "2017Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2017Q4"
+        }
+       ],
+       "seconds": 8.415753957990091
+      },
+      {
+       "children": {
+        "collect": 0.9594736250001006,
+        "publish": 2.0745162079983857,
+        "transform": 0.9963847079779953
+       },
+       "kind": "quarterly",
+       "member_id": "d22e78a4b5d589ff69e878857a9cf69e6887f70eb631eac51c85d8944ce3547b",
+       "outcome": "success",
+       "period": "2018Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2018Q1"
+        }
+       ],
+       "seconds": 8.711243208002998
+      },
+      {
+       "children": {
+        "collect": 0.9253870410029776,
+        "publish": 2.151318124990212,
+        "transform": 1.0136422089999542
+       },
+       "kind": "quarterly",
+       "member_id": "bdd79ef20ca9cd8619e8db544129c6553db15a5d8e18f9a6fed6bf5c246f3a45",
+       "outcome": "success",
+       "period": "2018Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2018Q2"
+        }
+       ],
+       "seconds": 9.013003125000978
+      },
+      {
+       "children": {
+        "collect": 0.9285281249904074,
+        "publish": 2.2545530000061262,
+        "transform": 0.9929940830043051
+       },
+       "kind": "quarterly",
+       "member_id": "f2c99210a50dff77229fbd953492313bbe1b8b3254f750249a0f3e80203c54ff",
+       "outcome": "success",
+       "period": "2018Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2018Q3"
+        }
+       ],
+       "seconds": 9.140889833011897
+      },
+      {
+       "children": {
+        "collect": 0.9474281250149943,
+        "publish": 2.221482500026468,
+        "transform": 0.9939339999982622
+       },
+       "kind": "quarterly",
+       "member_id": "a8dff3b335903b65e678d39f88821f6131aa742ee1e3b631eff78534b787f764",
+       "outcome": "success",
+       "period": "2018Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2018Q4"
+        }
+       ],
+       "seconds": 9.438035667000804
+      },
+      {
+       "children": {
+        "collect": 0.945020957995439,
+        "publish": 2.40114254198852,
+        "transform": 1.0043041660101153
+       },
+       "kind": "quarterly",
+       "member_id": "23611988a08b4de2ab934f31ce54deef9d669ebd98246d126200abe95a1738a1",
+       "outcome": "success",
+       "period": "2019Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2019Q1"
+        }
+       ],
+       "seconds": 9.689795999991475
+      },
+      {
+       "children": {
+        "collect": 0.9420395000197459,
+        "publish": 2.5141239580116235,
+        "transform": 1.0276844580075704
+       },
+       "kind": "quarterly",
+       "member_id": "eb07a2596bb1b2ed0a6b969d17688ac3873a28d9e1a8ef592d11a815f74a8a46",
+       "outcome": "success",
+       "period": "2019Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2019Q2"
+        }
+       ],
+       "seconds": 10.348754292004742
+      },
+      {
+       "children": {
+        "collect": 0.9691207919968292,
+        "publish": 2.4837700840143953,
+        "transform": 1.0367432920029387
+       },
+       "kind": "quarterly",
+       "member_id": "244a1e8c158bdcf6e5f514038de4c24d45ec99ca9a4f1d9c0134f61ba9184ccb",
+       "outcome": "success",
+       "period": "2019Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2019Q3"
+        }
+       ],
+       "seconds": 10.613439040986123
+      },
+      {
+       "children": {
+        "collect": 0.9804349160112906,
+        "publish": 2.617859874997521,
+        "transform": 1.0459456250246149
+       },
+       "kind": "quarterly",
+       "member_id": "83fc050dcbbd763e0e6724a89e6c891cc53e1b6d3ad4ae04cd8827c219d27758",
+       "outcome": "success",
+       "period": "2019Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2019Q4"
+        }
+       ],
+       "seconds": 10.74392691598041
+      },
+      {
+       "children": {
+        "collect": 0.9315727080102079,
+        "publish": 2.638962541008368,
+        "transform": 1.0043927500082646
+       },
+       "kind": "quarterly",
+       "member_id": "990be0d6b4dfc0db695aca62c1b0c9290fa720920b4c3435eeab1d13f1aac093",
+       "outcome": "success",
+       "period": "2020Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2020Q1"
+        }
+       ],
+       "seconds": 11.101046083000256
+      },
+      {
+       "children": {
+        "collect": 0.9968754169822205,
+        "publish": 2.898847833974287,
+        "transform": 1.0594810829788912
+       },
+       "kind": "quarterly",
+       "member_id": "d8c59d91d6359a06faac0b0cfd433b2bd0e9bdfd45abac05ee8e0ef4b5df421a",
+       "outcome": "success",
+       "period": "2020Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2020Q2"
+        }
+       ],
+       "seconds": 11.72594745902461
+      },
+      {
+       "children": {
+        "collect": 1.0266865419980604,
+        "publish": 2.8934219579969067,
+        "transform": 1.0632812920084689
+       },
+       "kind": "quarterly",
+       "member_id": "a2641017d6258e7e4f0be425e8e909a6fab5252b1545492556075dc371d42de0",
+       "outcome": "success",
+       "period": "2020Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2020Q3"
+        }
+       ],
+       "seconds": 12.062615417002235
+      },
+      {
+       "children": {
+        "collect": 1.0271206250181422,
+        "publish": 3.0133790000109,
+        "transform": 1.0698380839894526
+       },
+       "kind": "quarterly",
+       "member_id": "905f80f459bb4e0bc518ea617a398f85a519d5953e5aef677ef7b4e67c873b6f",
+       "outcome": "success",
+       "period": "2020Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2020Q4"
+        }
+       ],
+       "seconds": 12.391681958019035
+      },
+      {
+       "children": {
+        "collect": 0.9998277499980759,
+        "publish": 3.0659202500246465,
+        "transform": 1.0708216250059195
+       },
+       "kind": "quarterly",
+       "member_id": "4f273061d687b0be5b2d094a5541d9cf200a4ed29a0acd046786ef8d9bcace80",
+       "outcome": "success",
+       "period": "2021Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2021Q1"
+        }
+       ],
+       "seconds": 12.805340457998682
+      },
+      {
+       "children": {
+        "collect": 0.9857402089983225,
+        "publish": 3.0685712920094375,
+        "transform": 1.0547850419825409
+       },
+       "kind": "quarterly",
+       "member_id": "d3e997775bb09c486f9012d0a2a7b4debd746850cf7374c3f9ff7d73f7cfc6d2",
+       "outcome": "success",
+       "period": "2021Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2021Q2"
+        }
+       ],
+       "seconds": 12.823605375015177
+      },
+      {
+       "children": {
+        "collect": 0.9925839589850511,
+        "publish": 3.2290540839894675,
+        "transform": 1.0456988330115564
+       },
+       "kind": "quarterly",
+       "member_id": "93a663072fd2db85cb030dcac7622f5e78772c2b0599ae3e8d14ff375d59d269",
+       "outcome": "success",
+       "period": "2021Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2021Q3"
+        }
+       ],
+       "seconds": 13.245050041994546
+      },
+      {
+       "children": {
+        "collect": 0.9924327089975122,
+        "publish": 3.2246203340182547,
+        "transform": 1.0556368340039626
+       },
+       "kind": "quarterly",
+       "member_id": "173c76a5c8ced095ca5dc2200922f957c301ba138c31b84035d00d2f84267858",
+       "outcome": "success",
+       "period": "2021Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2021Q4"
+        }
+       ],
+       "seconds": 13.327880541997729
+      },
+      {
+       "children": {
+        "collect": 1.0045715419983026,
+        "publish": 3.377445792022627,
+        "transform": 1.0353697079990525
+       },
+       "kind": "quarterly",
+       "member_id": "d265e2c38ce3b040ad99627ec1b92a60026062d031a0130acfbc2b73e5b94763",
+       "outcome": "success",
+       "period": "2022Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2022Q1"
+        }
+       ],
+       "seconds": 13.720883041998604
+      },
+      {
+       "children": {
+        "collect": 0.9766926669981331,
+        "publish": 3.3940235410118476,
+        "transform": 1.061872416001279
+       },
+       "kind": "quarterly",
+       "member_id": "0f4829ca6460fb9ab7797badc9b8202f5d72fc7bdfd0601b565e543517b99c2b",
+       "outcome": "success",
+       "period": "2022Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2022Q2"
+        }
+       ],
+       "seconds": 13.942782041005557
+      },
+      {
+       "children": {
+        "collect": 0.9906861660128925,
+        "publish": 3.449026624992257,
+        "transform": 1.071461832994828
+       },
+       "kind": "quarterly",
+       "member_id": "67b5ecd30acfd31efd7cd41286b9ec0b7034aa97426e012300630cdc657a8da2",
+       "outcome": "success",
+       "period": "2022Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2022Q3"
+        }
+       ],
+       "seconds": 14.149412333004875
+      },
+      {
+       "children": {
+        "collect": 0.9837327919958625,
+        "publish": 3.479326333006611,
+        "transform": 1.0441822499851696
+       },
+       "kind": "quarterly",
+       "member_id": "500791920e4d980c876ce8fa13365affdc742b7f45d62549a0e726e7b0ae41bf",
+       "outcome": "success",
+       "period": "2022Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2022Q4"
+        }
+       ],
+       "seconds": 14.299278457998298
+      },
+      {
+       "children": {
+        "collect": 0.9729818330088165,
+        "publish": 3.6052435000019614,
+        "transform": 1.056399875000352
+       },
+       "kind": "quarterly",
+       "member_id": "7a1af7f885848e882800b6a802be743911ee7744620a28bc4753fa3abd68a78e",
+       "outcome": "success",
+       "period": "2023Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2023Q1"
+        }
+       ],
+       "seconds": 14.694308375008404
+      },
+      {
+       "children": {
+        "collect": 0.9868117079895455,
+        "publish": 3.665537666005548,
+        "transform": 1.0487334579811431
+       },
+       "kind": "quarterly",
+       "member_id": "f7444187999bf4622220e8edcff0a234e804e09b3bc766d2a55f0eccc0ec1de5",
+       "outcome": "success",
+       "period": "2023Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2023Q2"
+        }
+       ],
+       "seconds": 14.942134041019017
+      },
+      {
+       "children": {
+        "collect": 0.9789888329978567,
+        "publish": 3.6703179579926655,
+        "transform": 1.0592748339986429
+       },
+       "kind": "quarterly",
+       "member_id": "f1169da0770534d203cbc98409fa4966a3bca723fced02d348308ad2cbfe944f",
+       "outcome": "success",
+       "period": "2023Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2023Q3"
+        }
+       ],
+       "seconds": 15.150224249984603
+      },
+      {
+       "children": {
+        "collect": 1.0052168749971315,
+        "publish": 3.7711821669945493,
+        "transform": 1.0698715839826036
+       },
+       "kind": "quarterly",
+       "member_id": "09e735222fdb51c0f542ad99d5dff2cc891f1ce299ecd62f31e556f5c30e903b",
+       "outcome": "success",
+       "period": "2023Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2023Q4"
+        }
+       ],
+       "seconds": 15.546286416007206
+      },
+      {
+       "children": {
+        "collect": 0.9802014169981703,
+        "publish": 3.8300957920146175,
+        "transform": 1.0614469590072986
+       },
+       "kind": "quarterly",
+       "member_id": "16ac5f54500c9de2c98b3252fd2137a77bc18a50819bed881f644a70d7cf8c3d",
+       "outcome": "success",
+       "period": "2024Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2024Q1"
+        }
+       ],
+       "seconds": 15.825477042002603
+      },
+      {
+       "children": {
+        "collect": 1.0074404170154594,
+        "publish": 3.9114502919837832,
+        "transform": 1.069238291005604
+       },
+       "kind": "quarterly",
+       "member_id": "f96384f5b128f436138f2288f5079ef045c826a88e9d88094e8fbef477cde6d1",
+       "outcome": "success",
+       "period": "2024Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2024Q2"
+        }
+       ],
+       "seconds": 16.13551125000231
+      },
+      {
+       "children": {
+        "collect": 0.983350958005758,
+        "publish": 3.9615890830173157,
+        "transform": 1.071611916006077
+       },
+       "kind": "quarterly",
+       "member_id": "a2da2016331064ce612608126c98fb8486ca0386382628f0666550499cba4f50",
+       "outcome": "success",
+       "period": "2024Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2024Q3"
+        }
+       ],
+       "seconds": 16.327771541982656
+      },
+      {
+       "children": {
+        "collect": 1.0019906670204364,
+        "publish": 4.069802000012714,
+        "transform": 1.073111208010232
+       },
+       "kind": "quarterly",
+       "member_id": "bb187752806ad66cb353e5a0a82e6fb31aafa89f8bea1d768ab63463f9ed5757",
+       "outcome": "success",
+       "period": "2024Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2024Q4"
+        }
+       ],
+       "seconds": 16.679119708016515
+      },
+      {
+       "children": {
+        "collect": 1.0028152090089861,
+        "publish": 4.163698584015947,
+        "transform": 1.0799039999837987
+       },
+       "kind": "quarterly",
+       "member_id": "3ce9e6129626241a019fc28f451e9ee332985f1687459811c0e2b8379be7a066",
+       "outcome": "success",
+       "period": "2025Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2025Q1"
+        }
+       ],
+       "seconds": 16.91976537500159
+      },
+      {
+       "children": {
+        "collect": 1.0116342910041567,
+        "publish": 4.210524291993352,
+        "transform": 1.0738196249876637
+       },
+       "kind": "quarterly",
+       "member_id": "9aa5ce4d35ca2cfd657f5d0e345f8555912576df23d9cfdebe35f8a58c785fb9",
+       "outcome": "success",
+       "period": "2025Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2025Q2"
+        }
+       ],
+       "seconds": 17.09988420800073
+      },
+      {
+       "children": {
+        "collect": 1.024600000004284,
+        "publish": 4.272565250023035,
+        "transform": 1.0748871249961667
+       },
+       "kind": "quarterly",
+       "member_id": "ddd3a47c127520dec383b1df5267c0e7807e75acf1dd14b03dbc77af96d8cebe",
+       "outcome": "success",
+       "period": "2025Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2025Q3"
+        }
+       ],
+       "seconds": 17.61384525001631
+      },
+      {
+       "children": {
+        "collect": 0.9832447080116253,
+        "publish": 4.282199082983425,
+        "transform": 1.0546251669875346
+       },
+       "kind": "quarterly",
+       "member_id": "971dfe8cb5289fa29440fb1d07ea85e46656d81e1c5d0065e80358ff8b8998b1",
+       "outcome": "success",
+       "period": "2025Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2025Q4"
+        }
+       ],
+       "seconds": 17.522045290999813
+      },
+      {
+       "children": {
+        "collect": 0.9817453750001732,
+        "publish": 4.287498541991226,
+        "transform": 1.0502996669965796
+       },
+       "kind": "quarterly",
+       "member_id": "5426bae1ffc00308fdc62dab734a4cc6d97a4f607b7f4e6ac002b58ba3bb61fb",
+       "outcome": "success",
+       "period": "2026Q1",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2026Q1"
+        }
+       ],
+       "seconds": 17.48957670899108
+      },
+      {
+       "children": {
+        "collect": 0.94449816600536,
+        "publish": 4.40893233299721,
+        "transform": 1.0077795829856768
+       },
+       "kind": "quarterly",
+       "member_id": "e8d9c212b41263155486b94e6e5ba9082df7f0c64ff1e28d474135c84d0c7b76",
+       "outcome": "success",
+       "period": "2026Q2",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2026Q2"
+        }
+       ],
+       "seconds": 18.470600625005318
+      },
+      {
+       "children": {
+        "collect": 0.9819829580083024,
+        "publish": 4.4630811249953695,
+        "transform": 1.049523624998983
+       },
+       "kind": "quarterly",
+       "member_id": "5bc99f901092baf332680b936c259883a295a247e023400e8ea3fc586d3b9b77",
+       "outcome": "success",
+       "period": "2026Q3",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2026Q3"
+        }
+       ],
+       "seconds": 18.40704912500223
+      },
+      {
+       "children": {
+        "collect": 0.9904847500147298,
+        "publish": 4.337645042018266,
+        "transform": 1.0082742080267053
+       },
+       "kind": "quarterly",
+       "member_id": "c3f9bd45b4c22715148b92f6123ae07c5de0c59e518ace8d461c2da3a28c600a",
+       "outcome": "success",
+       "period": "2026Q4",
+       "quarters": [
+        {
+         "outcome": "published",
+         "quarter": "2026Q4"
+        }
+       ],
+       "seconds": 18.28526762497495
+      }
+     ],
+     "outcome": "success",
+     "result_ref": "runs/sec/measure-finish-0/backfill/a/result.json",
+     "run_id": "measure-finish-0",
+     "seconds": 878.0517879579857,
+     "timings": [
+      {
+       "command": "discover",
+       "label": "child",
+       "seconds": 41.49669670799631,
+       "step_id": "discover"
+      },
+      {
+       "label": "select_work",
+       "seconds": 93.47557795897592
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.8895511659793556,
+       "step_id": "collect-f1c3ecfc12f9677acf98a4b63bd356eff5cdc0d829bf6cf37912686525af146a"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9773366670124233,
+       "step_id": "transform-f1c3ecfc12f9677acf98a4b63bd356eff5cdc0d829bf6cf37912686525af146a"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.2732985419861507,
+       "step_id": "publish-f1c3ecfc12f9677acf98a4b63bd356eff5cdc0d829bf6cf37912686525af146a"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.8997310409904458,
+       "step_id": "collect-3787fe2f06e65ae406a1b28f89f9ebcb721852d5f8f16c186caa0964519a9477"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.98597329101176,
+       "step_id": "transform-3787fe2f06e65ae406a1b28f89f9ebcb721852d5f8f16c186caa0964519a9477"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.302399542008061,
+       "step_id": "publish-3787fe2f06e65ae406a1b28f89f9ebcb721852d5f8f16c186caa0964519a9477"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9183494999888353,
+       "step_id": "collect-1b3b2d25f49d7f49b4e1ff0e56a7f4371487e11d77750f5a46dd62d6e5eb404f"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9819805409933906,
+       "step_id": "transform-1b3b2d25f49d7f49b4e1ff0e56a7f4371487e11d77750f5a46dd62d6e5eb404f"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.4420179589942563,
+       "step_id": "publish-1b3b2d25f49d7f49b4e1ff0e56a7f4371487e11d77750f5a46dd62d6e5eb404f"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.8984070000005886,
+       "step_id": "collect-9744afaf486c63ae7fe8117e663ec9b1ff74b00b1efee218848a3b9f5ffbbd3e"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9725007920060307,
+       "step_id": "transform-9744afaf486c63ae7fe8117e663ec9b1ff74b00b1efee218848a3b9f5ffbbd3e"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.4922480420209467,
+       "step_id": "publish-9744afaf486c63ae7fe8117e663ec9b1ff74b00b1efee218848a3b9f5ffbbd3e"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9282194999977946,
+       "step_id": "collect-0ec95f7c6deef9248eafd22a485dfeb4efda59321358edbe0b35fca1a5a73f65"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0146092500071973,
+       "step_id": "transform-0ec95f7c6deef9248eafd22a485dfeb4efda59321358edbe0b35fca1a5a73f65"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.5113770829921123,
+       "step_id": "publish-0ec95f7c6deef9248eafd22a485dfeb4efda59321358edbe0b35fca1a5a73f65"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9181897499947809,
+       "step_id": "collect-0021939e7a4c0da131d47fbba853c310d8d3dcf19a6c23a7c5275ed51e2706e6"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9799622079881374,
+       "step_id": "transform-0021939e7a4c0da131d47fbba853c310d8d3dcf19a6c23a7c5275ed51e2706e6"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.5643318340007681,
+       "step_id": "publish-0021939e7a4c0da131d47fbba853c310d8d3dcf19a6c23a7c5275ed51e2706e6"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9033237500116229,
+       "step_id": "collect-cfa408e2bba1051ae97216ad25103f9c1aeae5145c679590b7c9112e2ef5ccf3"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0142810409888625,
+       "step_id": "transform-cfa408e2bba1051ae97216ad25103f9c1aeae5145c679590b7c9112e2ef5ccf3"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.6502249999903142,
+       "step_id": "publish-cfa408e2bba1051ae97216ad25103f9c1aeae5145c679590b7c9112e2ef5ccf3"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9637351669953205,
+       "step_id": "collect-714ed4ae6a5684edecf83ffb5270ab73884a4dd967f6a3da6fc677279bdc0ec8"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.037659875000827,
+       "step_id": "transform-714ed4ae6a5684edecf83ffb5270ab73884a4dd967f6a3da6fc677279bdc0ec8"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.8297854159900453,
+       "step_id": "publish-714ed4ae6a5684edecf83ffb5270ab73884a4dd967f6a3da6fc677279bdc0ec8"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9333811250107829,
+       "step_id": "collect-53fca81acdc87eff1f0eb48771c44e410939083ae64dee69495982afcecbdb52"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0184918339946307,
+       "step_id": "transform-53fca81acdc87eff1f0eb48771c44e410939083ae64dee69495982afcecbdb52"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.8748583330016118,
+       "step_id": "publish-53fca81acdc87eff1f0eb48771c44e410939083ae64dee69495982afcecbdb52"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9512435829965398,
+       "step_id": "collect-de2c125fde0d59d90896cba3dde52b04e40694f231adf0df498d9806d3098dd7"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.04473920899909,
+       "step_id": "transform-de2c125fde0d59d90896cba3dde52b04e40694f231adf0df498d9806d3098dd7"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 1.9641331250022631,
+       "step_id": "publish-de2c125fde0d59d90896cba3dde52b04e40694f231adf0df498d9806d3098dd7"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9865925000049174,
+       "step_id": "collect-a6f98b21dc9e2a64aa4166c1efa0fe2707e889900752a00e3882f6be7f35f9e0"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0615945419995114,
+       "step_id": "transform-a6f98b21dc9e2a64aa4166c1efa0fe2707e889900752a00e3882f6be7f35f9e0"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.020849624997936,
+       "step_id": "publish-a6f98b21dc9e2a64aa4166c1efa0fe2707e889900752a00e3882f6be7f35f9e0"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.951514957996551,
+       "step_id": "collect-364db6939fbdf9df8a039fbe2b30fa242b32bf27c1c668068334785800efa957"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0226831670152023,
+       "step_id": "transform-364db6939fbdf9df8a039fbe2b30fa242b32bf27c1c668068334785800efa957"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.015498458989896,
+       "step_id": "publish-364db6939fbdf9df8a039fbe2b30fa242b32bf27c1c668068334785800efa957"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9594736250001006,
+       "step_id": "collect-d22e78a4b5d589ff69e878857a9cf69e6887f70eb631eac51c85d8944ce3547b"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9963847079779953,
+       "step_id": "transform-d22e78a4b5d589ff69e878857a9cf69e6887f70eb631eac51c85d8944ce3547b"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.0745162079983857,
+       "step_id": "publish-d22e78a4b5d589ff69e878857a9cf69e6887f70eb631eac51c85d8944ce3547b"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9253870410029776,
+       "step_id": "collect-bdd79ef20ca9cd8619e8db544129c6553db15a5d8e18f9a6fed6bf5c246f3a45"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0136422089999542,
+       "step_id": "transform-bdd79ef20ca9cd8619e8db544129c6553db15a5d8e18f9a6fed6bf5c246f3a45"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.151318124990212,
+       "step_id": "publish-bdd79ef20ca9cd8619e8db544129c6553db15a5d8e18f9a6fed6bf5c246f3a45"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9285281249904074,
+       "step_id": "collect-f2c99210a50dff77229fbd953492313bbe1b8b3254f750249a0f3e80203c54ff"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9929940830043051,
+       "step_id": "transform-f2c99210a50dff77229fbd953492313bbe1b8b3254f750249a0f3e80203c54ff"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.2545530000061262,
+       "step_id": "publish-f2c99210a50dff77229fbd953492313bbe1b8b3254f750249a0f3e80203c54ff"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9474281250149943,
+       "step_id": "collect-a8dff3b335903b65e678d39f88821f6131aa742ee1e3b631eff78534b787f764"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 0.9939339999982622,
+       "step_id": "transform-a8dff3b335903b65e678d39f88821f6131aa742ee1e3b631eff78534b787f764"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.221482500026468,
+       "step_id": "publish-a8dff3b335903b65e678d39f88821f6131aa742ee1e3b631eff78534b787f764"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.945020957995439,
+       "step_id": "collect-23611988a08b4de2ab934f31ce54deef9d669ebd98246d126200abe95a1738a1"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0043041660101153,
+       "step_id": "transform-23611988a08b4de2ab934f31ce54deef9d669ebd98246d126200abe95a1738a1"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.40114254198852,
+       "step_id": "publish-23611988a08b4de2ab934f31ce54deef9d669ebd98246d126200abe95a1738a1"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9420395000197459,
+       "step_id": "collect-eb07a2596bb1b2ed0a6b969d17688ac3873a28d9e1a8ef592d11a815f74a8a46"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0276844580075704,
+       "step_id": "transform-eb07a2596bb1b2ed0a6b969d17688ac3873a28d9e1a8ef592d11a815f74a8a46"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.5141239580116235,
+       "step_id": "publish-eb07a2596bb1b2ed0a6b969d17688ac3873a28d9e1a8ef592d11a815f74a8a46"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9691207919968292,
+       "step_id": "collect-244a1e8c158bdcf6e5f514038de4c24d45ec99ca9a4f1d9c0134f61ba9184ccb"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0367432920029387,
+       "step_id": "transform-244a1e8c158bdcf6e5f514038de4c24d45ec99ca9a4f1d9c0134f61ba9184ccb"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.4837700840143953,
+       "step_id": "publish-244a1e8c158bdcf6e5f514038de4c24d45ec99ca9a4f1d9c0134f61ba9184ccb"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9804349160112906,
+       "step_id": "collect-83fc050dcbbd763e0e6724a89e6c891cc53e1b6d3ad4ae04cd8827c219d27758"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0459456250246149,
+       "step_id": "transform-83fc050dcbbd763e0e6724a89e6c891cc53e1b6d3ad4ae04cd8827c219d27758"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.617859874997521,
+       "step_id": "publish-83fc050dcbbd763e0e6724a89e6c891cc53e1b6d3ad4ae04cd8827c219d27758"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9315727080102079,
+       "step_id": "collect-990be0d6b4dfc0db695aca62c1b0c9290fa720920b4c3435eeab1d13f1aac093"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0043927500082646,
+       "step_id": "transform-990be0d6b4dfc0db695aca62c1b0c9290fa720920b4c3435eeab1d13f1aac093"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.638962541008368,
+       "step_id": "publish-990be0d6b4dfc0db695aca62c1b0c9290fa720920b4c3435eeab1d13f1aac093"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9968754169822205,
+       "step_id": "collect-d8c59d91d6359a06faac0b0cfd433b2bd0e9bdfd45abac05ee8e0ef4b5df421a"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0594810829788912,
+       "step_id": "transform-d8c59d91d6359a06faac0b0cfd433b2bd0e9bdfd45abac05ee8e0ef4b5df421a"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.898847833974287,
+       "step_id": "publish-d8c59d91d6359a06faac0b0cfd433b2bd0e9bdfd45abac05ee8e0ef4b5df421a"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0266865419980604,
+       "step_id": "collect-a2641017d6258e7e4f0be425e8e909a6fab5252b1545492556075dc371d42de0"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0632812920084689,
+       "step_id": "transform-a2641017d6258e7e4f0be425e8e909a6fab5252b1545492556075dc371d42de0"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 2.8934219579969067,
+       "step_id": "publish-a2641017d6258e7e4f0be425e8e909a6fab5252b1545492556075dc371d42de0"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0271206250181422,
+       "step_id": "collect-905f80f459bb4e0bc518ea617a398f85a519d5953e5aef677ef7b4e67c873b6f"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0698380839894526,
+       "step_id": "transform-905f80f459bb4e0bc518ea617a398f85a519d5953e5aef677ef7b4e67c873b6f"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.0133790000109,
+       "step_id": "publish-905f80f459bb4e0bc518ea617a398f85a519d5953e5aef677ef7b4e67c873b6f"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9998277499980759,
+       "step_id": "collect-4f273061d687b0be5b2d094a5541d9cf200a4ed29a0acd046786ef8d9bcace80"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0708216250059195,
+       "step_id": "transform-4f273061d687b0be5b2d094a5541d9cf200a4ed29a0acd046786ef8d9bcace80"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.0659202500246465,
+       "step_id": "publish-4f273061d687b0be5b2d094a5541d9cf200a4ed29a0acd046786ef8d9bcace80"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9857402089983225,
+       "step_id": "collect-d3e997775bb09c486f9012d0a2a7b4debd746850cf7374c3f9ff7d73f7cfc6d2"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0547850419825409,
+       "step_id": "transform-d3e997775bb09c486f9012d0a2a7b4debd746850cf7374c3f9ff7d73f7cfc6d2"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.0685712920094375,
+       "step_id": "publish-d3e997775bb09c486f9012d0a2a7b4debd746850cf7374c3f9ff7d73f7cfc6d2"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9925839589850511,
+       "step_id": "collect-93a663072fd2db85cb030dcac7622f5e78772c2b0599ae3e8d14ff375d59d269"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0456988330115564,
+       "step_id": "transform-93a663072fd2db85cb030dcac7622f5e78772c2b0599ae3e8d14ff375d59d269"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.2290540839894675,
+       "step_id": "publish-93a663072fd2db85cb030dcac7622f5e78772c2b0599ae3e8d14ff375d59d269"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9924327089975122,
+       "step_id": "collect-173c76a5c8ced095ca5dc2200922f957c301ba138c31b84035d00d2f84267858"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0556368340039626,
+       "step_id": "transform-173c76a5c8ced095ca5dc2200922f957c301ba138c31b84035d00d2f84267858"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.2246203340182547,
+       "step_id": "publish-173c76a5c8ced095ca5dc2200922f957c301ba138c31b84035d00d2f84267858"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0045715419983026,
+       "step_id": "collect-d265e2c38ce3b040ad99627ec1b92a60026062d031a0130acfbc2b73e5b94763"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0353697079990525,
+       "step_id": "transform-d265e2c38ce3b040ad99627ec1b92a60026062d031a0130acfbc2b73e5b94763"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.377445792022627,
+       "step_id": "publish-d265e2c38ce3b040ad99627ec1b92a60026062d031a0130acfbc2b73e5b94763"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9766926669981331,
+       "step_id": "collect-0f4829ca6460fb9ab7797badc9b8202f5d72fc7bdfd0601b565e543517b99c2b"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.061872416001279,
+       "step_id": "transform-0f4829ca6460fb9ab7797badc9b8202f5d72fc7bdfd0601b565e543517b99c2b"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.3940235410118476,
+       "step_id": "publish-0f4829ca6460fb9ab7797badc9b8202f5d72fc7bdfd0601b565e543517b99c2b"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9906861660128925,
+       "step_id": "collect-67b5ecd30acfd31efd7cd41286b9ec0b7034aa97426e012300630cdc657a8da2"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.071461832994828,
+       "step_id": "transform-67b5ecd30acfd31efd7cd41286b9ec0b7034aa97426e012300630cdc657a8da2"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.449026624992257,
+       "step_id": "publish-67b5ecd30acfd31efd7cd41286b9ec0b7034aa97426e012300630cdc657a8da2"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9837327919958625,
+       "step_id": "collect-500791920e4d980c876ce8fa13365affdc742b7f45d62549a0e726e7b0ae41bf"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0441822499851696,
+       "step_id": "transform-500791920e4d980c876ce8fa13365affdc742b7f45d62549a0e726e7b0ae41bf"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.479326333006611,
+       "step_id": "publish-500791920e4d980c876ce8fa13365affdc742b7f45d62549a0e726e7b0ae41bf"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9729818330088165,
+       "step_id": "collect-7a1af7f885848e882800b6a802be743911ee7744620a28bc4753fa3abd68a78e"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.056399875000352,
+       "step_id": "transform-7a1af7f885848e882800b6a802be743911ee7744620a28bc4753fa3abd68a78e"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.6052435000019614,
+       "step_id": "publish-7a1af7f885848e882800b6a802be743911ee7744620a28bc4753fa3abd68a78e"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9868117079895455,
+       "step_id": "collect-f7444187999bf4622220e8edcff0a234e804e09b3bc766d2a55f0eccc0ec1de5"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0487334579811431,
+       "step_id": "transform-f7444187999bf4622220e8edcff0a234e804e09b3bc766d2a55f0eccc0ec1de5"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.665537666005548,
+       "step_id": "publish-f7444187999bf4622220e8edcff0a234e804e09b3bc766d2a55f0eccc0ec1de5"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9789888329978567,
+       "step_id": "collect-f1169da0770534d203cbc98409fa4966a3bca723fced02d348308ad2cbfe944f"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0592748339986429,
+       "step_id": "transform-f1169da0770534d203cbc98409fa4966a3bca723fced02d348308ad2cbfe944f"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.6703179579926655,
+       "step_id": "publish-f1169da0770534d203cbc98409fa4966a3bca723fced02d348308ad2cbfe944f"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0052168749971315,
+       "step_id": "collect-09e735222fdb51c0f542ad99d5dff2cc891f1ce299ecd62f31e556f5c30e903b"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0698715839826036,
+       "step_id": "transform-09e735222fdb51c0f542ad99d5dff2cc891f1ce299ecd62f31e556f5c30e903b"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.7711821669945493,
+       "step_id": "publish-09e735222fdb51c0f542ad99d5dff2cc891f1ce299ecd62f31e556f5c30e903b"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9802014169981703,
+       "step_id": "collect-16ac5f54500c9de2c98b3252fd2137a77bc18a50819bed881f644a70d7cf8c3d"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0614469590072986,
+       "step_id": "transform-16ac5f54500c9de2c98b3252fd2137a77bc18a50819bed881f644a70d7cf8c3d"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.8300957920146175,
+       "step_id": "publish-16ac5f54500c9de2c98b3252fd2137a77bc18a50819bed881f644a70d7cf8c3d"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0074404170154594,
+       "step_id": "collect-f96384f5b128f436138f2288f5079ef045c826a88e9d88094e8fbef477cde6d1"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.069238291005604,
+       "step_id": "transform-f96384f5b128f436138f2288f5079ef045c826a88e9d88094e8fbef477cde6d1"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.9114502919837832,
+       "step_id": "publish-f96384f5b128f436138f2288f5079ef045c826a88e9d88094e8fbef477cde6d1"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.983350958005758,
+       "step_id": "collect-a2da2016331064ce612608126c98fb8486ca0386382628f0666550499cba4f50"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.071611916006077,
+       "step_id": "transform-a2da2016331064ce612608126c98fb8486ca0386382628f0666550499cba4f50"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 3.9615890830173157,
+       "step_id": "publish-a2da2016331064ce612608126c98fb8486ca0386382628f0666550499cba4f50"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0019906670204364,
+       "step_id": "collect-bb187752806ad66cb353e5a0a82e6fb31aafa89f8bea1d768ab63463f9ed5757"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.073111208010232,
+       "step_id": "transform-bb187752806ad66cb353e5a0a82e6fb31aafa89f8bea1d768ab63463f9ed5757"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.069802000012714,
+       "step_id": "publish-bb187752806ad66cb353e5a0a82e6fb31aafa89f8bea1d768ab63463f9ed5757"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0028152090089861,
+       "step_id": "collect-3ce9e6129626241a019fc28f451e9ee332985f1687459811c0e2b8379be7a066"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0799039999837987,
+       "step_id": "transform-3ce9e6129626241a019fc28f451e9ee332985f1687459811c0e2b8379be7a066"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.163698584015947,
+       "step_id": "publish-3ce9e6129626241a019fc28f451e9ee332985f1687459811c0e2b8379be7a066"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.0116342910041567,
+       "step_id": "collect-9aa5ce4d35ca2cfd657f5d0e345f8555912576df23d9cfdebe35f8a58c785fb9"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0738196249876637,
+       "step_id": "transform-9aa5ce4d35ca2cfd657f5d0e345f8555912576df23d9cfdebe35f8a58c785fb9"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.210524291993352,
+       "step_id": "publish-9aa5ce4d35ca2cfd657f5d0e345f8555912576df23d9cfdebe35f8a58c785fb9"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 1.024600000004284,
+       "step_id": "collect-ddd3a47c127520dec383b1df5267c0e7807e75acf1dd14b03dbc77af96d8cebe"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0748871249961667,
+       "step_id": "transform-ddd3a47c127520dec383b1df5267c0e7807e75acf1dd14b03dbc77af96d8cebe"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.272565250023035,
+       "step_id": "publish-ddd3a47c127520dec383b1df5267c0e7807e75acf1dd14b03dbc77af96d8cebe"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9832447080116253,
+       "step_id": "collect-971dfe8cb5289fa29440fb1d07ea85e46656d81e1c5d0065e80358ff8b8998b1"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0546251669875346,
+       "step_id": "transform-971dfe8cb5289fa29440fb1d07ea85e46656d81e1c5d0065e80358ff8b8998b1"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.282199082983425,
+       "step_id": "publish-971dfe8cb5289fa29440fb1d07ea85e46656d81e1c5d0065e80358ff8b8998b1"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9817453750001732,
+       "step_id": "collect-5426bae1ffc00308fdc62dab734a4cc6d97a4f607b7f4e6ac002b58ba3bb61fb"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0502996669965796,
+       "step_id": "transform-5426bae1ffc00308fdc62dab734a4cc6d97a4f607b7f4e6ac002b58ba3bb61fb"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.287498541991226,
+       "step_id": "publish-5426bae1ffc00308fdc62dab734a4cc6d97a4f607b7f4e6ac002b58ba3bb61fb"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.94449816600536,
+       "step_id": "collect-e8d9c212b41263155486b94e6e5ba9082df7f0c64ff1e28d474135c84d0c7b76"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0077795829856768,
+       "step_id": "transform-e8d9c212b41263155486b94e6e5ba9082df7f0c64ff1e28d474135c84d0c7b76"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.40893233299721,
+       "step_id": "publish-e8d9c212b41263155486b94e6e5ba9082df7f0c64ff1e28d474135c84d0c7b76"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9819829580083024,
+       "step_id": "collect-5bc99f901092baf332680b936c259883a295a247e023400e8ea3fc586d3b9b77"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.049523624998983,
+       "step_id": "transform-5bc99f901092baf332680b936c259883a295a247e023400e8ea3fc586d3b9b77"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.4630811249953695,
+       "step_id": "publish-5bc99f901092baf332680b936c259883a295a247e023400e8ea3fc586d3b9b77"
+      },
+      {
+       "command": "collect",
+       "label": "child",
+       "seconds": 0.9904847500147298,
+       "step_id": "collect-c3f9bd45b4c22715148b92f6123ae07c5de0c59e518ace8d461c2da3a28c600a"
+      },
+      {
+       "command": "transform",
+       "label": "child",
+       "seconds": 1.0082742080267053,
+       "step_id": "transform-c3f9bd45b4c22715148b92f6123ae07c5de0c59e518ace8d461c2da3a28c600a"
+      },
+      {
+       "command": "publish",
+       "label": "child",
+       "seconds": 4.337645042018266,
+       "step_id": "publish-c3f9bd45b4c22715148b92f6123ae07c5de0c59e518ace8d461c2da3a28c600a"
+      },
+      {
+       "label": "baseline_gaps",
+       "seconds": 28.948393500002567
+      },
+      {
+       "label": "source_revert_gaps",
+       "seconds": 3.147550624998985
+      },
+      {
+       "label": "summarize",
+       "seconds": 6.458399002440274e-05
+      },
+      {
+       "label": "write_workflow_result",
+       "seconds": 120.05377983301878
+      },
+      {
+       "label": "emit_summary",
+       "seconds": 0.001299084018683061
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "started_at": "2026-10-23T13:26:15.840192+00:00"
+}

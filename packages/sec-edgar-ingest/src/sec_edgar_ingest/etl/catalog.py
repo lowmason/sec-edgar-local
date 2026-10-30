@@ -14,13 +14,14 @@ import pyarrow.parquet as pq
 from ..config import Settings
 from ..models import Error, RunContext, canonical_json, parse_json, quarter_for, quarter_value
 from ..storage.contracts import BoundaryObserver, Conflict, ObjectStore, observe
-from .contracts import Candidate, FileRef, GenerationCapture, GenerationManifest, IndexRow, ObservationRef, canonical_schema, change_schema
-from .manifest import (gate_payload, gate_ref, generation_base, generation_identity, iter_file_rows,
-                       read_manifest, source_fingerprint, validate_candidate, validate_candidate_content, validate_files)
+from . import incremental
+from .contracts import (ABSENCE_REASON, BUSINESS_FIELDS, WITHDRAWAL_REASON, Candidate, FileRef, GenerationCapture,
+                        GenerationManifest, IndexRow, ObservationRef, arrow_row, canonical_schema, change_schema)
+from .manifest import (_validate_identity, check_candidate_integrity, gate_payload, gate_ref, generation_base,
+                       generation_identity, iter_file_rows, read_manifest, source_fingerprint,
+                       validate_candidate_content, validate_files)
 from .state import EtlState
 from .transform import BATCH_ROWS, PARQUET_VERSION, _check_deadline, _file_identity, _validate_context, read_observations, transform_member
-
-BUSINESS_FIELDS = ('cik', 'company_name', 'form_type', 'archive_path', 'filing_date', 'accession_number')
 
 
 def select_sources(existing: tuple[ObservationRef, ...], incoming: tuple[ObservationRef, ...]) -> tuple[ObservationRef, ...]:
@@ -50,6 +51,54 @@ def _candidate(manifest, body):
                      hashlib.sha256(body).hexdigest(), len(body), gate_ref(manifest))
 
 
+FILE_NAMES = {'data': 'part-00000.parquet', 'changes': 'changes.parquet'}
+
+
+def _stage_file(path, ref, objects, observer):
+    objects.stage(ref.path, path)
+    objects.verify(ref.path, ref.sha256, ref.byte_count)
+    observe(observer, 'candidate.after_' + ref.role)
+
+
+def _generation(quarter, generation_id, previous, fingerprint, context, selected, files, counts, mode,
+                membership, retained):
+    return GenerationManifest(quarter=quarter,
+        generation_id=generation_id,
+        base_generation_id=previous.generation_id if previous else None,
+        source_fingerprint=fingerprint,
+        parser_version=context.parser_version,
+        schema_version=context.schema_version,
+        runtime=context.runtime,
+        sources=selected,
+        files=tuple(files),
+        row_count=counts['data'],
+        added=counts['added'],
+        updated=counts['updated'],
+        withdrawn=counts['withdrawn'],
+        unresolved_absence=counts['unresolved_absence'],
+        provenance_refreshed=counts['provenance_refreshed'],
+        quarter_mode=mode,
+        membership_source=membership,
+        retained_from_generation=retained,
+        gate='awaiting_approval' if mode == 'closed' and counts['withdrawn'] else 'clear')
+
+
+def _store_manifest(manifest, previous, objects, observer):
+    base = generation_base(manifest.quarter, manifest.generation_id)
+    if previous:
+        objects.put_once(base + '/retained-base.json', canonical_json(previous.to_mapping()))
+    body = canonical_json(manifest.to_mapping())
+    candidate = _candidate(manifest, body)
+    try:
+        objects.put_once(candidate.manifest_ref, body)
+    except Conflict:
+        candidate = _existing(manifest.quarter, manifest.generation_id, objects)
+        if candidate is None:
+            raise Conflict('concurrent candidate vanished')
+    observe(observer, 'candidate.after_manifest')
+    return candidate
+
+
 def _existing(quarter, generation_id, objects):
     path = generation_base(quarter, generation_id) + '/manifest.json'
     try:
@@ -72,11 +121,16 @@ def _database(path):
     return db
 
 
-def _load_observations(db, selected, quarter, membership, objects, context):
+def _require_rows(ref):
+    """Both build paths refuse an empty source before they read or stage anything."""
+    if not ref.source_row_count:
+        raise ValueError('invalid_source: empty source observations')
+
+
+def _load_observations(db, selected, quarter, membership, objects, context, read=read_observations):
     for ref in selected:
-        if not ref.source_row_count:
-            raise ValueError('invalid_source: empty source observations')
-        with closing(read_observations(ref, objects)) as rows:
+        _require_rows(ref)
+        with closing(read(ref, objects)) as rows:
             for obs in rows:
                 if quarter_for(obs.row.filing_date) != quarter:
                     continue
@@ -122,11 +176,11 @@ def _resolve(db, mode, membership):
         absent = proposed is None or (mode == 'open' and membership is not None and not member)
         if absent:
             if mode == 'closed' and membership:
-                _change(db, key, 'withdrawn', before, None, 'absent from closed quarterly membership')
+                _change(db, key, 'withdrawn', before, None, WITHDRAWAL_REASON)
                 counts['withdrawn'] += 1
             else:
                 db.execute('INSERT OR REPLACE INTO proposed VALUES(?,?,?)', (*key, payload))
-                _change(db, key, 'unresolved_absence', before, before, 'absence is not authoritative withdrawal evidence')
+                _change(db, key, 'unresolved_absence', before, before, ABSENCE_REASON)
                 counts['unresolved_absence'] += 1
                 counts['retained'] += 1
             continue
@@ -143,12 +197,8 @@ def _resolve(db, mode, membership):
     return counts
 
 
-def _arrow_row(value):
-    return {**value, 'filing_date': IndexRow.from_mapping(value).filing_date}
-
-
 def _write_parquet(db, root, base, role, context):
-    name = 'part-00000.parquet' if role == 'data' else 'changes.parquet'
+    name = FILE_NAMES[role]
     schema = canonical_schema() if role == 'data' else change_schema()
     sql = ('SELECT payload FROM proposed ORDER BY cik,path' if role == 'data' else
            'SELECT payload FROM changes ORDER BY cik,path,change_type')
@@ -158,11 +208,11 @@ def _write_parquet(db, root, base, role, context):
         for (payload,) in db.execute(sql):
             value = parse_json(payload)
             if role == 'data':
-                value = _arrow_row(value)
+                value = arrow_row(value)
             else:
                 for field in ('before', 'after'):
                     if value[field] is not None:
-                        value[field] = _arrow_row(value[field])
+                        value[field] = arrow_row(value[field])
             batch.append(value)
             count += 1
             if len(batch) == BATCH_ROWS:
@@ -182,7 +232,7 @@ def _stage_gate(candidate, objects, state):
         objects.verify(candidate.candidate_ref, hashlib.sha256(body).hexdigest(), len(body))
         if objects.read(candidate.candidate_ref) != body:
             raise Conflict('candidate gate readback differs')
-        validate_candidate(candidate, objects)
+        check_candidate_integrity(candidate, objects)
         state.record_candidate(candidate)
 
 
@@ -193,6 +243,48 @@ def _invalid_membership(quarter, source, context, objects):
     path = f'quarantine/sec/{context.run_id}/{source.source.source_id}/catalog/{hashlib.sha256(body).hexdigest()}.json'
     objects.put_once(path, body)
     raise ValueError(error.message)
+
+
+def _identify_candidate(quarter, previous, selected, mode, membership, retained_count, objects, state, observer):
+    """The retained basis, fingerprint and generation ID, and the stored candidate they replay, if any."""
+    retained = previous.generation_id if retained_count and previous else None
+    fingerprint = source_fingerprint(quarter, selected, mode=mode, membership_source=membership,
+                                     retained_from_generation=retained)
+    generation_id = generation_identity(quarter, previous.generation_id if previous else None, fingerprint)
+    existing = _existing(quarter, generation_id, objects)
+    if existing:
+        observe(observer, 'candidate.after_validation')
+        _stage_gate(existing, objects, state)
+    return retained, fingerprint, generation_id, existing
+
+
+def _incremental_candidate(quarter, previous, active, selected, membership, mode, context, objects, state, observer):
+    """C5, then C6 before the gate and pointer steps."""
+    from .equivalence import validate_incremental_candidate
+    for ref in selected:
+        _require_rows(ref)
+    delta = incremental.build_incremental(quarter, active, selected, membership, mode, context, objects)
+    retained, fingerprint, generation_id, existing = _identify_candidate(
+        quarter, previous, selected, mode, membership, delta.counts['retained'], objects, state, observer)
+    if existing:
+        return existing
+    base, files = generation_base(quarter, generation_id), []
+    with TemporaryDirectory(prefix='sec-catalog-delta-') as directory:
+        for role, table, schema in (('data', delta.data, canonical_schema()), ('changes', delta.changes, change_schema())):
+            path = Path(directory) / FILE_NAMES[role]
+            incremental.write_table(table, path, schema, context)
+            digest, byte_count = _file_identity(path)
+            ref = FileRef(base + '/' + FILE_NAMES[role], digest, byte_count, table.num_rows, role)
+            _stage_file(path, ref, objects, observer)
+            files.append(ref)
+    manifest = _generation(quarter, generation_id, previous, fingerprint, context, selected, files,
+                           delta.counts, mode, membership, retained)
+    _validate_identity(manifest)  # The full path checks it in `validate_files`, also before the manifest is stored.
+    candidate = _store_manifest(manifest, previous, objects, observer)
+    validate_incremental_candidate(candidate, previous, context, objects)
+    observe(observer, 'candidate.after_validation')
+    _stage_gate(candidate, objects, state)
+    return candidate
 
 
 def build_candidate(quarter: str, previous: GenerationCapture | None, incoming: tuple[ObservationRef, ...],
@@ -206,8 +298,10 @@ def build_candidate(quarter: str, previous: GenerationCapture | None, incoming: 
         raise ValueError('previous generation belongs to another quarter')
     active = read_manifest(previous, objects) if previous else None
     if active:
-        validate_candidate(Candidate(active, previous.manifest_ref, previous.manifest_sha256,
-                                     previous.manifest_bytes, gate_ref(active)), objects)
+        # The previous generation was checked (by the full check or by C6) before its pointer
+        # committed (S1, C2).
+        check_candidate_integrity(Candidate(active, previous.manifest_ref, previous.manifest_sha256,
+                                            previous.manifest_bytes, gate_ref(active)), objects)
     selected = select_sources(active.sources if active else (), incoming)
     selected = tuple(transform_member(ref.source, ref.snapshot, context, settings, objects, state)
                      if (ref.parser_version, ref.schema_version) != (context.parser_version, context.schema_version)
@@ -225,60 +319,29 @@ def build_candidate(quarter: str, previous: GenerationCapture | None, incoming: 
         candidate = Candidate(active, previous.manifest_ref, previous.manifest_sha256, previous.manifest_bytes, gate_ref(active))
         _stage_gate(candidate, objects, state)
         return candidate
+    if incremental.eligible(active, incoming, selected, membership, mode, context):
+        return _incremental_candidate(quarter, previous, active, selected, membership, mode,
+                                      context, objects, state, observer)
     with TemporaryDirectory(prefix='sec-catalog-') as directory:
         root = Path(directory)
         with closing(_database(root / 'catalog.sqlite')) as db:
             _load_observations(db, selected, quarter, membership, objects, context)
             _load_active(db, active, objects)
             counts = _resolve(db, mode, membership)
-            retained = previous.generation_id if counts['retained'] and previous else None
-            fingerprint = source_fingerprint(quarter, selected, mode=mode, membership_source=membership,
-                                             retained_from_generation=retained)
-            generation_id = generation_identity(quarter, previous.generation_id if previous else None, fingerprint)
-            existing = _existing(quarter, generation_id, objects)
+            retained, fingerprint, generation_id, existing = _identify_candidate(
+                quarter, previous, selected, mode, membership, counts['retained'], objects, state, observer)
             if existing:
-                observe(observer, 'candidate.after_validation')
-                _stage_gate(existing, objects, state)
                 return existing
             base = generation_base(quarter, generation_id)
             files = []
             for role in ('data', 'changes'):
                 path, ref = _write_parquet(db, root, base, role, context)
-                objects.stage(ref.path, path)
-                objects.verify(ref.path, ref.sha256, ref.byte_count)
+                _stage_file(path, ref, objects, observer)
                 files.append(ref)
-                observe(observer, 'candidate.after_' + role)
-        manifest = GenerationManifest(quarter=quarter,
-        generation_id=generation_id,
-        base_generation_id=previous.generation_id if previous else None,
-        source_fingerprint=fingerprint,
-        parser_version=context.parser_version,
-        schema_version=context.schema_version,
-        runtime=context.runtime,
-        sources=selected,
-        files=tuple(files),
-        row_count=counts['data'],
-        added=counts['added'],
-        updated=counts['updated'],
-        withdrawn=counts['withdrawn'],
-        unresolved_absence=counts['unresolved_absence'],
-        provenance_refreshed=counts['provenance_refreshed'],
-        quarter_mode=mode,
-        membership_source=membership,
-        retained_from_generation=retained,
-        gate='awaiting_approval' if mode == 'closed' and counts['withdrawn'] else 'clear')
+        manifest = _generation(quarter, generation_id, previous, fingerprint, context, selected, files,
+                               counts, mode, membership, retained)
         validate_files(manifest, objects)
-        if previous:
-            objects.put_once(base + '/retained-base.json', canonical_json(previous.to_mapping()))
-        body = canonical_json(manifest.to_mapping())
-        candidate = _candidate(manifest, body)
-        try:
-            objects.put_once(candidate.manifest_ref, body)
-        except Conflict:
-            candidate = _existing(quarter, generation_id, objects)
-            if candidate is None:
-                raise Conflict('concurrent candidate vanished')
-        observe(observer, 'candidate.after_manifest')
+        candidate = _store_manifest(manifest, previous, objects, observer)
         validate_candidate_content(candidate, objects)
         observe(observer, 'candidate.after_validation')
         _stage_gate(candidate, objects, state)

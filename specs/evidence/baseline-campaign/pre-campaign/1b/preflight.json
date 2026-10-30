@@ -1,0 +1,9 @@
+{
+ "backfill": [
+  "2015Q1",
+  "open"
+ ],
+ "dispatch_reserve_seconds": 1800,
+ "effective_config_sha256": "db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1",
+ "release_id": "9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b"
+}

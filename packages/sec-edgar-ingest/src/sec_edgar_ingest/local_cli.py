@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from .config import normalize_paths, parse_config, pin_context
+from .config import admit_dispatch_reserve, normalize_paths, parse_config, pin_context
 from .models import RunContext, canonical_json
 from .runtime import native_descriptor, native_python_argv, preflight_current
 from .runtime import isolated_environment
@@ -95,6 +95,9 @@ def prepare_invocation(config_path: Path, command: str, timeout_seconds: float, 
     settings = normalize_paths(parse_config(original.decode('utf-8')), config_path.parent)
     if timeout_seconds > settings.execution.max_run_seconds:
         raise ValueError('timeout_seconds exceeds execution.max_run_seconds')
+    reserve = admit_dispatch_reserve(settings)
+    if reserve is not None and timeout_seconds <= reserve:
+        raise ValueError('timeout_seconds must exceed execution.dispatch_reserve_seconds')
     if settings.runtime.kind != 'native':
         raise ValueError('launcher requires an explicit installed native release')
     verified = preflight_current(Path(settings.runtime.release_manifest))

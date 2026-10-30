@@ -379,3 +379,16 @@ def validate_candidate(candidate: Candidate, objects: ObjectStore) -> None:
     validate_candidate_content(candidate, objects)
     if candidate.candidate_ref and objects.read(candidate.candidate_ref) != gate_payload(candidate):
         raise Conflict('candidate gate record differs from exact generation/base/hash')
+
+
+def check_candidate_integrity(candidate: Candidate, objects: ObjectStore) -> None:
+    """C1: the exact manifest and every listed file's hash and length; no data or change row is read."""
+    capture = GenerationCapture(candidate.manifest.quarter, candidate.manifest.generation_id,
+                                candidate.manifest_ref, candidate.manifest_sha256, candidate.manifest_bytes)
+    manifest = read_manifest(capture, objects)
+    if manifest != candidate.manifest or candidate.candidate_ref != gate_ref(manifest):
+        raise ValueError('candidate differs from exact manifest/gate identity')
+    for ref in manifest.files:
+        objects.verify(ref.path, ref.sha256, ref.byte_count)
+    if candidate.candidate_ref and objects.read(candidate.candidate_ref) != gate_payload(candidate):
+        raise Conflict('candidate gate record differs from exact generation/base/hash')

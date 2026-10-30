@@ -13,9 +13,9 @@ from ..etl.commands import _affected_quarters, read_etl_result
 from ..etl.contracts import (
     GenerationCapture, ObservationRef, decode_transformed, processing_key, transformed_ref,
 )
-from ..etl.reader import capture_quarter, validated_manifest
+from ..etl.reader import capture_quarter, checked_manifest
 from ..etl.state import EtlState
-from ..etl.transform import _read_manifest
+from ..etl.transform import checked_observation
 from ..models import (
     Binding, DirectoryOutcome, Error, RunContext, Snapshot, Source, SourceWorkset,
     canonical_json, error_text, parse_json, quarter_for, quarter_value, require_hash,
@@ -417,7 +417,7 @@ def validate_capture(capture, objects) -> None:
     if ref.source != source or ref.snapshot != snapshot:
         raise Conflict('capture observation differs from exact source/snapshot')
     objects.verify(snapshot.raw_path, snapshot.sha256, snapshot.byte_count)
-    durable, _ = _read_manifest(ref.manifest_ref, objects)
+    durable = checked_observation(ref.manifest_ref, objects)
     if durable != ref:
         raise Conflict('capture observation differs from immutable readback')
     affected = capture['affected_quarters']
@@ -425,7 +425,7 @@ def validate_capture(capture, objects) -> None:
     if affected != sorted(set(affected)) or [q.quarter for q in quarters] != affected or not set(ref.quarter_counts) <= set(affected):
         raise Conflict('capture affected-quarter coverage differs')
     for quarter in quarters:
-        manifest = validated_manifest(quarter, objects)
+        manifest = checked_manifest(quarter, objects)
         if (manifest.parser_version, manifest.schema_version) != (ref.parser_version, ref.schema_version):
             raise Conflict('captured publication versions differ')
         active = next((r for r in manifest.sources if r.source.source_id == source.source_id), None)
@@ -448,7 +448,17 @@ def accounts_for(active: ObservationRef | None, ref: ObservationRef) -> bool:
 LEGACY_PUBLISH_FORMAT = 'sec-local-workflow-legacy-publish-v1'
 
 
-def _legacy_publish_call(context, objects):
+def _require_complete_input(workset):
+    if not workset.complete:
+        raise Conflict('legacy unfinished publication has no complete publishable input')
+
+
+def _legacy_publish_descriptor(context, objects, *, require_complete=False):
+    """Build the legacy publish call and read its input (Stage 1c, M1).
+
+    The inventory loop builds without the complete-input refusal. `_legacy_publish_call` sets
+    `require_complete`, so its checks run in today's order.
+    """
     if context.command != 'publish':
         raise Conflict('legacy repair context is not a publish command')
     settings = Settings.from_mapping(context.to_mapping()['effective_config'])
@@ -469,13 +479,18 @@ def _legacy_publish_call(context, objects):
     workset = decode_transformed(objects.read(intent['workset']))
     if transformed_ref(workset) != intent['workset']:
         raise Conflict('legacy publish transformed input address differs')
-    if not workset.complete:
-        raise Conflict('legacy unfinished publication has no complete publishable input')
+    if require_complete:
+        _require_complete_input(workset)
     if (workset.context.parser_version, workset.context.schema_version) != (
             context.parser_version, context.schema_version):
         raise Conflict('legacy publish input versions differ')
-    return {'contract_version': LOCAL_CONTRACT, 'format_version': LEGACY_PUBLISH_FORMAT, 'context': context.to_mapping(),
+    call = {'contract_version': LOCAL_CONTRACT, 'format_version': LEGACY_PUBLISH_FORMAT, 'context': context.to_mapping(),
             'intent': intent, 'input_ref': intent['workset'], 'result_ref': path}
+    return call, workset
+
+
+def _legacy_publish_call(context, objects):
+    return _legacy_publish_descriptor(context, objects, require_complete=True)[0]
 
 
 def read_legacy_publish(call, store, objects):
@@ -555,12 +570,15 @@ def _publish_calls(store, objects):
             context = RunContext.from_mapping(value['context'])
             if context.command != 'publish' or result_path(context) in checked_paths:
                 continue
-            call = _legacy_publish_call(context, objects)
+            call, workset = _legacy_publish_descriptor(context, objects)
             _transformed_input(call['input_ref'], None, objects)
             call_key = hashlib.sha256(canonical_json(to_mapping_value(call))).hexdigest()
+            # Stage 1c (M2): only a kept call must have a complete input. A finished Attempt with an
+            # incomplete input and no repair record moved no pointer, so it is not an obligation.
             if (value['result'] is None
                     or store.get('WorkflowRepairObligation', call_key) is not None
                     or _read_repair_authority(call_key, objects) is not None):
+                _require_complete_input(workset)
                 legacy.append(call)
         except (ValueError, OSError, Conflict, KeyError, TypeError) as error:
             raise Conflict(f'ordinary publication authority inventory uncertain: {error}') from error
@@ -685,7 +703,7 @@ def _publication_captures(result, store, objects):
         body = objects.read(quarter.manifest_ref)
         capture = GenerationCapture(quarter.quarter, quarter.generation_id, quarter.manifest_ref,
                                     hashlib.sha256(body).hexdigest(), len(body))
-        manifest = validated_manifest(capture, objects)
+        manifest = checked_manifest(capture, objects)
         captures.append(capture.to_mapping())
         artifacts.append({'contract_version': LOCAL_CONTRACT, 'quarter': quarter.quarter, 'records': _repair_artifacts(manifest, store)})
     return captures, artifacts
@@ -702,7 +720,7 @@ def _write_resolution(obligation, call, result, captures, artifacts, store, obje
     for ref_value in original['sources']:
         ref = ObservationRef.from_mapping(ref_value)
         for captured in captures:
-            manifest = validated_manifest(GenerationCapture.from_mapping(captured), objects)
+            manifest = checked_manifest(GenerationCapture.from_mapping(captured), objects)
             if next((r for r in manifest.sources if r.source.source_id == ref.source.source_id), None) != ref:
                 raise Conflict('repair resolution silently supersedes unfinished source evidence')
     payload = {'contract_version': LOCAL_CONTRACT, 'format_version': RESOLUTION_FORMAT, 'obligation': _plain(obligation),
@@ -767,7 +785,7 @@ def validate_resolution_capture(resolution, objects) -> None:
         raise Conflict('repair resolution artifact coverage differs')
     for quarter, mapping in captured.items():
         capture = GenerationCapture.from_mapping(mapping)
-        manifest = validated_manifest(capture, objects)
+        manifest = checked_manifest(capture, objects)
         q = quarters[quarter]
         if q.outcome not in ('published', 'unchanged') or (q.generation_id, q.manifest_ref) != (capture.generation_id, capture.manifest_ref):
             raise Conflict('repair resolution capture differs from successful command')
@@ -786,7 +804,7 @@ def validate_resolution(resolution, store, objects):
     artifact_by_quarter = {v['quarter']: v['records'] for v in value['repair_artifacts']}
     for mapping in value['quarters']:
         capture = GenerationCapture.from_mapping(mapping)
-        manifest = validated_manifest(capture, objects)
+        manifest = checked_manifest(capture, objects)
         if artifact_by_quarter[capture.quarter] != _repair_artifacts(manifest, store):
             raise Conflict('repair resolution current recoverable indexes differ')
 
@@ -812,7 +830,7 @@ def evaluate_member(value, parser_version, schema_version, store, objects) -> Co
         ref = ObservationRef.from_mapping(processing['observation'])
         if processing['processing_key'] != key or (ref.source, ref.snapshot, ref.parser_version, ref.schema_version) != (source, snapshot, parser_version, schema_version):
             raise Conflict('decoded Processing identity differs from member pin/current versions')
-        durable, _ = _read_manifest(ref.manifest_ref, objects)
+        durable = checked_observation(ref.manifest_ref, objects)
         if durable != ref:
             raise Conflict('Processing differs from immutable observation')
         affected = _affected_quarters((ref,), objects, store)
@@ -822,7 +840,7 @@ def evaluate_member(value, parser_version, schema_version, store, objects) -> Co
             if capture is None:
                 gaps.append(Error('publication_pending', 'affected quarter has no publication', True, source.source_id, {'quarter': quarter}))
                 continue
-            manifest = validated_manifest(capture, objects)
+            manifest = checked_manifest(capture, objects)
             active = next((r for r in manifest.sources if r.source.source_id == source.source_id), None)
             if not accounts_for(active, ref):
                 gaps.append(Error('publication_pending', 'affected quarter does not contain exact current observation', True, source.source_id, {'quarter': quarter}))

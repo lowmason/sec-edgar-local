@@ -23,9 +23,9 @@ from ..storage.contracts import deployment_binding
 from ..worksets import decode_source_workset, decode_snapshot_workset, encode_workset, make_snapshot_workset
 from ..etl.commands import read_etl_result, validate_workset_ref
 from ..etl.contracts import Candidate, EtlResult, GenerationCapture, decode_transformed, transformed_ref, processing_key
-from ..etl.manifest import validate_candidate, read_manifest
-from ..etl.reader import validated_manifest
-from ..etl.transform import _pinned_members, _read_manifest, read_observations
+from ..etl.manifest import check_candidate_integrity, read_manifest
+from ..etl.reader import checked_manifest
+from ..etl.transform import _pinned_members, checked_observation
 from ..etl.parser import supported_parser
 from ..models import Record, validate_record_fields
 from .contracts import WORKFLOW_COMMANDS
@@ -238,11 +238,9 @@ def _transformed_input(path, store, objects):
     for ref in workset.observations:
         if ref.source != members.get(ref.source.source_id) or ref.snapshot != snapshots_by_id.get(ref.source.source_id):
             raise Conflict('transformed observation differs from exact source/raw binding')
-        retained, _ = _read_manifest(ref.manifest_ref, objects)
+        retained = checked_observation(ref.manifest_ref, objects)
         if retained != ref:
             raise Conflict('transformed observation differs from retained manifest')
-        for _ in read_observations(ref, objects):
-            pass
         if store is not None:
             row = store.get('Processing', processing_key(ref.source.source_id, ref.snapshot.sha256,
                                                        ref.parser_version, ref.schema_version))
@@ -296,7 +294,7 @@ def _validate_input_output(call, result, store, objects):
                 body = objects.read(quarter.manifest_ref)
                 capture = GenerationCapture(quarter.quarter, quarter.generation_id, quarter.manifest_ref,
                                             hashlib.sha256(body).hexdigest(), len(body))
-                manifest = validated_manifest(capture, objects)
+                manifest = checked_manifest(capture, objects)
                 if (manifest.parser_version, manifest.schema_version) != (
                         result.context.parser_version, result.context.schema_version):
                     raise Conflict('publication manifest versions differ')
@@ -310,7 +308,7 @@ def _validate_input_output(call, result, store, objects):
                     capture.manifest_sha256, capture.manifest_bytes, quarter.candidate_ref)
                 if candidate.manifest.quarter != quarter.quarter:
                     raise Conflict('candidate belongs to another quarter')
-                validate_candidate(candidate, objects)
+                check_candidate_integrity(candidate, objects)
                 if store is not None:
                     row = store.get('Candidate', candidate.manifest.generation_id)
                     if row is None or row.to_mapping()['value'] != candidate.to_mapping():

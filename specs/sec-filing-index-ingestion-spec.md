@@ -248,6 +248,22 @@ with `capture_quarter`, then use `read_quarter` to validate its manifest, files,
 exposing rows. Retained captures remain stable when active pointers change. A reproducible
 multi-quarter read records every capture; it does not scan all retained Parquet generations.
 
+The engine checks a generation or an observation that a committed pointer, a retained capture or a
+checked result names by its exact manifest and file hashes, without reading rows; the full content
+check runs once, before a full rebuild's pointer commits, and again in `read_quarter`, `approve` and
+`rollback`, and on a stored candidate that a retry or a replay finds. A quarter takes the incremental
+path only when it has a `clear` active generation with the same quarter mode, parser and schema, keeps
+that generation's sources and membership authority, and gains only sources that are new to it. Such a
+quarter is rebuilt from its base generation and the new rows, and an equivalence check against the
+full path's resolution of every key that can change runs before its pointer commits. Every other
+quarter takes the full rebuild. A candidate that the equivalence check refuses stays in the
+write-once store. A retry with the same inputs runs the full check on it, and when that check fails
+it reports `invalid_source`, even after a code fix, unless that fix changes the retained basis.
+Otherwise the quarter recovers only when its source set or base changes. Removing the candidate's
+objects is not a supported recovery step. §4.7 forbids deleting objects to reset state, and no
+command exists for it. Such a removal needs a separately reviewed operational decision.
+(Stage 1b, plan 5; C1–C6 and C11 in the [1b spec](completed/sec-filing-index-per-member-cost.md).)
+
 ### 4.7 Invocation evidence, recovery, and operators
 
 The manual launcher accepts `backfill`, `daily`, or `reconcile`, an explicit config, and a finite
@@ -265,9 +281,19 @@ inspect this evidence without treating absent summary fields as successful compl
 Exact completed-result replay uses the original archived runtime/config/IDs/intent/deadline and
 can return after expiry without HTTP. An unfinished expired attempt needs supported new-attempt
 recovery; never extend its saved deadline. A new launcher invocation creates a new result and may
-continue eligible unresolved work. Ambiguous child execution is not permission for an automatic
-whole-worker relaunch. Interruption, deadline, and logging failures retain status/drain evidence;
-required launcher logging failure returns 9 while preserving the actual engine status where known.
+continue eligible unresolved work. A workflow run stops starting members at its deadline minus
+`execution.dispatch_reserve_seconds`, records each member not started as pending
+(`workflow_deferred`), and writes its durable result. So a deadline deferral reports exit 3 or 4.
+A member already running at that time completes. (Stage 1a, plan 4.) Ambiguous child execution is
+not permission for an automatic whole-worker relaunch. Interruption, deadline, and logging failures
+retain status/drain evidence; required launcher logging failure returns 9 while preserving the
+actual engine status where known.
+
+A finished publish Attempt whose input workset is incomplete, with no repair record, moved no pointer.
+It is not a repair obligation. A member stops before any child dispatch when its first completion
+check reports no obligation and a non-retryable gap. The conflict names the member and each such gap,
+and no pointer moves. When a completed child leaves a member incomplete, the conflict names each gap
+of the completion check. (Stage 1c, plan 6.)
 
 Operator commands `candidates`, `history`, `approve`, and `rollback` verify an existing store without
 initializing one. Approver/operator/reason labels are explicit audit text, not authenticated user
@@ -293,7 +319,7 @@ from the canonical normalized effective-config hash.
 | Storage / acquisition | `storage.backend=local`; `acquisition.mode=live`. |
 | Data root | `../data`, resolving to `/Users/lowell/Projects/sec-edgar-local/data`. |
 | Logging root | `../logs`, resolving to `/Users/lowell/Projects/sec-edgar-local/logs`. |
-| Backfill / handoff | `2015Q1` through `open`; daily handoff `2026-10-01`. |
+| Backfill / handoff | `2020Q1` through `open`; daily handoff `2026-10-01` (owner, plan 2, 2026-10-29). |
 | SEC identity | `Lowell Mason sec-edgar-ingest mason.lowell@mac.com`. |
 | Request policy | 3 requests/second, one active collector. A lower positive rate is allowed. |
 | HTTP attempts / retry delay | Five total; 2-second base, 120-second local cap with jitter; honor longer server delays. |
@@ -303,19 +329,40 @@ from the canonical normalized effective-config hash.
 | Parser / schema | `sec-index-parser-v1` / `sec-index-v1`. |
 | Withdrawal approval | `reconciliation.require_withdrawal_approval=true`. |
 | Execution | Live maximum 3,600 seconds; launcher default 3,300 seconds. |
+| Dispatch reserve | `execution.dispatch_reserve_seconds=1800`, set from measured member costs (Stage 1b, plan 5; [measurement](evidence/stage1b/measurement.md)). Required for a new live workflow run. The value must be at least the floor of 480 seconds (release constant) and below `max_run_seconds`. The launcher refuses a timeout at or below the reserve. (Stage 1a, plan 4; Stage 1b, plan 5.) |
 | Runtime | `kind=native`; explicit content-addressed `release_manifest`. |
 
 The selected manifest is:
 
 ```text
-/Users/lowell/Projects/sec-edgar-local/releases/sha256=fc68adef9eb5909e4c97e1fb4cf5bb96915721d5bf4a533bbc782e5cc551f7ec/release.json
+/Users/lowell/Projects/sec-edgar-local/releases/sha256=c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7/release.json
 ```
 
-The post-completion release-only edit produces effective-config SHA-256
-`088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`, confirmed by offline preflight.
-The config remains untracked. Acceptance-time statements that the preserved default selected
-`900952a8…` describe the earlier bytes; they are not current release-selection instructions. Keep
-those historical records and releases intact.
+Stage 1c (plan 6) selected the 1c release
+`c4de77b89bb1d8ecc5d094f0e1dc6f8a5f3a7935e3595a9dd086d1e41a6b8aa7` at commit
+`f64c212cd1fd11688785442666299270f0103262`. The reserve stays at 1800 s. The effective-config SHA-256
+is `fb93b0e8e05dbc1cbc9bd167ae02ef2d775629905c15938055a6a93c5fb95e96`, confirmed by offline
+preflight.
+
+Before that, Stage 1b (plan 5) selected the 1b release
+`9fa189a0bea3c6545e7bce5b82d266d601abe2c3a35a66a58a8b8378d2bc283b` at commit
+`6d80da4d9e1f30461c45a826fecbf8eefc899201`. The reserve stays at 1800 s, which Stage 1a set. The
+Stage 1b [measurement](evidence/stage1b/measurement.md) now backs it. The effective-config SHA-256 was
+`db62e7fb8c941f125f84992c5bccfdbb65d6461231d899054af505700e9004b1`, confirmed by offline preflight.
+Plan 2 Revision 2 moved the backfill start to `2020Q1`. The effective-config SHA-256 was then
+`2512fdcb999a302d93de84315d45e4e44d0bb942d5165698b64c371fc42b5be5`, confirmed by offline preflight
+(owner, plan 2, 2026-10-29).
+
+Earlier, Stage 1a (plan 4) selected the D5 release
+`aa8de1ac09fa8ef1a8f638301b25c370af5222e9ef0b02fd117866c2260a6ab4` and added the dispatch reserve,
+at commit `62ce1403f192ff18537d28842548af1be2ecfe57`. The effective-config SHA-256 is
+`32e822323d24d2bb3ee41b53e7c3eb16082b7dc9059d6ba17c578dbdd1c0579e`, confirmed by offline preflight.
+The earlier release-only edit that selected `fc68adef…` produced
+`088403cb55f5b6541502cb07678c5757ffdb13b92fac52a52b6aa663177b7d4d`.
+The config has been tracked in git since commit `001edf5`. That change left the `088403cb…` hash
+unchanged (owner, plan 2, 2026-10-21). Acceptance-time statements that the preserved default
+selected `900952a8…` describe the earlier bytes; they are not current release-selection
+instructions. Keep those historical records and releases intact.
 
 There are no `schedule`, `jobs`, `worker.image_digest`, or cloud orchestration keys in the current
 config schema. The future scheduling phase must define its own reviewed configuration boundary;
@@ -338,6 +385,29 @@ Preserve original producer descriptors on cached artifacts. Historical reads val
 producer manifests without requiring the current release to equal the producer. Exact old retries,
 origin-bound collection, and publication repair still need the saved release environment. Missing
 old execution authority is a recovery failure; never substitute the new parent release.
+
+Release `fc68adef…` refuses a config and a receipt that a D5 live run writes. Its settings reject the
+unknown `execution.dispatch_reserve_seconds` key, and it reports a D5 sibling-completion receipt as
+`legacy_member_unresolved`, so the run ends `incomplete` (exit 3). The child results and contexts of
+a D5 live run carry the D5 config, so `fc68adef…` probably cannot validate them either. That is an
+untested inference. After a D5 live run has written to a store, selecting `fc68adef…` again for that
+store is unsupported. The D5 release continues `fc68adef…`-origin pending work. (Stage 1a, plan 4;
+[two-release evidence](evidence/d5-release/two-release.md).)
+
+The 1b release changes no generation, manifest, receipt, selection or config format (C7). It continues
+D5-origin pending work. Selecting the D5 release again is supported for a store that holds 1b
+first-generation (full-rebuild) generations and 1b and sibling-completion receipts. This was tested
+once, on fixture packs. D5 reading an incremental 1b generation is not tested. It rests on the byte
+identity of an incremental generation with the full rebuild (C5). A D5 publish on top of a 1b
+generation is also not tested. (Stage 1b, plan 5; C5 and C7 in the
+[1b spec](completed/sec-filing-index-per-member-cost.md); [two-release evidence](evidence/stage1b/two-release.md).)
+
+The 1c release changes no generation, manifest, receipt, member evidence, selection, Attempt or config
+format, and no outcome or exit-code format (M6). The 1b release can still read a store that the 1c release
+wrote. But on a store that holds a finished publish Attempt with an incomplete input, such as the live
+store, the 1b release fails the member-completion check. So selecting the 1b release again for that
+store is unsupported. (Stage 1c, plan 6; §4.3 item 7 of the
+[1c spec](completed/sec-filing-index-member-completion.md).)
 
 The supervised entry point is `scripts/sec-edgar-local`. The installed engine exposes `discover`,
 `collect`, `transform`, `publish`, `backfill`, `daily`, `reconcile`, `candidates`, `approve`, `history`,
@@ -426,8 +496,10 @@ reviewed offline adjudication of the same preserved bounded genuine attempt:
 - **73 unselected discoveries remained pending.** Neither those counts nor the bounded pass prove
   full coverage of the configured historical range or readiness for unattended scheduling.
 
-Retain the live root, releases, committed evidence, and `/private/tmp/sec-local-task16-acceptance-20261018`,
-including the original results and separate supplement. Future operational reports add evidence;
+Retain the live root, releases, and committed evidence. The external directory
+`/private/tmp/sec-local-task16-acceptance-20261018`, with the original results and separate supplement,
+was found absent on 2026-10-21; its recorded hashes and inventory remain in the committed machine
+evidence (owner, plan 2, 2026-10-21). Future operational reports add evidence;
 they do not rewrite the acceptance attempt. Do not repeat acceptance to close a documentation gate.
 
 ## 7. Operational rollout and acceptance gates

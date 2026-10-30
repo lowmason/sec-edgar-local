@@ -1,0 +1,24 @@
+{
+ "format_version": "sec-d5-drain-measurement-v1",
+ "kind": "count",
+ "sources": {
+  "2024Q1": {
+   "bytes": 4262821,
+   "kind": "quarterly",
+   "rows": 370321,
+   "sha256": "ba4aa3d405d4d603c5e881c2db023070b9b9f8eebc80a361dc61d831353453cb"
+  },
+  "2026-10-14": {
+   "bytes": 289582,
+   "kind": "daily",
+   "rows": 3220,
+   "sha256": "74a2830b81ee2ad818321981b68c15539c86eb6e268f57580d94894ea6e14a02"
+  },
+  "2026-10-15": {
+   "bytes": 329651,
+   "kind": "daily",
+   "rows": 3652,
+   "sha256": "83bfddd88a0d3880074c479a8559db1d2c6113d82ed33220cf6084064ec2a608"
+  }
+ }
+}

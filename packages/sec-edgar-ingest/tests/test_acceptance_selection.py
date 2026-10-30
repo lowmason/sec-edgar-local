@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import runpy
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -16,10 +17,24 @@ PROJECT = Path(__file__).resolve().parents[3]
 DRIVER = PROJECT / 'scripts/accept-sec-native.py'
 
 
+def run_script(path):
+    """Load a script in this process without keeping the bytecode policy it sets.
+
+    The scripts set sys.dont_write_bytecode and sys.pycache_prefix at import on
+    purpose. The test process must not keep that policy: later tests in the same
+    process compute cache paths with importlib.util.cache_from_source.
+    """
+    prefix, dont_write = sys.pycache_prefix, sys.dont_write_bytecode
+    try:
+        return runpy.run_path(str(path))
+    finally:
+        sys.pycache_prefix, sys.dont_write_bytecode = prefix, dont_write
+
+
 def harness():
     if not DRIVER.exists():
         raise AssertionError('missing acceptance-only selection and reservation harness')
-    return runpy.run_path(str(DRIVER))
+    return run_script(DRIVER)
 
 
 def example_selection(api, root):
@@ -569,7 +584,7 @@ class AcceptanceTests(unittest.TestCase):
         # original archive only as incomplete; runtime verification is an
         # explicit fake boundary here, never an acquisition path.
         from unittest.mock import patch
-        analyzer = runpy.run_path(str(PROJECT / 'scripts/verify-sec-native-adjudication.py'))
+        analyzer = run_script(PROJECT / 'scripts/verify-sec-native-adjudication.py')
         historical_directory = self.root / 'harness-original'
         historical_directory.mkdir()
         for record in selected['harness'].values():
@@ -851,7 +866,7 @@ class AcceptanceTests(unittest.TestCase):
     def test_adjudication_validates_exact_archived_historical_harness(self):
         path = PROJECT / 'scripts/verify-sec-native-adjudication.py'
         self.assertTrue(path.exists(), 'missing separately versioned offline-only adjudicator')
-        api = runpy.run_path(str(path))
+        api = run_script(path)
         archive = self.root / 'harness-original'
         archive.mkdir()
         for record in self.selection['harness'].values():
@@ -870,7 +885,7 @@ class AcceptanceTests(unittest.TestCase):
     def test_adjudication_keeps_original_incomplete_separate_from_corrected_status(self):
         path = PROJECT / 'scripts/verify-sec-native-adjudication.py'
         self.assertTrue(path.exists(), 'missing separately versioned offline-only adjudicator')
-        api = runpy.run_path(str(path))
+        api = run_script(path)
         original = {'genuine_native': False, 'persistence': False, 'restart_reuse': False,
             'exact_replay': False, 'bounded': True, 'published_reads': [], 'selected_native': [],
             'selected_acquired': ['a'], 'selected_reused': ['a'], 'selected_replayed': ['a']}
@@ -882,6 +897,37 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(original['selected_native'], [])
         with self.assertRaisesRegex(ValueError, 'outside runtime representation'):
             api['proof_delta'](original, {**corrected, 'bounded': False})
+
+
+class BytecodePolicyTests(unittest.TestCase):
+    """The scripts set the bytecode policy at import; loading them must not leak it."""
+
+    def setUp(self):
+        self.policy = (sys.pycache_prefix, sys.dont_write_bytecode)
+        self.addCleanup(self.restore_policy)
+
+    def restore_policy(self):
+        sys.pycache_prefix, sys.dont_write_bytecode = self.policy
+
+    def current(self):
+        return (sys.pycache_prefix, sys.dont_write_bytecode)
+
+    def test_loading_the_acceptance_driver_leaves_the_process_policy_unchanged(self):
+        harness()
+        self.assertEqual(self.current(), self.policy)
+
+    def test_loading_the_adjudicator_leaves_the_process_policy_unchanged(self):
+        run_script(PROJECT / 'scripts/verify-sec-native-adjudication.py')
+        self.assertEqual(self.current(), self.policy)
+
+    def test_a_script_that_raises_after_setting_the_policy_still_restores_it(self):
+        with tempfile.TemporaryDirectory() as name:
+            script = Path(name) / 'poisoner.py'
+            script.write_text('import os, sys\nsys.dont_write_bytecode = True\n'
+                              'sys.pycache_prefix = os.devnull\nraise RuntimeError("boom")\n')
+            with self.assertRaisesRegex(RuntimeError, 'boom'):
+                run_script(script)
+        self.assertEqual(self.current(), self.policy)
 
 
 if __name__ == '__main__':

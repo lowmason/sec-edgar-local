@@ -17,6 +17,10 @@ class ProcessedMember(Record):
     def __post_init__(self):
         validate_record_fields(self)
 
+def _gap_text(gaps) -> str:
+    """Each gap as `code: message`, in order, on one line (Stage 1c, M3 and M4)."""
+    return '; '.join(f'{gap.code}: {gap.message}' for gap in gaps)
+
 def process_member(value, context, dispatcher, store, objects, observer=None) -> ProcessedMember:
     value = to_mapping_value(value)
     member = read_member(value, store, objects)
@@ -27,6 +31,12 @@ def process_member(value, context, dispatcher, store, objects, observer=None) ->
     source = member.members[0]
     origin = Settings.from_mapping(member.context.to_mapping()['effective_config'])
     initial = evaluate_member(value, context.parser_version, context.schema_version, store, objects)
+    # Stage 1c (M4): with no obligation to repair, a non-retryable gap means completion cannot pass,
+    # so stop before any child runs. Obligations keep the repair path; the final check stays the guard.
+    blocking = tuple(gap for gap in initial.gaps if not gap.retryable)
+    if blocking and not initial.obligations:
+        raise Conflict(f"member {value['member_id']} completion check cannot pass before dispatch: "
+                       f'{_gap_text(blocking)}')
     resolutions, calls, gaps, quarters = [], [], [], ()
     for obligation in initial.obligations:
         objects.verify(obligation['ref'], obligation['sha256'], obligation['bytes'])
@@ -93,7 +103,8 @@ def process_member(value, context, dispatcher, store, objects, observer=None) ->
         tuple(quarters), tuple(gaps), context.parser_version, context.schema_version)
     evaluated = evaluate_member(value, context.parser_version, context.schema_version, store, objects)
     if result.outcome in COMPLETE and not evaluated.complete:
-        raise Conflict('child completion lacks all affected quarter/repair evidence')
+        stock = 'child completion lacks all affected quarter/repair evidence'
+        raise Conflict(f'{stock}: {_gap_text(evaluated.gaps)}' if evaluated.gaps else stock)
     evidence = {'contract_version': LOCAL_CONTRACT, 'format_version': 'sec-local-workflow-member-evidence-v1', 'member': dict(value),
         'calls': calls, 'completion': evaluated.capture if result.outcome in COMPLETE else None,
         'resolutions': resolutions, 'terminal_error': terminal_error}
@@ -126,6 +137,9 @@ def validate_member_evidence(result, evidence, objects) -> None:
     projected = read_source(value['member_ref'], objects)
     if projected != projection(parent, result.source.source_id) or projected.workset_id != result.member_id:
         raise Conflict('member differs from immutable original projection')
+    if not evidence['calls'] and evidence['terminal_error'] is None:
+        _validate_sibling_completion(result, evidence, value, objects)
+        return
     checked, repair_calls, missing_calls = [], [], []
     namespace = None
     for call in evidence['calls']:
@@ -256,3 +270,22 @@ def validate_member_evidence(result, evidence, objects) -> None:
         resolution_calls.append(parse_json(objects.read(resolution['ref']))['call'])
     if resolution_calls != repair_calls:
         raise Conflict('repair resolution belongs to another checked prefix')
+
+
+def _validate_sibling_completion(result, evidence, value, objects) -> None:
+    """B4 receipt: the run already completed this source, so its capture stands in for every child."""
+    if (result.outcome != 'unchanged' or result.child_refs or result.snapshot_ref is not None
+            or result.transformed_ref is not None or result.downloaded or result.transformed
+            or result.quarantined or result.gaps or evidence['resolutions']):
+        raise Conflict('member has no checked source operation')
+    complete = evidence['completion']
+    if complete is None or complete['member'] != value:
+        raise Conflict('sibling completion lacks exact captured evidence')
+    validate_capture(complete, objects)
+    if (complete['observation']['parser_version'], complete['observation']['schema_version']) != (
+            result.parser_version, result.schema_version):
+        raise Conflict('member capture processing versions differ')
+    expected = [(q['quarter'], 'unchanged', q['generation_id'], q['manifest_ref'], None, 0) for q in complete['quarters']]
+    actual = [(q.quarter, q.outcome, q.generation_id, q.manifest_ref, q.candidate_ref, q.conflicts) for q in result.quarters]
+    if actual != expected:
+        raise Conflict('sibling completion quarters differ from immutable capture')

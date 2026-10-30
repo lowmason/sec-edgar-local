@@ -1,0 +1,414 @@
+"""Stage 1a: the dispatch cutoff (B3) and the sibling-completion skip (B4-B6)."""
+from network_guard import install
+install()
+
+import hashlib, json, re, sys, tempfile, unittest
+from collections import Counter
+from dataclasses import replace
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+from support import fixture_settings
+from support_process import checked_dispatcher as Dispatcher
+from support_workflows import CommandHarness, quarter_pack, simple_pack
+from sec_edgar_ingest.config import pin_context
+from sec_edgar_ingest.etl.reader import capture_quarter
+from sec_edgar_ingest.etl.state import EtlState
+from sec_edgar_ingest.models import Error, RunContext, canonical_json, parse_json, to_mapping_value
+from sec_edgar_ingest.runtime import configured_descriptor
+from sec_edgar_ingest.state import AcquisitionState
+from sec_edgar_ingest.storage.contracts import Conflict
+from sec_edgar_ingest.workflows.checked import read_child_capture
+from sec_edgar_ingest.workflows.contracts import COMPLETE, LOCAL_CONTRACT, workflow_path
+from sec_edgar_ingest.workflows.members import WorkflowMembers
+from sec_edgar_ingest.workflows.results import freeze_workflow, read_workflow_result, write_workflow_result
+from sec_edgar_ingest.workflows.runner import run_workflow
+
+RESERVE = 600
+TODAY = date(2026, 10, 7)
+
+
+class MemberBudget:
+    """Stands in for runner.datetime.now: the first `allowed` checks see the start, later ones the cutoff."""
+    def __init__(self, context, allowed, reserve=RESERVE):
+        self.start, self.cutoff = context.started_at, context.deadline - timedelta(seconds=reserve)
+        self.allowed, self.calls = allowed, 0
+
+    def now(self, tz=None):
+        self.calls += 1
+        return self.start if self.calls <= self.allowed else self.cutoff
+
+
+def harness(root, pack, reserve=RESERVE, start='2026Q3'):
+    execution = {'max_run_seconds': 3600}
+    if reserve is not None:
+        execution['dispatch_reserve_seconds'] = reserve
+    settings = fixture_settings(root=root / '.fixture-state',
+        backfill={'start_quarter': start, 'end_quarter': 'open'},
+        etl={'parser_version': 'fixture-index-parser-v1'},
+        fixture={'allow_clock_override': True, 'allow_deadline_override': False},
+        execution=execution)
+    return CommandHarness(root, pack, settings)
+
+
+def widen(pack, times):
+    """Repeat every fixture response, so many discoveries can read the same listings."""
+    manifest = json.loads(pack.read_text())
+    manifest['responses'] = {url: responses * times for url, responses in manifest['responses'].items()}
+    pack.write_bytes(canonical_json(to_mapping_value(manifest)))
+    return pack
+
+
+def begin(h, run_id):
+    """Freeze a workflow attempt; the same context resumes the attempt."""
+    now = datetime.now(timezone.utc)
+    context = RunContext(run_id, 'manual', 'backfill', 'a', h.settings.etl.parser_version,
+        h.settings.etl.schema_version, h.settings.config_sha256, now, now + timedelta(seconds=1800), 'backfill',
+        runtime=configured_descriptor(h.settings), format_version='sec-local-run-context-v1')
+    context = pin_context(h.settings, context, TODAY)[0]
+    intent = {'contract_version': LOCAL_CONTRACT, 'command': 'backfill', 'today': TODAY.isoformat(),
+              'fixture_sha256': hashlib.sha256(h.pack.read_bytes()).hexdigest(), 'pinned_end_quarter': '2026Q4'}
+    return freeze_workflow(context, intent, h.store, h.objects), intent
+
+
+def run(h, run_id, allowed):
+    context, intent = begin(h, run_id)
+    dispatcher = Dispatcher(context, h.settings, h.pack, h.root, h.store, h.objects)
+    budget, steps = MemberBudget(context, allowed), []
+    execute = dispatcher.execute
+    def counted(command, step_id, settings, flags):
+        steps.append(step_id)
+        return execute(command, step_id, settings, flags)
+    with patch('sec_edgar_ingest.workflows.runner.datetime', wraps=datetime) as clock, \
+            patch.object(dispatcher, 'execute', side_effect=counted):
+        clock.now.side_effect = budget.now
+        report = run_workflow(context, h.settings, intent, dispatcher, h.store, h.objects)
+    path = write_workflow_result(report, h.store, h.objects)
+    if read_workflow_result(path, h.store, h.objects) != report:
+        raise AssertionError('written workflow result does not read back')
+    return report, steps
+
+
+class CutoffTests(unittest.TestCase):
+    def test_members_after_the_cutoff_defer_without_a_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, simple_pack(root / 'pack'))
+            try:
+                report, steps = run(h, 'cutoff', allowed=1)
+                first, second = report.members
+                # The first runner check sees the start, so the first member runs and completes. The mocked
+                # clock moves to the cutoff at the next runner check, after the first member returns.
+                self.assertIn(first.outcome, COMPLETE)
+                self.assertEqual(second.outcome, 'pending')
+                self.assertEqual([gap.code for gap in second.gaps], ['workflow_deferred'])
+                self.assertEqual(second.child_refs, ())
+                self.assertFalse(any(step.endswith(second.member_id) for step in steps))
+                self.assertEqual(report.outcome, 'incomplete')
+            finally:
+                h.close()
+
+    def test_a_missing_reserve_keeps_the_deadline_as_the_cutoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, simple_pack(root / 'pack'), reserve=None)
+            try:
+                # The budget reports deadline - RESERVE after its first check: still before a deadline cutoff.
+                report, _ = run(h, 'no-reserve', allowed=1)
+                self.assertTrue(all(member.outcome in COMPLETE for member in report.members))
+            finally:
+                h.close()
+
+
+def child_counts(h, steps):
+    """Child sequences per (command, source), from dispatched step IDs."""
+    source_of = {v['member_id']: v['source']['source_id'] for v in WorkflowMembers(h.store, h.objects).inventory()[0]}
+    counts = Counter()
+    for step in steps:
+        command, _, member_id = step.partition('-')
+        if command in ('collect', 'transform', 'publish'):
+            counts[command, source_of[member_id]] += 1
+    return counts, set(source_of.values())
+
+
+class SiblingCompletionTests(unittest.TestCase):
+    def pair(self, h, name):
+        """Defer every member once, then run with room: each source has a retained and a new member."""
+        run(h, name + '-0', allowed=0)
+        return run(h, name + '-1', allowed=10)
+
+    def test_pending_sources_drain_with_one_child_sequence_each(self):
+        periods = ('2025Q1', '2025Q2', '2025Q3', '2025Q4', '2026Q1', '2026Q2', '2026Q3', '2026Q4')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(quarter_pack(root / 'pack', periods), 4), start='2025Q1')
+            try:
+                first, steps = run(h, 'drain-0', allowed=0)
+                self.assertEqual(steps, ['discover'])
+                self.assertEqual(first.counts['pending_sources'], 8)
+                runs = 1
+                while True:
+                    # An odd budget makes cutoffs fall inside same-source pairs (plan 4 F-P2).
+                    report, more = run(h, f'drain-{runs}', allowed=5)
+                    steps.extend(more)
+                    runs += 1
+                    if not any(gap.code == 'workflow_deferred' for member in report.members for gap in member.gaps):
+                        break
+                    self.assertLess(runs, 20, 'the drain made no progress')
+                self.assertGreater(runs, 2)
+                counts, sources = child_counts(h, steps)
+                self.assertEqual(len(sources), 8)
+                for source_id in sources:
+                    for command in ('collect', 'transform', 'publish'):
+                        with self.subTest(source=source_id, command=command):
+                            self.assertEqual(counts[command, source_id], 1)
+                for period in periods:
+                    self.assertIsNotNone(capture_quarter(period, h.objects, EtlState(h.store)))
+                self.assertIn(report.outcome, ('success', 'unchanged'))
+            finally:
+                h.close()
+
+    def test_sibling_receipt_shape_capture_and_exact_replay(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(simple_pack(root / 'pack'), 4))
+            try:
+                report, steps = self.pair(h, 'pair')
+                self.assertEqual(len(report.members), 4)
+                skipped = [member for member in report.members if not member.child_refs]
+                self.assertEqual(len(skipped), 2)
+                registry = WorkflowMembers(h.store, h.objects)
+                values = {v['member_id']: v for v in registry.inventory()[0]}
+                receipts = {}
+                for member in skipped:
+                    self.assertEqual((member.outcome, member.snapshot_ref, member.transformed_ref),
+                                     ('unchanged', None, None))
+                    self.assertFalse(member.downloaded or member.transformed or member.quarantined or member.gaps)
+                    self.assertTrue(member.quarters)
+                    self.assertTrue(all(q.outcome == 'unchanged' and q.candidate_ref is None and q.conflicts == 0
+                                        for q in member.quarters))
+                    self.assertFalse(any(step.endswith(member.member_id) for step in steps))
+                    capture = registry.completed(values[member.member_id], member.parser_version, member.schema_version)
+                    self.assertEqual([(q['quarter'], q['generation_id']) for q in capture['quarters']],
+                                     [(q.quarter, q.generation_id) for q in member.quarters])
+                    path = registry._path(member.member_id, report.context)
+                    receipts[path] = h.objects.read(path)
+                    self.assertEqual(registry._read_receipt(path)[2]['calls'], [])
+                stored = h.objects.read(workflow_path(report.context))
+                dispatcher = Dispatcher(report.context, h.settings, h.pack, h.root, h.store, h.objects)
+                with patch.object(dispatcher, 'execute', side_effect=AssertionError('replay dispatched a child')), \
+                        patch('sec_edgar_ingest.workflows.runner.reuse_exact_binding',
+                              side_effect=AssertionError('replay decided a skip again')), \
+                        patch('sec_edgar_ingest.workflows.runner.datetime', wraps=datetime) as clock:
+                    # ended_at is the only wall-clock field: pin it, so the whole replay is compared as bytes.
+                    clock.now.side_effect = lambda tz=None: datetime.fromisoformat(report.ended_at)
+                    replay = run_workflow(report.context, h.settings, to_mapping_value(report.intent['invocation']),
+                                          dispatcher, h.store, h.objects)
+                self.assertEqual(canonical_json(to_mapping_value(replay.to_mapping())), stored)
+                self.assertEqual(replay, report)
+                for path, body in receipts.items():
+                    self.assertEqual(h.objects.read(path), body)
+                self.assertEqual(h.objects.read(workflow_path(report.context)), stored)
+                self.assertEqual(read_workflow_result(workflow_path(report.context), h.store, h.objects), report)
+            finally:
+                h.close()
+
+    def test_sibling_receipt_shape_is_exact(self):
+        from sec_edgar_ingest.workflows.processing import validate_member_evidence
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(simple_pack(root / 'pack'), 4))
+            try:
+                report, _ = self.pair(h, 'shape')
+                member = next(m for m in report.members if not m.child_refs)
+                registry = WorkflowMembers(h.store, h.objects)
+                result, _, evidence, _ = registry._read_receipt(registry._path(member.member_id, report.context))
+                first = result.quarters[0]
+                for change in ({'outcome': 'success'}, {'downloaded': True}, {'transformed': True},
+                               {'quarters': (replace(first, outcome='published'),) + result.quarters[1:]}):
+                    with self.subTest(result=change), self.assertRaises(ValueError):
+                        replace(result, **change)
+                evidence = to_mapping_value(evidence)
+                no_operation = 'member has no checked source operation'
+                quarters_differ = 'sibling completion quarters differ from immutable capture'
+                tampered = (
+                    ({'gaps': (Error('state_conflict', 'invented', False, result.source.source_id, {}),)}, {},
+                     no_operation),
+                    ({'quarters': (replace(first, generation_id='0' * 64),) + result.quarters[1:]}, {},
+                     quarters_differ),
+                    ({'quarters': (replace(first, conflicts=1),) + result.quarters[1:]}, {}, quarters_differ),
+                    ({}, {'completion': None}, 'sibling completion lacks exact captured evidence'),
+                    ({}, {'resolutions': [{'ref': 'invented'}]}, no_operation),
+                )
+                for result_change, evidence_change, message in tampered:
+                    with self.subTest(result=result_change, evidence=evidence_change), \
+                            self.assertRaisesRegex(Conflict, '^' + re.escape(message) + '$'):
+                        validate_member_evidence(replace(result, **result_change), {**evidence, **evidence_change}, h.objects)
+            finally:
+                h.close()
+
+    def test_refusals_leave_the_member_to_its_child_sequence(self):
+        from contextlib import nullcontext
+        from sec_edgar_ingest.workflows import runner
+        from sec_edgar_ingest.workflows.contracts import CompletionEvaluation
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(simple_pack(root / 'pack'), 4))
+            try:
+                # The cutoff falls after the first member, so its same-source sibling stays deferred and unbound.
+                run(h, 'refuse-0', allowed=0)
+                report, _ = run(h, 'refuse-1', allowed=1)
+                done = next(m for m in report.members if m.child_refs)
+                other = next(m for m in report.members if m.source.source_id != done.source.source_id)
+                values = WorkflowMembers(h.store, h.objects).inventory()[0]
+                sibling = next(v for v in values
+                               if v['source']['source_id'] == done.source.source_id and v['member_id'] != done.member_id)
+                identity = done.source.source_id
+                acquisition = AcquisitionState(h.store)
+                pin = acquisition.binding(done.member_id, identity)
+                self.assertIsNotNone(pin)
+                self.assertIsNone(acquisition.binding(sibling['member_id'], identity))
+                # The other-source case must fail only on source identity: give it a complete outcome.
+                elsewhere = replace(done, source=other.source)
+                self.assertIn(elsewhere.outcome, COMPLETE)
+                self.assertNotEqual(elsewhere.source.source_id, identity)
+                conflict = Error('state_conflict', 'corrupt sibling evidence', False, identity, {})
+                unpinned = Error('acquisition_pending', 'member has no exact raw pin', True, identity, {})
+                # Without 'reuse', the case runs the real reuse_exact_binding, which would bind the sibling.
+                cases = {
+                    'no preceding member, source not already complete': {'previous': None},
+                    'complete preceding member of another source': {'previous': elsewhere},
+                    'failed sibling': {'previous': replace(done, outcome='state_conflict')},
+                    'quarantined sibling': {'previous': replace(done, outcome='quarantined', quarantined=True,
+                                                                transformed=False)},
+                    'pending sibling': {'previous': replace(done, outcome='pending')},
+                    'binding gap': {'reuse': (conflict,)},
+                    'divergent or missing binding': {'reuse': (),
+                                                     'evaluation': CompletionEvaluation(False, None, (), (unpinned,))},
+                    'repair obligation': {'reuse': (),
+                                          'evaluation': CompletionEvaluation(False, None, ({'ref': 'obligation'},), ())},
+                    'corrupt evidence': {'reuse': (), 'evaluation': CompletionEvaluation(False, None, (), (conflict,))},
+                }
+                for name, case in cases.items():
+                    evaluation = (patch.object(runner, 'evaluate_member', return_value=case['evaluation'])
+                                  if 'evaluation' in case else nullcontext())
+                    reuse = (patch.object(runner, 'reuse_exact_binding', return_value=case['reuse'])
+                             if 'reuse' in case else nullcontext())
+                    with self.subTest(case=name), evaluation, reuse:
+                        self.assertIsNone(runner.sibling_completion(sibling, case.get('previous', done), frozenset(),
+                                                                    report.context, h.store, h.objects))
+                        # A refusal before the binding step writes no state: the sibling is still unbound.
+                        self.assertIsNone(AcquisitionState(h.store).binding(sibling['member_id'], identity))
+                # A refusal after the real binding step: reuse_exact_binding has bound the sibling, and the
+                # refusal keeps that row. The write is benign: it pins the snapshot that the completed sibling
+                # holds, and the member's later child sequence or skip binds that same snapshot again.
+                with self.subTest(case='real binding, then an incomplete evaluation'), \
+                        patch.object(runner, 'evaluate_member', return_value=CompletionEvaluation(False, None, (), (unpinned,))):
+                    self.assertIsNone(runner.sibling_completion(sibling, done, frozenset(), report.context,
+                                                                h.store, h.objects))
+                    bound = AcquisitionState(h.store).binding(sibling['member_id'], identity)
+                    self.assertIsNotNone(bound)
+                    self.assertEqual((bound.source_workset_id, bound.snapshot_sha256),
+                                     (sibling['member_id'], pin.snapshot_sha256))
+                # Positive controls: a complete preceding sibling, and a source already complete at selection.
+                for previous, completed in ((done, frozenset()), (None, frozenset({identity}))):
+                    with self.subTest(previous=previous is not None):
+                        processed = runner.sibling_completion(sibling, previous, completed, report.context, h.store, h.objects)
+                        self.assertEqual((processed.result.outcome, processed.result.child_refs), ('unchanged', ()))
+            finally:
+                h.close()
+
+    def test_a_skip_check_gap_refuses_the_skip_and_stays_out_of_the_report(self):
+        from sec_edgar_ingest.workflows import runner
+        real = runner.reuse_exact_binding
+        probes = []
+        def reuse(value, store, objects):
+            # The real binding step runs everywhere. Only the skip check also sees an extra gap, so the
+            # skip would otherwise succeed: only the P8 refusal sends the member to its child sequence.
+            gaps = real(value, store, objects)
+            if sys._getframe(1).f_code.co_name != 'sibling_completion':
+                return gaps
+            probe = Error('legacy_member_unresolved', 'skip-check probe gap', False, value['source']['source_id'],
+                          {'member_id': value['member_id']})
+            probes.append(probe)
+            return gaps + (probe,)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(simple_pack(root / 'pack'), 4))
+            try:
+                run(h, 'probe-0', allowed=0)
+                with patch.object(runner, 'reuse_exact_binding', new=reuse):
+                    report, steps = run(h, 'probe-1', allowed=10)
+                self.assertEqual(len(probes), 2)  # One skip check for each source's second member.
+                refused = {probe.details['member_id'] for probe in probes}
+                registry = WorkflowMembers(h.store, h.objects)
+                for member in report.members:
+                    with self.subTest(member=member.member_id):
+                        self.assertTrue(member.child_refs)
+                        self.assertIn(member.outcome, COMPLETE)
+                        for probe in probes:
+                            self.assertNotIn(probe, member.gaps)
+                        if member.member_id in refused:
+                            # The refused member ran its ordinary child sequence and keeps exactly its gaps.
+                            self.assertIn('collect-' + member.member_id, steps)
+                            calls = registry._read_receipt(registry._path(member.member_id, report.context))[2]['calls']
+                            self.assertEqual([call['step_id'] for call in calls],
+                                             [command + '-' + member.member_id for command in ('collect', 'transform', 'publish')])
+                            ordinary = tuple(gap for call in calls for gap in read_child_capture(call, h.objects).gaps)
+                            self.assertEqual(member.gaps, ordinary)
+                for probe in probes:
+                    self.assertNotIn(probe, report.gaps)
+                self.assertFalse(any(gap.message == 'skip-check probe gap' for gap in report.gaps))
+            finally:
+                h.close()
+
+    def test_a_resumed_attempt_finishes_the_members_own_children_instead_of_skipping(self):
+        from sec_edgar_ingest.workflows import runner
+        from sec_edgar_ingest.workflows.processing import _member_outcome
+
+        class Crash(Exception):
+            pass
+
+        processed = []
+        def observer(point):
+            # The engine dies after the second member's own children, before its receipt is recorded.
+            if point == 'workflow.after_member_processing':
+                processed.append(point)
+                if len(processed) == 2:
+                    raise Crash()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            h = harness(root, widen(simple_pack(root / 'pack'), 4))
+            try:
+                run(h, 'resume-0', allowed=0)
+                context, intent = begin(h, 'resume-1')
+                # Attempt k: the skip is refused (as for a binding gap), so the second member runs its own children.
+                with patch.object(runner, 'sibling_completion', return_value=None), self.assertRaises(Crash):
+                    run_workflow(context, h.settings, intent, Dispatcher(context, h.settings, h.pack, h.root,
+                                 h.store, h.objects), h.store, h.objects, observer)
+                registry = WorkflowMembers(h.store, h.objects)
+                selection = parse_json(h.objects.read(workflow_path(context).rsplit('/', 1)[0] + '/selection.json'))
+                first, second = (job['member'] for job in selection['jobs'][:2])
+                self.assertEqual(first['source'], second['source'])
+                registry._read_receipt(registry._path(first['member_id'], context))
+                with self.assertRaises(FileNotFoundError):
+                    h.objects.read(registry._path(second['member_id'], context))
+                # The same argv resumes: same frozen context and selection, no patch.
+                report = run_workflow(context, h.settings, intent, Dispatcher(context, h.settings, h.pack, h.root,
+                                      h.store, h.objects), h.store, h.objects)
+                write_workflow_result(report, h.store, h.objects)
+                member = next(m for m in report.members if m.member_id == second['member_id'])
+                calls = registry._read_receipt(registry._path(member.member_id, context))[2]['calls']
+                self.assertEqual([call['step_id'] for call in calls],
+                                 [command + '-' + member.member_id for command in ('collect', 'transform', 'publish')])
+                self.assertEqual(member.child_refs, tuple(call['result_ref'] for call in calls))
+                self.assertTrue(member.downloaded)
+                self.assertIsNotNone(member.snapshot_ref)
+                self.assertEqual(member.outcome, _member_outcome(read_child_capture(calls[-1], h.objects)))
+            finally:
+                h.close()
+
+
+if __name__ == '__main__':
+    unittest.main()

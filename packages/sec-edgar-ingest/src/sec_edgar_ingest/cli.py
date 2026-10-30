@@ -14,7 +14,7 @@ from pathlib import Path
 from .runtime import configured_descriptor, preflight_current, retain_manifest
 from . import __version__
 from .collection import collect
-from .config import Settings, load_config, pin_context
+from .config import Settings, admit_dispatch_reserve, load_config, pin_context
 from .coordination import Clock, Coordinator
 from .discovery import discover
 from .etl.approval import activation_ref, approve
@@ -403,6 +403,8 @@ def _validate_workflow(args):
     if (deadline - Clock().now()).total_seconds() > settings.execution.max_run_seconds and not (
             settings.fixture and settings.fixture.allow_deadline_override):
         raise ValueError('deadline exceeds execution.max_run_seconds')
+    # B2 admission reads only this invocation's own config, before any store opens (plan 4 P3).
+    admit_dispatch_reserve(settings)
     # Do not construct a fresh context here: the immutable saved pin must be read first.
     return settings, today, deadline, pack
 

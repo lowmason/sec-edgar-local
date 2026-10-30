@@ -105,7 +105,8 @@ def read_observations(ref: ObservationRef, objects: ObjectStore) -> Iterator[Obs
             yield from rows
 
 
-def _read_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, bytes]:
+def _observation_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, bytes]:
+    """The exact canonical observation manifest at `path` and its producer; no row is read."""
     body = objects.read(path)
     value = parse_json(body)
     if not isinstance(value, dict) or set(value) != {'format_version', 'observation', 'runtime'}:
@@ -119,10 +120,25 @@ def _read_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, byt
         raise ValueError('observation manifest must be canonical')
     if ref.manifest_ref != path:
         raise ValueError('observation manifest address differs')
+    return ref, body
+
+
+def _read_manifest(path: str, objects: ObjectStore) -> tuple[ObservationRef, bytes]:
+    ref, body = _observation_manifest(path, objects)
     with closing(read_observations(ref, objects)) as rows:
         for _ in rows:
             pass
     return ref, body
+
+
+def checked_observation(path: str, objects: ObjectStore) -> ObservationRef:
+    """C11 for engine paths: the exact observation manifest and its rows file hash and length; no row is read."""
+    ref, _ = _observation_manifest(path, objects)
+    try:
+        objects.verify(ref.rows_ref, ref.rows_sha256, ref.rows_bytes)
+    except Conflict as error:
+        raise Conflict('observation bytes differ from manifest hash or length') from error
+    return ref
 
 
 def _existing(source, snapshot, context, objects, state):

@@ -140,13 +140,21 @@ if __name__=='__main__':
             for case in report['cases']:
                 self.assertEqual(case['b_exit'], 0)
                 self.assertGreater(case['rows'], 0)
-                self.assertTrue(case['a_child_under_b_parent'])
+                # Member order (plan Decisions R2, fallback; see workflow_proof.order_aware_children).
+                # repair always runs its saved A publication under A. pending runs an A child only
+                # when the A-origin member sorts before its B sibling; otherwise B4 completes it with
+                # no child and every continue-b process is B.
+                self.assertEqual(case['a_child_expected'],
+                                 case['scenario'] == 'repair' or any(case['a_first'].values()))
+                self.assertEqual(case['a_child_under_b_parent'], case['a_child_expected'])
                 records = [case['parent'], *case['children']]
                 selected = sorted({str(Path(item['python']).parents[2]) for item in records})
-                self.assertEqual(len(selected), 2, 'upgrade must exercise actual A-origin and B processes')
+                expected = (case['release_directories'] if case['a_child_expected']
+                            else [str(Path(case['parent']['python']).parents[2])])
+                self.assertEqual(selected, expected, 'upgrade must exercise actual A-origin and B processes')
                 for record in records:
                     guard = record['checkout_guard']
                     self.assertEqual(guard['pid'], record['pid'])
                     self.assertFalse(guard['application_imported'])
                     self.assertEqual(guard['denied'], [True] * 6)
-                    self.assertEqual(guard['policy']['releases'], selected)
+                    self.assertEqual(guard['policy']['releases'], case['release_directories'])
